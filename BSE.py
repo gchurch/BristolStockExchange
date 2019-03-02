@@ -799,6 +799,7 @@ class Trader_ZIP(Trader):
 # between successive calls, but that does make it inefficient as it has to
 # re-analyse the entire set of traders on each call
 def trade_stats(expid, traders, dumpfile, time, lob):
+        # calculate the total balance sum for each type of trader and the number of each type of trader
         trader_types = {}
         n_traders = len(traders)
         for t in traders:
@@ -811,21 +812,26 @@ def trade_stats(expid, traders, dumpfile, time, lob):
                         n = 1
                 trader_types[ttype] = {'n':n, 'balance_sum':t_balance}
 
-
+        # write the trial number followed by the time
         dumpfile.write('%s, %06d, ' % (expid, time))
+        # for each type of trader write: the type name, the total balance sum of all traders of that type,
+        # the number of traders of that type, and then the average balance of each trader of that type
         for ttype in sorted(list(trader_types.keys())):
                 n = trader_types[ttype]['n']
                 s = trader_types[ttype]['balance_sum']
                 dumpfile.write('%s, %d, %d, %f, ' % (ttype, s, n, s / float(n)))
 
+        # write the best bid on the lob
         if lob['bids']['best'] != None :
                 dumpfile.write('%d, ' % (lob['bids']['best']))
         else:
                 dumpfile.write('N, ')
+        # write the best ask on the lob
         if lob['asks']['best'] != None :
                 dumpfile.write('%d, ' % (lob['asks']['best']))
         else:
                 dumpfile.write('N, ')
+        # write a new line
         dumpfile.write('\n');
 
 
@@ -1359,7 +1365,7 @@ def experiment3():
 
 # main function contains code to execute the experiments
 def main():
-    experiment3()
+    experiment1()
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":

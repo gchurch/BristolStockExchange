@@ -1105,9 +1105,10 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
 
 
 # one session in the market
-def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dumpfile, dump_each_trade, verbose):
+def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dumpfile, dump_each_trade):
 
         # variables which dictate what information is printed to the output
+        verbose = False
         traders_verbose = False
         orders_verbose = False
         lob_verbose = False
@@ -1136,14 +1137,14 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
         pending_cust_orders = []
 
-        if verbose: print('\n%s;  ' % (sess_id))
+        print('\n%s;  ' % (sess_id))
 
         while time < endtime:
 
                 # how much time left, as a percentage?
                 time_left = (endtime - time) / duration
 
-                # if verbose: print('\n\n%s; t=%08.2f (%4.1f/100) ' % (sess_id, time, time_left*100))
+                if verbose: print('%s; t=%08.2f (%4.1f/100) ' % (sess_id, time, time_left*100))
 
                 trade = None
 
@@ -1152,11 +1153,11 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
                 # if any newly-issued customer orders mean quotes on the LOB need to be cancelled, kill them
                 if len(kills) > 0 :
-                        # if verbose : print('Kills: %s' % (kills))
+                        if verbose : print('Kills: %s' % (kills))
                         for kill in kills :
-                                # if verbose : print('lastquote=%s' % traders[kill].lastquote)
+                                if verbose : print('lastquote=%s' % traders[kill].lastquote)
                                 if traders[kill].lastquote != None :
-                                        # if verbose : print('Killing order %s' % (str(traders[kill].lastquote)))
+                                        if verbose : print('Killing order %s' % (str(traders[kill].lastquote)))
                                         exchange.del_order(time, traders[kill].lastquote, verbose)
 
 
@@ -1164,7 +1165,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
                 tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
                 order = traders[tid].getorder(time, time_left, exchange.publish_lob(time, lob_verbose))
 
-                # if verbose: print('Trader Quote: %s' % (order))
+                if verbose: print('Trader Quote: %s' % (order))
 
                 if order != None:
                         if order.otype == 'Ask' and order.price < traders[tid].orders[0].price: sys.exit('Bad ask')
@@ -1235,8 +1236,6 @@ def experiment1():
     sellers_spec = buyers_spec
     traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
 
-    verbose = True
-
     # run a sequence of trials, one session per trial
 
     n_trials = 1
@@ -1249,7 +1248,7 @@ def experiment1():
             
     while (trial<(n_trials+1)):
             trial_id = 'trial%04d' % trial
-            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all, verbose)
+            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
             tdump.flush()
             trial = trial + 1
     tdump.close()
@@ -1277,8 +1276,6 @@ def experiment2():
 
     order_sched = {'sup':supply_schedule, 'dem':demand_schedule,
                    'interval':30, 'timemode':'drip-poisson'}
-
-    verbose = True
 
     n_trader_types = 4
     equal_ratio_n = 4
@@ -1310,7 +1307,7 @@ def experiment2():
                                     while trial <= n_trials_per_ratio:
                                             trial_id = 'trial%07d' % trialnumber
                                             market_session(trial_id, start_time, end_time, traders_spec,
-                                                           order_sched, tdump, False, verbose)
+                                                           order_sched, tdump, False)
                                             tdump.flush()
                                             trial = trial + 1
                                             trialnumber = trialnumber + 1
@@ -1341,8 +1338,6 @@ def experiment3():
     sellers_spec = buyers_spec
     traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
 
-    verbose = True
-
     # run a sequence of trials, one session per trial
 
     n_trials = 1
@@ -1355,7 +1350,7 @@ def experiment3():
             
     while (trial<(n_trials+1)):
             trial_id = 'trial%04d' % trial
-            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all, verbose)
+            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
             tdump.flush()
             trial = trial + 1
     tdump.close()

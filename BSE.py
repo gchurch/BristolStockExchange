@@ -1107,6 +1107,13 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
 # one session in the market
 def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dumpfile, dump_each_trade, verbose):
 
+        # variables which dictate what information is printed to the output
+        traders_verbose = False
+        orders_verbose = False
+        lob_verbose = False
+        process_verbose = False
+        respond_verbose = False
+        bookkeep_verbose = False
 
         # initialise the exchange
         exchange = Exchange()
@@ -1114,7 +1121,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
         # create a bunch of traders
         traders = {}
-        trader_stats = populate_market(trader_spec, traders, True, verbose)
+        trader_stats = populate_market(trader_spec, traders, True, traders_verbose)
 
 
         # timestep set so that can process all traders in one second
@@ -1126,12 +1133,6 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
         last_update = -1.0
 
         time = starttime
-
-        orders_verbose = False
-        lob_verbose = False
-        process_verbose = False
-        respond_verbose = False
-        bookkeep_verbose = False
 
         pending_cust_orders = []
 
@@ -1234,6 +1235,8 @@ def experiment1():
     sellers_spec = buyers_spec
     traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
 
+    verbose = True
+
     # run a sequence of trials, one session per trial
 
     n_trials = 1
@@ -1246,7 +1249,7 @@ def experiment1():
             
     while (trial<(n_trials+1)):
             trial_id = 'trial%04d' % trial
-            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all, False)
+            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all, verbose)
             tdump.flush()
             trial = trial + 1
     tdump.close()
@@ -1274,6 +1277,8 @@ def experiment2():
 
     order_sched = {'sup':supply_schedule, 'dem':demand_schedule,
                    'interval':30, 'timemode':'drip-poisson'}
+
+    verbose = True
 
     n_trader_types = 4
     equal_ratio_n = 4
@@ -1305,7 +1310,7 @@ def experiment2():
                                     while trial <= n_trials_per_ratio:
                                             trial_id = 'trial%07d' % trialnumber
                                             market_session(trial_id, start_time, end_time, traders_spec,
-                                                           order_sched, tdump, False, True)
+                                                           order_sched, tdump, False, verbose)
                                             tdump.flush()
                                             trial = trial + 1
                                             trialnumber = trialnumber + 1
@@ -1336,6 +1341,8 @@ def experiment3():
     sellers_spec = buyers_spec
     traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
 
+    verbose = True
+
     # run a sequence of trials, one session per trial
 
     n_trials = 1
@@ -1348,7 +1355,7 @@ def experiment3():
             
     while (trial<(n_trials+1)):
             trial_id = 'trial%04d' % trial
-            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all, False)
+            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all, verbose)
             tdump.flush()
             trial = trial + 1
     tdump.close()

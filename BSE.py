@@ -843,6 +843,7 @@ def trade_stats(expid, traders, dumpfile, time, lob):
 # optionally shuffles the pack of buyers and the pack of sellers
 def populate_market(traders_spec, traders, shuffle, verbose):
 
+        # given a trader type and a name, create the trader
         def trader_type(robottype, name):
                 if robottype == 'GVWY':
                         return Trader_Giveaway('GVWY', name, 0.00, 0)
@@ -870,7 +871,7 @@ def populate_market(traders_spec, traders, shuffle, verbose):
                         traders[t1name] = traders[t2name]
                         traders[t2name] = temp
 
-
+        # create the buyers from the specification and add them to the traders dictionary
         n_buyers = 0
         for bs in traders_spec['buyers']:
                 ttype = bs[0]
@@ -884,7 +885,7 @@ def populate_market(traders_spec, traders, shuffle, verbose):
 
         if shuffle: shuffle_traders('B', n_buyers, traders)
 
-
+        # create the sellers from the specification and add them to the traders dictionary
         n_sellers = 0
         for ss in traders_spec['sellers']:
                 ttype = ss[0]
@@ -898,6 +899,7 @@ def populate_market(traders_spec, traders, shuffle, verbose):
 
         if shuffle: shuffle_traders('S', n_sellers, traders)
 
+        # print the information about each trader
         if verbose :
                 for t in range(n_buyers):
                         bname = 'B%02d' % t
@@ -953,7 +955,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                 return price
 
         
-
+        # return the order price for trader i out of n by using the selected mode
         def getorderprice(i, sched, n, mode, issuetime):
                 # does the first schedule range include optional dynamic offset function(s)?
                 if len(sched[0]) > 2:
@@ -999,7 +1001,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                 return orderprice
 
 
-
+        # return a dictionary containing the issue times of orders according to the selected issuing mode
         def getissuetimes(n_traders, mode, interval, shuffle, fittointerval):
                 interval = float(interval)
                 if n_traders < 1:
@@ -1042,6 +1044,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                 return issuetimes
         
 
+        # return a tuple containing the current ranges and stepmode      
         def getschedmode(time, os):
                 got_one = False
                 for sched in os:
@@ -1063,13 +1066,13 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
 
         cancellations = []
 
+        # if there are no pending orders
         if len(pending) < 1:
                 # list of pending (to-be-issued) customer orders is empty, so generate a new one
                 new_pending = []
 
-                # demand side (buyers)
+                # add the demand side (buyers) customer orders to the list of pending orders
                 issuetimes = getissuetimes(n_buyers, os['timemode'], os['interval'], shuffle_times, True)
-                
                 ordertype = 'Bid'
                 (sched, mode) = getschedmode(time, os['dem'])             
                 for t in range(n_buyers):
@@ -1079,7 +1082,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         order = Order(tname, ordertype, orderprice, 1, issuetime, -3.14)
                         new_pending.append(order)
                         
-                # supply side (sellers)
+                # add the supply side (sellers) customer orders to the list of pending orders
                 issuetimes = getissuetimes(n_sellers, os['timemode'], os['interval'], shuffle_times, True)
                 ordertype = 'Ask'
                 (sched, mode) = getschedmode(time, os['sup'])
@@ -1089,6 +1092,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         orderprice = getorderprice(t, sched, n_sellers, mode, issuetime)
                         order = Order(tname, ordertype, orderprice, 1, issuetime, -3.14)
                         new_pending.append(order)
+        # if there are some pending orders
         else:
                 # there are pending future orders: issue any whose timestamp is in the past
                 new_pending = []
@@ -1099,6 +1103,8 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                                 tname = order.tid
                                 response = traders[tname].add_order(order, verbose)
                                 if verbose: print('Customer order: %s %s' % (response, order) )
+                                # if issuing the order causes the trader to cancel their current order then add
+                                # the traders name to the cancellations list
                                 if response == 'LOB_Cancel' :
                                     cancellations.append(tname)
                                     if verbose: print('Cancellations: %s' % (cancellations))
@@ -1122,6 +1128,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
         respond_verbose = False
         bookkeep_verbose = False
 
+
         # initialise the exchange
         exchange = Exchange()
 
@@ -1141,6 +1148,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
         time = starttime
 
+        # this list contains all the pending customer orders that are yet to happen
         pending_cust_orders = []
 
         print('\n%s;  ' % (sess_id))
@@ -1154,6 +1162,8 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
                 trade = None
 
+                # update the pending customer orders list by generating new order if none remain or by issuing 
+                # any orders that were scheduled in the past 
                 [pending_cust_orders, kills] = customer_orders(time, last_update, traders, trader_stats,
                                                  order_schedule, pending_cust_orders, orders_verbose)
 
@@ -1365,7 +1375,7 @@ def experiment3():
 
 # main function contains code to execute the experiments
 def main():
-    experiment1()
+    experiment3()
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":

@@ -1162,8 +1162,9 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
                 trade = None
 
-                # update the pending customer orders list by generating new order if none remain or by issuing 
-                # any orders that were scheduled in the past 
+                # update the pending customer orders list by generating new orders if none remain and issue 
+                # any customer orders that were scheduled in the past. Note these are customer orders being
+                # issued to traders, quotes will not be put onto the exchange yet
                 [pending_cust_orders, kills] = customer_orders(time, last_update, traders, trader_stats,
                                                  order_schedule, pending_cust_orders, orders_verbose)
 
@@ -1183,6 +1184,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
                 if verbose: print('Trader Quote: %s' % (order))
 
+                # if the randomly selected trader gives us a quote, then add it to the exchange
                 if order != None:
                         if order.otype == 'Ask' and order.price < traders[tid].orders[0].price: sys.exit('Bad ask')
                         if order.otype == 'Bid' and order.price > traders[tid].orders[0].price: sys.exit('Bad bid')

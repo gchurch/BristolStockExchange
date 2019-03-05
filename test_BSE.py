@@ -1,6 +1,9 @@
 import unittest
 import BSE
 
+###############################################################################
+# Tests for the Order class
+
 class Test_Order(unittest.TestCase):
 
     def test_init(self):
@@ -21,6 +24,10 @@ class Test_Order(unittest.TestCase):
         self.assertEqual(order.qty, qty)
         self.assertEqual(order.time, time)
         self.assertEqual(order.qid, qid)
+
+
+#################################################################################
+# tests for the Orderbook_half class
 
 class Test_Orderbook_half(unittest.TestCase):
 
@@ -62,7 +69,7 @@ class Test_Orderbook_half(unittest.TestCase):
 
         # create an instance of the Order class
         order1 = BSE.Order('B1', 'Bid', 100, 1, 25.0, 10)
-        order2 = BSE.Order('B2', 'Ask', 150, 1, 35.0, 20)
+        order2 = BSE.Order('B2', 'Bid', 150, 1, 35.0, 20)
 
         # add the order to the order book
         instance.book_add(order1)
@@ -85,7 +92,7 @@ class Test_Orderbook_half(unittest.TestCase):
 
         # create an instance of the Order class
         order1 = BSE.Order('B1', 'Bid', 100, 1, 25.0, 10)
-        order2 = BSE.Order('B2', 'Ask', 150, 1, 35.0, 20)
+        order2 = BSE.Order('B2', 'Bid', 150, 1, 35.0, 20)
 
         # add the order to the order book
         instance.book_add(order1)
@@ -105,7 +112,7 @@ class Test_Orderbook_half(unittest.TestCase):
 
         # create an instance of the Order class
         order1 = BSE.Order('B1', 'Bid', 100, 1, 25.0, 10)
-        order2 = BSE.Order('B2', 'Ask', 150, 1, 35.0, 20)
+        order2 = BSE.Order('B2', 'Bid', 150, 1, 35.0, 20)
 
         # add the order to the order book and then delete it
         instance.book_add(order1)
@@ -134,7 +141,7 @@ class Test_Orderbook_half(unittest.TestCase):
 
         # create an instance of the Order class
         order1 = BSE.Order('B1', 'Bid', 100, 1, 25.0, 10)
-        order2 = BSE.Order('B2', 'Ask', 150, 1, 35.0, 20)
+        order2 = BSE.Order('B2', 'Bid', 150, 1, 35.0, 20)
 
         # add the order to the order book
         instance.book_add(order1)
@@ -149,6 +156,135 @@ class Test_Orderbook_half(unittest.TestCase):
         self.assertEqual(instance.best_price, 100)
         self.assertEqual(instance.best_tid, 'B1')
 
+################################################################################
+# tests for the Orderbook class
+
+class Test_Orderbook(unittest.TestCase):
+
+    def test_init(self):
+
+        orderbook = BSE.Orderbook()
+
+        self.assertEqual(orderbook.tape, [])
+        self.assertEqual(orderbook.quote_id, 0)
+        self.assertEqual(orderbook.bids.lob, {})
+        self.assertEqual(orderbook.asks.lob, {})
+
+###############################################################################
+# tests for Exchange class
+
+class Test_Exchange(unittest.TestCase):
+
+    def test_add_init(self):
+
+        exchange = BSE.Exchange()
+
+        self.assertEqual(exchange.tape, [])
+        self.assertEqual(exchange.quote_id, 0)
+        self.assertEqual(exchange.bids.lob, {})
+        self.assertEqual(exchange.asks.lob, {})
+
+    def test_add_order(self):
+        
+        # create an instance of the exchange class
+        exchange = BSE.Exchange()
+
+        # create instances of the Order class
+        order1 = BSE.Order('B1', 'Bid', 100, 1, 25.0, 10)
+        order2 = BSE.Order('B2', 'Bid', 150, 1, 35.0, 20)
+        order3 = BSE.Order('S1', 'Ask', 140, 1, 45.0, 30)
+        order4 = BSE.Order('S2', 'Ask', 190, 1, 55.0, 40)
+
+        # add the orders to the exchange
+        exchange.add_order(order1, False)
+        exchange.add_order(order2, False)
+        exchange.add_order(order3, False)
+        exchange.add_order(order4, False)
+
+        # test that the exchange's state is as expected
+        self.assertEqual(exchange.bids.lob, {100: [1, [[25.0, 1, 'B1', 0]]], 150: [1, [[35.0, 1, 'B2', 1]]]})
+        self.assertEqual(exchange.bids.best_price, 150)
+        self.assertEqual(exchange.bids.best_tid, 'B2')
+        self.assertEqual(exchange.asks.lob, {140: [1, [[45.0, 1, 'S1', 2]]], 190: [1, [[55.0, 1, 'S2', 3]]]})
+        self.assertEqual(exchange.asks.best_price, 140)
+        self.assertEqual(exchange.asks.best_tid, 'S1')
+
+    def test_del_order(self):
+
+        # create an instance of the Exchange class
+        exchange = BSE.Exchange()
+
+        # create instances of the Order class
+        order1 = BSE.Order('B1', 'Bid', 100, 1, 25.0, 10)
+        order2 = BSE.Order('B2', 'Bid', 150, 1, 35.0, 20)
+        order3 = BSE.Order('S1', 'Ask', 140, 1, 45.0, 30)
+        order4 = BSE.Order('S2', 'Ask', 190, 1, 55.0, 40)
+
+        # add the orders to the exchange
+        exchange.add_order(order1, False)
+        exchange.add_order(order2, False)
+        exchange.add_order(order3, False)
+        exchange.add_order(order4, False)
+
+        # delete orders from the exchange
+        exchange.del_order(100.0, order1, False)
+        exchange.del_order(110.0, order4, False)
+
+        # test that the exchange's state is as expected
+        self.assertEqual(exchange.bids.lob, {150: [1, [[35.0, 1, 'B2', 1]]]})
+        self.assertEqual(exchange.bids.best_price, 150)
+        self.assertEqual(exchange.bids.best_tid, 'B2')
+        self.assertEqual(exchange.asks.lob, {140: [1, [[45.0, 1, 'S1', 2]]]})
+        self.assertEqual(exchange.asks.best_price, 140)
+        self.assertEqual(exchange.asks.best_tid, 'S1')
+        self.assertEqual(len(exchange.tape), 2)
+
+    def test_process_order2(self):
+
+        exchange = BSE.Exchange()
+
+        # create an instance of the Order class
+        order1 = BSE.Order('B1', 'Bid', 100, 1, 25.0, 10)
+        order2 = BSE.Order('B2', 'Bid', 150, 1, 35.0, 20)
+        order3 = BSE.Order('S1', 'Ask', 140, 1, 45.0, 30)
+        order4 = BSE.Order('S2', 'Ask', 190, 1, 55.0, 40)
+
+        exchange.add_order(order1, False)
+        exchange.add_order(order2, False)
+        exchange.add_order(order4, False)
+        exchange.process_order2(100.0, order3, False)
+
+        self.assertEqual(exchange.bids.lob, {100: [1, [[25.0, 1, 'B1', 0]]]})
+        self.assertEqual(exchange.bids.best_price, 100)
+        self.assertEqual(exchange.bids.best_tid, 'B1')
+        self.assertEqual(exchange.asks.lob, {190: [1, [[55.0, 1, 'S2', 2]]]})
+        self.assertEqual(exchange.asks.best_price, 190)
+        self.assertEqual(exchange.asks.best_tid, 'S2')
+        self.assertEqual(exchange.tape, [{'party2': 'S1', 'party1': 'B2', 'price': 150, 'qty': 1, 'time': 100.0, 'type': 'Trade'}])
+
+    def test_tape_dump(self):
+        return
+
+    def test_publish_lob(self):
+
+        exchange = BSE.Exchange()
+
+        # create an instance of the Order class
+        order1 = BSE.Order('B1', 'Bid', 100, 1, 25.0, 10)
+        order2 = BSE.Order('B2', 'Bid', 130, 1, 35.0, 20)
+        order3 = BSE.Order('S1', 'Ask', 140, 1, 45.0, 30)
+        order4 = BSE.Order('S2', 'Ask', 170, 1, 55.0, 40)
+
+        exchange.process_order2(100.0, order1, False)
+        exchange.process_order2(101.0, order2, False)
+        exchange.process_order2(102.0, order3, False)
+        exchange.process_order2(103.0, order4, False)
+
+        self.assertEqual(exchange.publish_lob(104.0, False), {'QID': 4, 'tape': [], 'bids': {'lob': [[100, 1], [130, 1]], 'worst': 1, 'best': 130, 'n': 2}, 'asks': {'lob': [[140, 1], [170, 1]], 'worst': 1000, 'best': 140, 'n': 2}, 'time': 104.0})  
+
+
+###########################################################################
+# the code to be executed if this is the main program
 
 if __name__ == "__main__":
     unittest.main()

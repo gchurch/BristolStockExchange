@@ -305,11 +305,11 @@ class Test_Exchange(unittest.TestCase):
         exchange.process_order2(102.0, order3, False)
         exchange.process_order2(103.0, order4, False)
 
-        exchange.tape_dump('test.csv', 'w', 'keep')
+        exchange.tape_dump('transactions_test.csv', 'w', 'keep')
 
         rows = []
 
-        with open('test.csv') as csvfile:
+        with open('transactions_test.csv') as csvfile:
             reader = csv.reader(csvfile)
             for row in reader:
                 rows.append(row)
@@ -336,6 +336,65 @@ class Test_Exchange(unittest.TestCase):
         # test that the publish_lob function produces the expected return value
         self.assertEqual(exchange.publish_lob(104.0, False), {'QID': 4, 'tape': [], 'bids': {'lob': [[100, 1], [130, 1]], 'worst': 1, 'best': 130, 'n': 2}, 'asks': {'lob': [[140, 1], [170, 1]], 'worst': 1000, 'best': 140, 'n': 2}, 'time': 104.0})  
 
+
+class Test_Functions(unittest.TestCase):
+
+    def test_trade_stats(self):
+        exchange = BSE.Exchange()
+
+        # create an instance of the Order class
+        order1 = BSE.Order('B1', 'Bid', 100, 1, 25.0, 10)
+        order2 = BSE.Order('B2', 'Bid', 130, 1, 35.0, 20)
+        order3 = BSE.Order('S1', 'Ask', 140, 1, 45.0, 30)
+        order4 = BSE.Order('S2', 'Ask', 170, 1, 55.0, 40)
+
+        exchange.process_order2(100.0, order1, False)
+        exchange.process_order2(101.0, order2, False)
+        exchange.process_order2(102.0, order3, False)
+        exchange.process_order2(103.0, order4, False)
+
+        # create the trader specs
+        buyers_spec = [('GVWY',2),('SHVR',1),('ZIC',2),('ZIP',3)]
+        sellers_spec =[('GVWY',3),('SHVR',2),('ZIC',1),('ZIP',2)]
+        traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
+
+        # create an empty traders dict
+        traders = {}
+        # call the populate market function
+        trader_stats = BSE.populate_market(traders_spec, traders, False, False)
+        # open the test file
+        dumpfile=open('avg_balance_test.csv','w')
+        # call the trade_stats function
+        BSE.trade_stats(1, traders, dumpfile, 100.0, exchange.publish_lob(100.0, False))
+        # close the test file
+        dumpfile.close()
+
+        rows = []
+
+        with open('avg_balance_test.csv') as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                rows.append(row)
+        csvfile.close()
+
+        self.assertEqual(rows, [['1', ' 000100', ' GVWY', ' 0', ' 5', ' 0.000000', ' SHVR', ' 0', ' 3', ' 0.000000', ' ZIC', ' 0', ' 3', ' 0.000000', ' ZIP', ' 0', ' 5', ' 0.000000', ' 130', ' 140', ' ']])
+
+    def test_populate_market(self):
+
+        # create the trader specs
+        buyers_spec = [('GVWY',2),('SHVR',1),('ZIC',2),('ZIP',3)]
+        sellers_spec =[('GVWY',3),('SHVR',2),('ZIC',1),('ZIP',2)]
+        traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
+
+        # create an empty traders dict
+        traders = {}
+
+        # call the populate market function
+        trader_stats = BSE.populate_market(traders_spec, traders, False, False)
+
+        # test the results of the function call are as expected
+        self.assertEqual(trader_stats, {'n_sellers': 8, 'n_buyers': 8})
+        self.assertEqual(len(traders), 16)
 
 ###########################################################################
 # the code to be executed if this is the main program

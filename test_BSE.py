@@ -1,5 +1,6 @@
 import unittest
 import BSE
+import csv
 
 ###############################################################################
 # Tests for the Order class
@@ -241,6 +242,7 @@ class Test_Exchange(unittest.TestCase):
 
     def test_process_order2(self):
 
+        # create an instance of the Exchange class
         exchange = BSE.Exchange()
 
         # create an instance of the Order class
@@ -249,11 +251,15 @@ class Test_Exchange(unittest.TestCase):
         order3 = BSE.Order('S1', 'Ask', 140, 1, 45.0, 30)
         order4 = BSE.Order('S2', 'Ask', 190, 1, 55.0, 40)
 
+        # add orders to the exchange
         exchange.add_order(order1, False)
         exchange.add_order(order2, False)
         exchange.add_order(order4, False)
+
+        # process order
         exchange.process_order2(100.0, order3, False)
 
+        # test that the exchange's state is as expected
         self.assertEqual(exchange.bids.lob, {100: [1, [[25.0, 1, 'B1', 0]]]})
         self.assertEqual(exchange.bids.best_price, 100)
         self.assertEqual(exchange.bids.best_tid, 'B1')
@@ -263,7 +269,33 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(exchange.tape, [{'party2': 'S1', 'party1': 'B2', 'price': 150, 'qty': 1, 'time': 100.0, 'type': 'Trade'}])
 
     def test_tape_dump(self):
-        return
+
+        # create an instance of the Exchange class
+        exchange = BSE.Exchange()
+
+        # create some orders
+        order1 = BSE.Order('B1', 'Bid', 140, 1, 25.0, 10)
+        order2 = BSE.Order('B2', 'Bid', 150, 1, 35.0, 20)
+        order3 = BSE.Order('S1', 'Ask', 130, 1, 45.0, 30)
+        order4 = BSE.Order('S2', 'Ask', 120, 1, 55.0, 40)
+
+        # let the exchange process a series of orders
+        exchange.process_order2(100.0, order1, False)
+        exchange.process_order2(101.0, order2, False)
+        exchange.process_order2(102.0, order3, False)
+        exchange.process_order2(103.0, order4, False)
+
+        exchange.tape_dump('test.csv', 'w', 'keep')
+
+        rows = []
+
+        with open('test.csv') as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                rows.append(row)
+        csvfile.close()
+
+        self.assertEqual(rows, [['102.0', ' 150'], ['103.0', ' 140']])
 
     def test_publish_lob(self):
 

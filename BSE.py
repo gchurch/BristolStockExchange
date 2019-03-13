@@ -1377,7 +1377,7 @@ def experiment3():
 
 # main function contains code to execute the experiments
 def main():
-    experiment3()
+    experiment1()
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":

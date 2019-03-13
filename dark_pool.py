@@ -315,3 +315,435 @@ class Exchange(Orderbook):
                         # print('qid=%d' % self.quote_id)
 
                 return public_data
+
+
+
+##################--Traders below here--#############
+
+
+# Trader superclass
+# all Traders have a trader id, bank balance, blotter, and list of orders to execute
+class Trader:
+
+        def __init__(self, ttype, tid, balance, time):
+                self.ttype = ttype      # what type / strategy this trader is
+                self.tid = tid          # trader unique ID code
+                self.balance = balance  # money in the bank
+                self.blotter = []       # record of trades executed
+                self.orders = []        # customer orders currently being worked (fixed at 1)
+                self.n_quotes = 0       # number of quotes live on LOB
+                self.willing = 1        # used in ZIP etc
+                self.able = 1           # used in ZIP etc
+                self.birthtime = time   # used when calculating age of a trader/strategy
+                self.profitpertime = 0  # profit per unit time
+                self.n_trades = 0       # how many trades has this trader done?
+                self.lastquote = None   # record of what its last quote was
+
+
+        def __str__(self):
+                return '[TID %s type %s balance %s blotter %s orders %s n_trades %s profitpertime %s]' \
+                       % (self.tid, self.ttype, self.balance, self.blotter, self.orders, self.n_trades, self.profitpertime)
+
+
+        def add_order(self, order, verbose):
+                # in this version, trader has at most one order,
+                # if allow more than one, this needs to be self.orders.append(order)
+                if self.n_quotes > 0 :
+                    # this trader has a live quote on the LOB, from a previous customer order
+                    # need response to signal cancellation/withdrawal of that quote
+                    response = 'LOB_Cancel'
+                else:
+                    response = 'Proceed'
+                self.orders = [order]
+                if verbose : print('add_order < response=%s' % response)
+                return response
+
+
+        def del_order(self, order):
+                # this is lazy: assumes each trader has only one customer order with quantity=1, so deleting sole order
+                # CHANGE TO DELETE THE HEAD OF THE LIST AND KEEP THE TAIL
+                self.orders = []
+
+
+        def bookkeep(self, trade, order, verbose, time):
+
+                outstr=""
+                for order in self.orders: outstr = outstr + str(order)
+
+                self.blotter.append(trade)  # add trade record to trader's blotter
+                # NB What follows is **LAZY** -- assumes all orders are quantity=1
+                transactionprice = trade['price']
+                if self.orders[0].otype == 'Bid':
+                        profit = self.orders[0].price - transactionprice
+                else:
+                        profit = transactionprice - self.orders[0].price
+                self.balance += profit
+                self.n_trades += 1
+                self.profitpertime = self.balance/(time - self.birthtime)
+
+                if profit < 0 :
+                        print(profit)
+                        print(trade)
+                        print(order)
+                        sys.exit()
+
+                if verbose: print('%s profit=%d balance=%d profit/time=%d' % (outstr, profit, self.balance, self.profitpertime))
+                self.del_order(order)  # delete the order
+
+
+        # specify how trader responds to events in the market
+        # this is a null action, expect it to be overloaded by specific algos
+        def respond(self, time, lob, trade, verbose):
+                return None
+
+        # specify how trader mutates its parameter values
+        # this is a null action, expect it to be overloaded by specific algos
+        def mutate(self, time, lob, trade, verbose):
+                return None
+
+
+# Trader subclass Giveaway
+# even dumber than a ZI-U: just give the deal away
+# (but never makes a loss)
+class Trader_Giveaway(Trader):
+
+        def getorder(self, time, countdown, lob):
+                if len(self.orders) < 1:
+                        order = None
+                else:
+                        quoteprice = self.orders[0].price
+                        order = Order(self.tid,
+                                    self.orders[0].otype,
+                                    quoteprice,
+                                    self.orders[0].qty,
+                                    time, lob['QID'])
+                        self.lastquote=order
+                return order
+
+
+
+##########################---Below lies the experiment/test-rig---##################
+
+
+
+# trade_stats()
+# dump CSV statistics on exchange data and trader population to file for later analysis
+# this makes no assumptions about the number of types of traders, or
+# the number of traders of any one type -- allows either/both to change
+# between successive calls, but that does make it inefficient as it has to
+# re-analyse the entire set of traders on each call
+def trade_stats(expid, traders, dumpfile, time, lob):
+        # calculate the total balance sum for each type of trader and the number of each type of trader
+        trader_types = {}
+        n_traders = len(traders)
+        for t in traders:
+                ttype = traders[t].ttype
+                if ttype in trader_types.keys():
+                        t_balance = trader_types[ttype]['balance_sum'] + traders[t].balance
+                        n = trader_types[ttype]['n'] + 1
+                else:
+                        t_balance = traders[t].balance
+                        n = 1
+                trader_types[ttype] = {'n':n, 'balance_sum':t_balance}
+
+        # write the trial number followed by the time
+        dumpfile.write('%s, %06d, ' % (expid, time))
+        # for each type of trader write: the type name, the total balance sum of all traders of that type,
+        # the number of traders of that type, and then the average balance of each trader of that type
+        for ttype in sorted(list(trader_types.keys())):
+                n = trader_types[ttype]['n']
+                s = trader_types[ttype]['balance_sum']
+                dumpfile.write('%s, %d, %d, %f, ' % (ttype, s, n, s / float(n)))
+
+        # write the best bid on the lob
+        if lob['bids']['best'] != None :
+                dumpfile.write('%d, ' % (lob['bids']['best']))
+        else:
+                dumpfile.write('N, ')
+        # write the best ask on the lob
+        if lob['asks']['best'] != None :
+                dumpfile.write('%d, ' % (lob['asks']['best']))
+        else:
+                dumpfile.write('N, ')
+        # write a new line
+        dumpfile.write('\n');
+
+
+
+
+
+# create a bunch of traders from traders_spec
+# returns tuple (n_buyers, n_sellers)
+# optionally shuffles the pack of buyers and the pack of sellers
+def populate_market(traders_spec, traders, shuffle, verbose):
+
+        # given a trader type and a name, create the trader
+        def trader_type(robottype, name):
+                if robottype == 'GVWY':
+                        return Trader_Giveaway('GVWY', name, 0.00, 0)
+                elif robottype == 'ZIC':
+                        return Trader_ZIC('ZIC', name, 0.00, 0)
+                elif robottype == 'SHVR':
+                        return Trader_Shaver('SHVR', name, 0.00, 0)
+                elif robottype == 'SNPR':
+                        return Trader_Sniper('SNPR', name, 0.00, 0)
+                elif robottype == 'ZIP':
+                        return Trader_ZIP('ZIP', name, 0.00, 0)
+                else:
+                        sys.exit('FATAL: don\'t know robot type %s\n' % robottype)
+
+
+        def shuffle_traders(ttype_char, n, traders):
+                for swap in range(n):
+                        t1 = (n - 1) - swap
+                        t2 = random.randint(0, t1)
+                        t1name = '%c%02d' % (ttype_char, t1)
+                        t2name = '%c%02d' % (ttype_char, t2)
+                        traders[t1name].tid = t2name
+                        traders[t2name].tid = t1name
+                        temp = traders[t1name]
+                        traders[t1name] = traders[t2name]
+                        traders[t2name] = temp
+
+        # create the buyers from the specification and add them to the traders dictionary
+        n_buyers = 0
+        for bs in traders_spec['buyers']:
+                ttype = bs[0]
+                for b in range(bs[1]):
+                        tname = 'B%02d' % n_buyers  # buyer i.d. string
+                        traders[tname] = trader_type(ttype, tname)
+                        n_buyers = n_buyers + 1
+
+        if n_buyers < 1:
+                sys.exit('FATAL: no buyers specified\n')
+
+        if shuffle: shuffle_traders('B', n_buyers, traders)
+
+        # create the sellers from the specification and add them to the traders dictionary
+        n_sellers = 0
+        for ss in traders_spec['sellers']:
+                ttype = ss[0]
+                for s in range(ss[1]):
+                        tname = 'S%02d' % n_sellers  # buyer i.d. string
+                        traders[tname] = trader_type(ttype, tname)
+                        n_sellers = n_sellers + 1
+
+        if n_sellers < 1:
+                sys.exit('FATAL: no sellers specified\n')
+
+        if shuffle: shuffle_traders('S', n_sellers, traders)
+
+        # print the information about each trader
+        if verbose :
+                for t in range(n_buyers):
+                        bname = 'B%02d' % t
+                        print(traders[bname])
+                for t in range(n_sellers):
+                        bname = 'S%02d' % t
+                        print(traders[bname])
+
+
+        return {'n_buyers':n_buyers, 'n_sellers':n_sellers}
+
+
+
+# customer_orders(): allocate orders to traders
+# parameter "os" is order schedule
+# os['timemode'] is either 'periodic', 'drip-fixed', 'drip-jitter', or 'drip-poisson'
+# os['interval'] is number of seconds for a full cycle of replenishment
+# drip-poisson sequences will be normalised to ensure time of last replenishment <= interval
+# parameter "pending" is the list of future orders (if this is empty, generates a new one from os)
+# revised "pending" is the returned value
+#
+# also returns a list of "cancellations": trader-ids for those traders who are now working a new order and hence
+# need to kill quotes already on LOB from working previous order
+#
+#
+# if a supply or demand schedule mode is "random" and more than one range is supplied in ranges[],
+# then each time a price is generated one of the ranges is chosen equiprobably and
+# the price is then generated uniform-randomly from that range
+#
+# if len(range)==2, interpreted as min and max values on the schedule, specifying linear supply/demand curve
+# if len(range)==3, first two vals are min & max, third value should be a function that generates a dynamic price offset
+#                   -- the offset value applies equally to the min & max, so gradient of linear sup/dem curve doesn't vary
+# if len(range)==4, the third value is function that gives dynamic offset for schedule min,
+#                   and fourth is a function giving dynamic offset for schedule max, so gradient of sup/dem linear curve can vary
+#
+# the interface on this is a bit of a mess... could do with refactoring
+
+
+def customer_orders(time, last_update, traders, trader_stats, os, pending, verbose):
+
+
+        def sysmin_check(price):
+                if price < bse_sys_minprice:
+                        print('WARNING: price < bse_sys_min -- clipped')
+                        price = bse_sys_minprice
+                return price
+
+
+        def sysmax_check(price):
+                if price > bse_sys_maxprice:
+                        print('WARNING: price > bse_sys_max -- clipped')
+                        price = bse_sys_maxprice
+                return price
+
+        
+        # return the order price for trader i out of n by using the selected mode
+        def getorderprice(i, sched, n, mode, issuetime):
+                # does the first schedule range include optional dynamic offset function(s)?
+                if len(sched[0]) > 2:
+                        offsetfn = sched[0][2]
+                        if callable(offsetfn):
+                                # same offset for min and max
+                                offset_min = offsetfn(issuetime)
+                                offset_max = offset_min
+                        else:
+                                sys.exit('FAIL: 3rd argument of sched in getorderprice() not callable')
+                        if len(sched[0]) > 3:
+                                # if second offset function is specfied, that applies only to the max value
+                                offsetfn = sched[0][3]
+                                if callable(offsetfn):
+                                        # this function applies to max
+                                        offset_max = offsetfn(issuetime)
+                                else:
+                                        sys.exit('FAIL: 4th argument of sched in getorderprice() not callable')
+                else:
+                        offset_min = 0.0
+                        offset_max = 0.0
+
+                pmin = sysmin_check(offset_min + min(sched[0][0], sched[0][1]))
+                pmax = sysmax_check(offset_max + max(sched[0][0], sched[0][1]))
+                prange = pmax - pmin
+                stepsize = prange / (n - 1)
+                halfstep = round(stepsize / 2.0)
+
+                if mode == 'fixed':
+                        orderprice = pmin + int(i * stepsize) 
+                elif mode == 'jittered':
+                        orderprice = pmin + int(i * stepsize) + random.randint(-halfstep, halfstep)
+                elif mode == 'random':
+                        if len(sched) > 1:
+                                # more than one schedule: choose one equiprobably
+                                s = random.randint(0, len(sched) - 1)
+                                pmin = sysmin_check(min(sched[s][0], sched[s][1]))
+                                pmax = sysmax_check(max(sched[s][0], sched[s][1]))
+                        orderprice = random.randint(pmin, pmax)
+                else:
+                        sys.exit('FAIL: Unknown mode in schedule')
+                orderprice = sysmin_check(sysmax_check(orderprice))
+                return orderprice
+
+
+        # return a dictionary containing the issue times of orders according to the selected issuing mode
+        def getissuetimes(n_traders, mode, interval, shuffle, fittointerval):
+                interval = float(interval)
+                if n_traders < 1:
+                        sys.exit('FAIL: n_traders < 1 in getissuetime()')
+                elif n_traders == 1:
+                        tstep = interval
+                else:
+                        tstep = interval / (n_traders - 1)
+                arrtime = 0
+                issuetimes = []
+                for t in range(n_traders):
+                        if mode == 'periodic':
+                                arrtime = interval
+                        elif mode == 'drip-fixed':
+                                arrtime = t * tstep
+                        elif mode == 'drip-jitter':
+                                arrtime = t * tstep + tstep * random.random()
+                        elif mode == 'drip-poisson':
+                                # poisson requires a bit of extra work
+                                interarrivaltime = random.expovariate(n_traders / interval)
+                                arrtime += interarrivaltime
+                        else:
+                                sys.exit('FAIL: unknown time-mode in getissuetimes()')
+                        issuetimes.append(arrtime) 
+                        
+                # at this point, arrtime is the last arrival time
+                if fittointerval and ((arrtime > interval) or (arrtime < interval)):
+                        # generated sum of interarrival times longer than the interval
+                        # squish them back so that last arrival falls at t=interval
+                        for t in range(n_traders):
+                                issuetimes[t] = interval * (issuetimes[t] / arrtime)
+                # optionally randomly shuffle the times
+                if shuffle:
+                        for t in range(n_traders):
+                                i = (n_traders - 1) - t
+                                j = random.randint(0, i)
+                                tmp = issuetimes[i]
+                                issuetimes[i] = issuetimes[j]
+                                issuetimes[j] = tmp
+                return issuetimes
+        
+
+        # return a tuple containing the current ranges and stepmode      
+        def getschedmode(time, os):
+                got_one = False
+                for sched in os:
+                        if (sched['from'] <= time) and (time < sched['to']) :
+                                # within the timezone for this schedule
+                                schedrange = sched['ranges']
+                                mode = sched['stepmode']
+                                got_one = True
+                                exit  # jump out the loop -- so the first matching timezone has priority over any others
+                if not got_one:
+                        sys.exit('Fail: time=%5.2f not within any timezone in os=%s' % (time, os))
+                return (schedrange, mode)
+        
+
+        n_buyers = trader_stats['n_buyers']
+        n_sellers = trader_stats['n_sellers']
+
+        shuffle_times = True
+
+        cancellations = []
+
+        # if there are no pending orders
+        if len(pending) < 1:
+                # list of pending (to-be-issued) customer orders is empty, so generate a new one
+                new_pending = []
+
+                # add the demand side (buyers) customer orders to the list of pending orders
+                issuetimes = getissuetimes(n_buyers, os['timemode'], os['interval'], shuffle_times, True)
+                ordertype = 'Bid'
+                (sched, mode) = getschedmode(time, os['dem'])             
+                for t in range(n_buyers):
+                        issuetime = time + issuetimes[t]
+                        tname = 'B%02d' % t
+                        orderprice = getorderprice(t, sched, n_buyers, mode, issuetime)
+                        order = Order(tname, ordertype, orderprice, 1, issuetime, -3.14)
+                        new_pending.append(order)
+                        
+                # add the supply side (sellers) customer orders to the list of pending orders
+                issuetimes = getissuetimes(n_sellers, os['timemode'], os['interval'], shuffle_times, True)
+                ordertype = 'Ask'
+                (sched, mode) = getschedmode(time, os['sup'])
+                for t in range(n_sellers):
+                        issuetime = time + issuetimes[t]
+                        tname = 'S%02d' % t
+                        orderprice = getorderprice(t, sched, n_sellers, mode, issuetime)
+                        order = Order(tname, ordertype, orderprice, 1, issuetime, -3.14)
+                        new_pending.append(order)
+        # if there are some pending orders
+        else:
+                # there are pending future orders: issue any whose timestamp is in the past
+                new_pending = []
+                for order in pending:
+                        if order.time < time:
+                                # this order should have been issued by now
+                                # issue it to the trader
+                                tname = order.tid
+                                response = traders[tname].add_order(order, verbose)
+                                if verbose: print('Customer order: %s %s' % (response, order) )
+                                # if issuing the order causes the trader to cancel their current order then add
+                                # the traders name to the cancellations list
+                                if response == 'LOB_Cancel' :
+                                    cancellations.append(tname)
+                                    if verbose: print('Cancellations: %s' % (cancellations))
+                                # and then don't add it to new_pending (i.e., delete it)
+                        else:
+                                # this order stays on the pending list
+                                new_pending.append(order)
+        return [new_pending, cancellations]

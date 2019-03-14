@@ -226,6 +226,7 @@ class Exchange(Orderbook):
                 # receive an order and either add it to the relevant LOB (ie treat as limit order)
                 # or if it crosses the best counterparty offer, execute it (treat as a market order)
                 oprice = order.price
+
                 counterparty = None
                 [qid, response] = self.add_order(order, verbose)  # add it to the order lists -- overwriting any previous order
                 order.qid = qid
@@ -308,7 +309,7 @@ class Exchange(Orderbook):
                 public_data['QID'] = self.quote_id
                 public_data['tape'] = self.tape
                 if verbose:
-                        print('publish_lob: t=%d' % time)
+                        print('publish_lob: t=%.2f' % time)
                         print('BID_lob=%s' % public_data['bids']['lob'])
                         # print('best=%s; worst=%s; n=%s ' % (self.bids.best_price, self.bids.worstprice, self.bids.n_orders))
                         print('ASK_lob=%s' % public_data['asks']['lob'])
@@ -747,3 +748,137 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                                 # this order stays on the pending list
                                 new_pending.append(order)
         return [new_pending, cancellations]
+
+# one session in the market
+def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dumpfile, dump_each_trade):
+
+        # variables which dictate what information is printed to the output
+        verbose = False
+        traders_verbose = False
+        orders_verbose = False
+        lob_verbose = True
+        process_verbose = False
+        respond_verbose = False
+        bookkeep_verbose = False
+
+
+        # initialise the exchange
+        exchange = Exchange()
+
+
+        # create a bunch of traders
+        traders = {}
+        trader_stats = populate_market(trader_spec, traders, True, traders_verbose)
+
+
+        # timestep set so that can process all traders in one second
+        # NB minimum interarrival time of customer orders may be much less than this!! 
+        timestep = 1.0 / float(trader_stats['n_buyers'] + trader_stats['n_sellers'])
+        
+        duration = float(endtime - starttime)
+
+        last_update = -1.0
+
+        time = starttime
+
+        # this list contains all the pending customer orders that are yet to happen
+        pending_cust_orders = []
+
+        print('\n%s;  ' % (sess_id))
+
+        while time < endtime:
+
+                # how much time left, as a percentage?
+                time_left = (endtime - time) / duration
+
+                if verbose: print('%s; t=%08.2f (%4.1f/100) ' % (sess_id, time, time_left*100))
+
+                trade = None
+
+                # update the pending customer orders list by generating new orders if none remain and issue 
+                # any customer orders that were scheduled in the past. Note these are customer orders being
+                # issued to traders, quotes will not be put onto the exchange yet
+                [pending_cust_orders, kills] = customer_orders(time, last_update, traders, trader_stats,
+                                                 order_schedule, pending_cust_orders, orders_verbose)
+
+                # if any newly-issued customer orders mean quotes on the LOB need to be cancelled, kill them
+                if len(kills) > 0 :
+                        if verbose : print('Kills: %s' % (kills))
+                        for kill in kills :
+                                if verbose : print('lastquote=%s' % traders[kill].lastquote)
+                                if traders[kill].lastquote != None :
+                                        if verbose : print('Killing order %s' % (str(traders[kill].lastquote)))
+                                        exchange.del_order(time, traders[kill].lastquote, verbose)
+
+
+                # get a limit-order quote (or None) from a randomly chosen trader
+                tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
+                order = traders[tid].getorder(time, time_left, exchange.publish_lob(time, lob_verbose))
+
+                if verbose: print('Trader Quote: %s' % (order))
+
+                # if the randomly selected trader gives us a quote, then add it to the exchange
+                if order != None:
+                        if order.otype == 'Ask' and order.price < traders[tid].orders[0].price: sys.exit('Bad ask')
+                        if order.otype == 'Bid' and order.price > traders[tid].orders[0].price: sys.exit('Bad bid')
+                        # send order to exchange
+                        traders[tid].n_quotes = 1
+                        result = exchange.add_order(order, process_verbose)
+                time = time + timestep
+
+
+        # end of an experiment -- dump the tape
+        exchange.tape_dump('transactions.csv', 'w', 'keep')
+
+
+        # write trade_stats for this experiment NB end-of-session summary only
+        trade_stats(sess_id, traders, dumpfile, time, exchange.publish_lob(time, lob_verbose))
+
+
+
+
+def experiment1():
+
+    start_time = 0.0
+    end_time = 20.0
+    duration = end_time - start_time
+
+    range1 = (75, 125)
+    supply_schedule = [ {'from':start_time, 'to':end_time, 'ranges':[range1], 'stepmode':'fixed'}
+                      ]
+
+    range1 = (75, 125)
+    demand_schedule = [ {'from':start_time, 'to':end_time, 'ranges':[range1], 'stepmode':'fixed'}
+                      ]
+
+    order_sched = {'sup':supply_schedule, 'dem':demand_schedule,
+                   'interval':10, 'timemode':'drip-fixed'}
+
+    buyers_spec = [('GVWY',5)]
+    sellers_spec = buyers_spec
+    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
+
+    n_trials = 1
+    tdump=open('avg_balance.csv','w')
+    trial = 1
+    if n_trials > 1:
+            dump_all = False
+    else:
+            dump_all = True
+            
+    while (trial<(n_trials+1)):
+            trial_id = 'trial%04d' % trial
+            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
+            tdump.flush()
+            trial = trial + 1
+    tdump.close()
+
+    sys.exit('Done Now')
+
+
+def main():
+    experiment1()
+
+# the main function is called if BSE.py is run as the main program
+if __name__ == "__main__":
+    main()

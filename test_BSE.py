@@ -336,6 +336,8 @@ class Test_Exchange(unittest.TestCase):
         # test that the publish_lob function produces the expected return value
         self.assertEqual(exchange.publish_lob(104.0, False), {'QID': 4, 'tape': [], 'bids': {'lob': [[100, 1], [130, 1]], 'worst': 1, 'best': 130, 'n': 2}, 'asks': {'lob': [[140, 1], [170, 1]], 'worst': 1000, 'best': 140, 'n': 2}, 'time': 104.0})  
 
+#######################################################################################
+# tests for various functions
 
 class Test_Functions(unittest.TestCase):
 

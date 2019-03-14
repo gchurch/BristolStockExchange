@@ -396,6 +396,72 @@ class Test_Functions(unittest.TestCase):
         self.assertEqual(trader_stats, {'n_sellers': 8, 'n_buyers': 8})
         self.assertEqual(len(traders), 16)
 
+#####################################################################################
+# testing Trader class
+
+class Test_Trader(unittest.TestCase):
+
+    def test_init(self):
+
+        # define argument values
+    	ttype = 'GVWY'
+        tid = 5
+        balance = 0.5
+        time = 5.0
+
+        # create instance of the Trader class
+        trader = dark_pool.Trader(ttype, tid, balance, time)
+
+        # test that the initialisation performs as expected
+        self.assertEqual(trader.ttype, ttype)
+        self.assertEqual(trader.tid, tid)
+        self.assertEqual(trader.balance, balance)
+        self.assertEqual(trader.blotter, [])
+        self.assertEqual(trader.orders, [])
+        self.assertEqual(trader.n_quotes, 0)
+        self.assertEqual(trader.willing, 1)
+        self.assertEqual(trader.able, 1)
+        self.assertEqual(trader.birthtime, time)
+        self.assertEqual(trader.profitpertime, 0)
+        self.assertEqual(trader.n_trades, 0)
+        self.assertEqual(trader.lastquote, None)
+
+
+    def test_add_order(self):
+
+    	# create instance of the Trader class
+        trader = dark_pool.Trader('GVWY', 5, 0.5, 5.0)
+
+        # create instance of the Order class
+        order1 = dark_pool.Order('B1', 'Bid', 100, 1, 25.0, 10)
+
+        # call the add_order function
+        response = trader.add_order(order1, False)
+
+        # test the results are as expected
+        self.assertEqual(len(trader.orders), 1)
+        self.assertEqual(response, "Proceed")
+
+    def test_del_order(self):
+        
+        # create trader
+        trader = dark_pool.Trader('GVWY', 5, 0.5, 5.0)
+
+        # create order
+        order = dark_pool.Order('B1', 'Bid', 100, 1, 25.0, 10)
+
+        # call the add_order function
+        trader.add_order(order, False)
+
+        # test that the length of the traders order member variable is 1
+        self.assertEqual(len(trader.orders), 1)
+
+        # call the del_order function
+        trader.del_order(order)
+
+        # test that the length of the traders order member variable is 0
+        self.assertEqual(len(trader.orders), 0)
+
 
 ###########################################################################
 # the code to be executed if this is the main program

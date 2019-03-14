@@ -281,7 +281,10 @@ class Exchange(Orderbook):
                 else:
                         return None
 
-
+        # this function executes the uncross event
+        # PMP is the Primary market Midpoint Price, i.e. the midpoint price on BSE
+        def uncross(self, PMP):
+            return
 
         def tape_dump(self, fname, fmode, tmode):
                 dumpfile = open(fname, fmode)
@@ -714,7 +717,9 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         issuetime = time + issuetimes[t]
                         tname = 'B%02d' % t
                         orderprice = getorderprice(t, sched, n_buyers, mode, issuetime)
-                        order = Order(tname, ordertype, orderprice, 1, issuetime, -3.14)
+                        # generating a random order quantity
+                        quantity = random.randint(1,10)
+                        order = Order(tname, ordertype, orderprice, quantity, issuetime, -3.14)
                         new_pending.append(order)
                         
                 # add the supply side (sellers) customer orders to the list of pending orders
@@ -725,7 +730,9 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         issuetime = time + issuetimes[t]
                         tname = 'S%02d' % t
                         orderprice = getorderprice(t, sched, n_sellers, mode, issuetime)
-                        order = Order(tname, ordertype, orderprice, 1, issuetime, -3.14)
+                        # generating a random order quantity
+                        quantity = random.randint(1,10)
+                        order = Order(tname, ordertype, orderprice, quantity, issuetime, -3.14)
                         new_pending.append(order)
         # if there are some pending orders
         else:

@@ -12,17 +12,16 @@ ticksize = 1  # minimum change in price, in cents/pennies
 # an Order/quote has a trader id, a type (buy/sell) price, quantity, timestamp, and unique i.d.
 class Order:
 
-        def __init__(self, tid, otype, price, qty, time, qid):
+        def __init__(self, tid, otype, qty, time, qid):
                 self.tid = tid      # trader i.d.
                 self.otype = otype  # order type
-                self.price = price  # price
                 self.qty = qty      # quantity
                 self.time = time    # timestamp
                 self.qid = qid      # quote i.d. (unique to each quote)
 
         def __str__(self):
-                return '[%s %s P=%03d Q=%s T=%5.2f QID:%d]' % \
-                       (self.tid, self.otype, self.price, self.qty, self.time, self.qid)
+                return '[%s %s Q=%s T=%5.2f QID:%d]' % \
+                       (self.tid, self.otype, self.qty, self.time, self.qid)
 
 
 
@@ -256,10 +255,8 @@ class Trader_Giveaway(Trader):
                 if len(self.orders) < 1:
                         order = None
                 else:
-                        quoteprice = self.orders[0].price
                         order = Order(self.tid,
                                     self.orders[0].otype,
-                                    quoteprice,
                                     self.orders[0].qty,
                                     time, lob['QID'])
                         self.lastquote=order
@@ -548,7 +545,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         orderprice = getorderprice(t, sched, n_buyers, mode, issuetime)
                         # generating a random order quantity
                         quantity = random.randint(1,10)
-                        order = Order(tname, ordertype, orderprice, quantity, issuetime, -3.14)
+                        order = Order(tname, ordertype, quantity, issuetime, -3.14)
                         new_pending.append(order)
                         
                 # add the supply side (sellers) customer orders to the list of pending orders
@@ -561,7 +558,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         orderprice = getorderprice(t, sched, n_sellers, mode, issuetime)
                         # generating a random order quantity
                         quantity = random.randint(1,10)
-                        order = Order(tname, ordertype, orderprice, quantity, issuetime, -3.14)
+                        order = Order(tname, ordertype, quantity, issuetime, -3.14)
                         new_pending.append(order)
         # if there are some pending orders
         else:
@@ -655,8 +652,6 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
                 # if the randomly selected trader gives us a quote, then add it to the exchange
                 if order != None:
-                        if order.otype == 'Ask' and order.price < traders[tid].orders[0].price: sys.exit('Bad ask')
-                        if order.otype == 'Bid' and order.price > traders[tid].orders[0].price: sys.exit('Bad bid')
                         # send order to exchange
                         traders[tid].n_quotes = 1
                         result = exchange.add_order(order, process_verbose)

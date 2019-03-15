@@ -12,16 +12,14 @@ class Test_Order(unittest.TestCase):
         # create an instance of the Order class
         tid = 'B5'
         otype = 'Bid'
-        price = 100
         qty = 1
         time = 25.0
         qid = 10
-        order = dark_pool.Order(tid, otype, price, qty, time, qid)
+        order = dark_pool.Order(tid, otype, qty, time, qid)
 
         # test all initialised member variables
         self.assertEqual(order.tid, tid)
         self.assertEqual(order.otype, otype)
-        self.assertEqual(order.price, price)
         self.assertEqual(order.qty, qty)
         self.assertEqual(order.time, time)
         self.assertEqual(order.qid, qid)
@@ -52,8 +50,8 @@ class Test_Orderbook_half(unittest.TestCase):
         orderbook_half = dark_pool.Orderbook_half(booktype)
 
         # create instances of the Order class
-        order1 = dark_pool.Order('B1', 'Bid', 100, 1, 25.0, 10)
-        order2 = dark_pool.Order('B2', 'Bid', 150, 1, 35.0, 20)
+        order1 = dark_pool.Order('B1', 'Bid', 1, 25.0, 10)
+        order2 = dark_pool.Order('B2', 'Bid', 1, 35.0, 20)
 
         # add the orders to the order book
         orderbook_half.book_add(order1)
@@ -74,8 +72,8 @@ class Test_Orderbook_half(unittest.TestCase):
         orderbook_half = dark_pool.Orderbook_half(booktype)
 
         # create instances of the Order class
-        order1 = dark_pool.Order('B1', 'Bid', 100, 1, 25.0, 10)
-        order2 = dark_pool.Order('B2', 'Bid', 150, 1, 35.0, 20)
+        order1 = dark_pool.Order('B1', 'Bid', 1, 25.0, 10)
+        order2 = dark_pool.Order('B2', 'Bid', 1, 35.0, 20)
 
         # add the orders to the order book
         return_value1 = orderbook_half.book_add(order1)
@@ -98,8 +96,8 @@ class Test_Orderbook_half(unittest.TestCase):
         orderbook_half = dark_pool.Orderbook_half(booktype)
 
         # create instances of the Order class
-        order1 = dark_pool.Order('B1', 'Bid', 100, 1, 25.0, 10)
-        order2 = dark_pool.Order('B2', 'Bid', 150, 1, 35.0, 20)
+        order1 = dark_pool.Order('B1', 'Bid', 1, 25.0, 10)
+        order2 = dark_pool.Order('B2', 'Bid', 1, 35.0, 20)
 
         # add the order to the order book and then delete it
         orderbook_half.book_add(order1)
@@ -154,10 +152,10 @@ class Test_Exchange(unittest.TestCase):
         exchange = dark_pool.Exchange()
 
         # create instances of the Order class
-        order1 = dark_pool.Order('B1', 'Bid', 100, 1, 25.0, 10)
-        order2 = dark_pool.Order('B2', 'Bid', 150, 1, 35.0, 20)
-        order3 = dark_pool.Order('S1', 'Ask', 140, 1, 45.0, 30)
-        order4 = dark_pool.Order('S2', 'Ask', 190, 1, 55.0, 40)
+        order1 = dark_pool.Order('B1', 'Bid', 1, 25.0, 10)
+        order2 = dark_pool.Order('B2', 'Bid', 1, 35.0, 20)
+        order3 = dark_pool.Order('S1', 'Ask', 1, 45.0, 30)
+        order4 = dark_pool.Order('S2', 'Ask', 1, 55.0, 40)
 
         # add the orders to the exchange
         return_value1 = exchange.add_order(order1, False)
@@ -185,10 +183,10 @@ class Test_Exchange(unittest.TestCase):
         exchange = dark_pool.Exchange()
 
         # create instances of the Order class
-        order1 = dark_pool.Order('B1', 'Bid', 100, 1, 25.0, 10)
-        order2 = dark_pool.Order('B2', 'Bid', 150, 1, 35.0, 20)
-        order3 = dark_pool.Order('S1', 'Ask', 140, 1, 45.0, 30)
-        order4 = dark_pool.Order('S2', 'Ask', 190, 1, 55.0, 40)
+        order1 = dark_pool.Order('B1', 'Bid', 1, 25.0, 10)
+        order2 = dark_pool.Order('B2', 'Bid', 1, 35.0, 20)
+        order3 = dark_pool.Order('S1', 'Ask', 1, 45.0, 30)
+        order4 = dark_pool.Order('S2', 'Ask', 1, 55.0, 40)
 
         # add the orders to the exchange
         exchange.add_order(order1, False)
@@ -265,7 +263,7 @@ class Test_Trader(unittest.TestCase):
         trader = dark_pool.Trader('GVWY', 5, 0.5, 5.0)
 
         # create instance of the Order class
-        order1 = dark_pool.Order('B1', 'Bid', 100, 1, 25.0, 10)
+        order1 = dark_pool.Order('B1', 'Bid', 1, 25.0, 10)
 
         # call the add_order function
         response = trader.add_order(order1, False)
@@ -280,7 +278,7 @@ class Test_Trader(unittest.TestCase):
         trader = dark_pool.Trader('GVWY', 5, 0.5, 5.0)
 
         # create order
-        order = dark_pool.Order('B1', 'Bid', 100, 1, 25.0, 10)
+        order = dark_pool.Order('B1', 'Bid', 1, 25.0, 10)
 
         # call the add_order function
         trader.add_order(order, False)

@@ -12,81 +12,79 @@ ticksize = 1  # minimum change in price, in cents/pennies
 # an Order/quote has a trader id, a type (buy/sell) price, quantity, timestamp, and unique i.d.
 class Order:
 
-        def __init__(self, tid, otype, qty, MES, time):
-                self.tid = tid      # trader i.d.
-                self.otype = otype  # order type
-                self.qty = qty      # quantity
-                self.MES = MES      # minimum execution size
-                self.time = time    # timestamp
-                self.qid = None      # quote i.d. (unique to each quote)
+    def __init__(self, tid, otype, qty, MES, time):
+        self.tid = tid      # trader i.d.
+        self.otype = otype  # order type
+        self.qty = qty      # quantity
+        self.MES = MES      # minimum execution size
+        self.time = time    # timestamp
+        self.qid = None      # quote i.d. (unique to each quote)
 
-        def __str__(self):
-                return '[%s %s Q=%s MES=%s T=%5.2f QID:%d]' % \
-                       (self.tid, self.otype, self.qty, self.MES, self.time, self.qid)
-
+    def __str__(self):
+        return '[%s %s Q=%s MES=%s T=%5.2f QID:%d]' % (self.tid, self.otype, self.qty, self.MES, self.time, self.qid)
 
 
 # Orderbook_half is one side of the book: a list of bids or a list of asks, each sorted best-first
 
 class Orderbook_half:
 
-        def __init__(self, booktype):
-                # booktype: bids or asks?
-                self.booktype = booktype
-                # a dictionary of the the original orders placed in the orderbook
-                self.orders = {}
-                # list of orders received, sorted by size and then time
-                self.order_book = []
-                # summary stats
-                self.n_orders = 0  # how many orders?
+    def __init__(self, booktype):
+        # booktype: bids or asks?
+        self.booktype = booktype
+        # a dictionary of the the original orders placed in the orderbook
+        self.orders = {}
+        # list of orders received, sorted by size and then time
+        self.order_book = []
+        # summary stats
+        self.n_orders = 0  # how many orders?
 
-        # find the position to insert the order into the order_book list such that the order_book list maintains
-        # it's ordering of (size,time)
-        def find_order_book_position(self, order):
-            quantity = order.qty
-            time = order.time
-            position = 0
-            for i in range(0,len(self.order_book)):
-                if quantity > self.order_book[i].qty or (quantity == self.order_book[i].qty and time < self.order_book[i].time):
-                    break
-                else:
-                    position += 1
-            return position
-
-        # add the order to the orders dictionary and to the order_book list
-        def book_add(self, order):
-            
-            # add the order to the orders dictionary
-            n_orders = self.n_orders
-            self.orders[order.tid] = order
-            self.n_orders = len(self.orders)
-
-            # add the order to order_book list
-            position = self.find_order_book_position(order)
-            self.order_book.insert(position,order)
-
-            # return whether this was an addition or an overwrite
-            if n_orders != self.n_orders :
-                return('Addition')
+    # find the position to insert the order into the order_book list such that the order_book list maintains
+    # it's ordering of (size,time)
+    def find_order_book_position(self, order):
+        quantity = order.qty
+        time = order.time
+        position = 0
+        for i in range(0,len(self.order_book)):
+            if quantity > self.order_book[i].qty or (quantity == self.order_book[i].qty and time < self.order_book[i].time):
+                break
             else:
-                return('Overwrite')
+                position += 1
+        return position
 
-        def book_del(self, order):
+    # add the order to the orders dictionary and to the order_book list
+    def book_add(self, order):
+        
+        # add the order to the orders dictionary
+        n_orders = self.n_orders
+        self.orders[order.tid] = order
+        self.n_orders = len(self.orders)
+
+        # add the order to order_book list
+        position = self.find_order_book_position(order)
+        self.order_book.insert(position,order)
+
+        # return whether this was an addition or an overwrite
+        if n_orders != self.n_orders :
+            return('Addition')
+        else:
+            return('Overwrite')
+
+    def book_del(self, order):
                 
-                if self.orders.get(order.tid) != None :
-                        del(self.orders[order.tid])
-                        self.n_orders = len(self.orders)
+        if self.orders.get(order.tid) != None :
+            del(self.orders[order.tid])
+            self.n_orders = len(self.orders)
 
 
 # Orderbook for a single instrument: list of bids and list of asks
 
 class Orderbook(Orderbook_half):
 
-        def __init__(self):
-                self.buy_side = Orderbook_half('Buy')
-                self.sell_side = Orderbook_half('Sell')
-                self.tape = []
-                self.quote_id = 0  #unique ID code for each quote accepted onto the book
+    def __init__(self):
+        self.buy_side = Orderbook_half('Buy')
+        self.sell_side = Orderbook_half('Sell')
+        self.tape = []
+        self.quote_id = 0  #unique ID code for each quote accepted onto the book
 
 
 
@@ -94,75 +92,75 @@ class Orderbook(Orderbook_half):
 
 class Exchange(Orderbook):
 
-        def add_order(self, order, verbose):
-                # add a quote/order to the exchange and update all internal records; return unique i.d.
-                order.qid = self.quote_id
-                self.quote_id = order.qid + 1
-                # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.qid, self.quote_id))
-                tid = order.tid
-                if order.otype == 'Buy':
-                        response=self.buy_side.book_add(order)
-                else:
-                        response=self.sell_side.book_add(order)
-                return [order.qid, response]
+    def add_order(self, order, verbose):
+        # add a quote/order to the exchange and update all internal records; return unique i.d.
+        order.qid = self.quote_id
+        self.quote_id = order.qid + 1
+        # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.qid, self.quote_id))
+        tid = order.tid
+        if order.otype == 'Buy':
+            response=self.buy_side.book_add(order)
+        else:
+            response=self.sell_side.book_add(order)
+            return [order.qid, response]
 
 
-        def del_order(self, time, order, verbose):
-                # delete a trader's quot/order from the exchange, update all internal records
-                tid = order.tid
-                if order.otype == 'Buy':
-                        self.buy_side.book_del(order)
-                        cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
-                        self.tape.append(cancel_record)
+    def del_order(self, time, order, verbose):
+        # delete a trader's quot/order from the exchange, update all internal records
+        tid = order.tid
+        if order.otype == 'Buy':
+            self.buy_side.book_del(order)
+            cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
+            self.tape.append(cancel_record)
 
-                elif order.otype == 'Sell':
-                        self.sell_side.book_del(order)
-                        cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
-                        self.tape.append(cancel_record)
-                else:
-                        # neither bid nor ask?
-                        sys.exit('bad order type in del_quote()')
-
-
-        # this function executes the uncross event
-        # PMP is the Primary market Midpoint Price, i.e. the midpoint price on BSE
-        def uncross(self, PMP):
-            return
-
-        def tape_dump(self, fname, fmode, tmode):
-                dumpfile = open(fname, fmode)
-                for tapeitem in self.tape:
-                        if tapeitem['type'] == 'Trade' :
-                                dumpfile.write('%s, %s\n' % (tapeitem['time'], tapeitem['price']))
-                dumpfile.close()
-                if tmode == 'wipe':
-                        self.tape = []
+        elif order.otype == 'Sell':
+            self.sell_side.book_del(order)
+            cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
+            self.tape.append(cancel_record)
+        else:
+            # neither bid nor ask?
+            sys.exit('bad order type in del_quote()')
 
 
-        # this returns the LOB data "published" by the exchange,
-        # i.e., what is accessible to the traders
-        def publish_lob(self, time, verbose):
-                public_data = {}
-                public_data['time'] = time
-                public_data['QID'] = self.quote_id
-                public_data['tape'] = self.tape
-                return public_data
+    # this function executes the uncross event
+    # PMP is the Primary market Midpoint Price, i.e. the midpoint price on BSE
+    def uncross(self, PMP):
+        return
 
-        def print_orders(self):
-            print("Buy orders:")
-            for key in self.buy_side.orders:
-                print(self.buy_side.orders[key])
-            print("Sell orders:")
-            for key in self.sell_side.orders:
-                print(self.sell_side.orders[key])
+    def tape_dump(self, fname, fmode, tmode):
+        dumpfile = open(fname, fmode)
+        for tapeitem in self.tape:
+            if tapeitem['type'] == 'Trade' :
+                dumpfile.write('%s, %s\n' % (tapeitem['time'], tapeitem['price']))
+        dumpfile.close()
+        if tmode == 'wipe':
+            self.tape = []
 
-        def print_order_book(self):
-            print("Buy side order book:")
-            for order in self.buy_side.order_book:
-                print(order)
-            print("Sell side order book:")
-            for order in self.sell_side.order_book:
-                print(order)
+
+    # this returns the LOB data "published" by the exchange,
+    # i.e., what is accessible to the traders
+    def publish_lob(self, time, verbose):
+        public_data = {}
+        public_data['time'] = time
+        public_data['QID'] = self.quote_id
+        public_data['tape'] = self.tape
+        return public_data
+
+    def print_orders(self):
+        print("Buy orders:")
+        for key in self.buy_side.orders:
+            print(self.buy_side.orders[key])
+        print("Sell orders:")
+        for key in self.sell_side.orders:
+            print(self.sell_side.orders[key])
+
+    def print_order_book(self):
+        print("Buy side order book:")
+        for order in self.buy_side.order_book:
+            print(order)
+        print("Sell side order book:")
+        for order in self.sell_side.order_book:
+            print(order)
 
 ##################--Traders below here--#############
 

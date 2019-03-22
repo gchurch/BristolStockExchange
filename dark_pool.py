@@ -34,24 +34,8 @@ class Orderbook_half:
                 self.booktype = booktype
                 # dictionary of orders received, indexed by Trader ID
                 self.orders = {}
-                # limit order book, dictionary indexed by quantity, with order info
-                self.lob = {}
                 # summary stats
                 self.n_orders = 0  # how many orders?
-
-        def build_lob(self):
-                lob_verbose = False
-                # take a list of orders and build a limit-order-book (lob) from it
-                # NB the exchange needs to know arrival times and trader-id associated with each order
-                # returns lob as a dictionary (i.e., unsorted)
-                # also builds anonymized version (just price/quantity, sorted, as a list) for publishing to traders
-                self.lob = {}
-                for tid in self.orders:
-                        order = self.orders.get(tid)
-                        # create a new dictionary entry
-                        self.lob[order.qty] = order
-
-                if lob_verbose : print(self.lob)
 
 
         def book_add(self, order):
@@ -64,7 +48,6 @@ class Orderbook_half:
                 n_orders = self.n_orders
                 self.orders[order.tid] = order
                 self.n_orders = len(self.orders)
-                self.build_lob()
                 #print('book_add < %s %s' % (order, self.orders))
                 if n_orders != self.n_orders :
                     return('Addition')
@@ -80,7 +63,6 @@ class Orderbook_half:
                 if self.orders.get(order.tid) != None :
                         del(self.orders[order.tid])
                         self.n_orders = len(self.orders)
-                        self.build_lob()
                 # print('book_del %s', self.orders)
 
 
@@ -154,13 +136,13 @@ class Exchange(Orderbook):
                 public_data['tape'] = self.tape
                 return public_data
 
-        def print_lob(self):
-            print("bids lob:")
-            for key in self.bids.lob:
-                print(self.bids.lob[key])
-            print("asks lob:")
-            for key in self.asks.lob:
-                print(self.asks.lob[key])
+        def print_order_book(self):
+            print("bids order book:")
+            for key in self.bids.orders:
+                print(self.bids.orders[key])
+            print("asks order book:")
+            for key in self.asks.orders:
+                print(self.asks.orders[key])
 
 ##################--Traders below here--#############
 
@@ -656,7 +638,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
                         traders[tid].n_quotes = 1
                         result = exchange.add_order(order, process_verbose)
 
-                exchange.print_lob()
+                exchange.print_order_book()
 
                 time = time + timestep
 
@@ -710,8 +692,49 @@ def experiment1():
     sys.exit('Done Now')
 
 
+def test():
+
+    # variables which dictate what information is printed to the output
+    verbose = False
+    traders_verbose = True
+    orders_verbose = False
+    lob_verbose = False
+    process_verbose = False
+    respond_verbose = False
+    bookkeep_verbose = False
+
+    # create the trader specs
+    buyers_spec = [('GVWY',5)]
+    sellers_spec = buyers_spec
+    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
+
+    # initialise the exchange
+    exchange = Exchange()
+
+    # create a bunch of traders
+    traders = {}
+    trader_stats = populate_market(traders_spec, traders, True, traders_verbose)
+
+    # create some orders
+    orders = []
+    orders.append(Order('B00', 'Bid', 1, 25.0, 10))
+    orders.append(Order('B01', 'Bid', 1, 35.0, 20))
+    orders.append(Order('S00', 'Ask', 1, 45.0, 30))
+    orders.append(Order('S01', 'Ask', 1, 55.0, 40))
+    print(len(orders))
+
+    for order in orders:
+        exchange.add_order(order, orders_verbose)
+
+    print(len(exchange.bids.orders))
+    print(len(exchange.bids.orders))
+
+    exchange.print_order_book()
+
+
+
 def main():
-    experiment1()
+    test()
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":

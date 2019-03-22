@@ -72,8 +72,8 @@ class Orderbook_half:
 class Orderbook(Orderbook_half):
 
         def __init__(self):
-                self.buy_side = Orderbook_half('Bid')
-                self.sell_side = Orderbook_half('Ask')
+                self.buy_side = Orderbook_half('Buy')
+                self.sell_side = Orderbook_half('Sell')
                 self.tape = []
                 self.quote_id = 0  #unique ID code for each quote accepted onto the book
 
@@ -89,7 +89,7 @@ class Exchange(Orderbook):
                 self.quote_id = order.qid + 1
                 # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.qid, self.quote_id))
                 tid = order.tid
-                if order.otype == 'Bid':
+                if order.otype == 'Buy':
                         response=self.buy_side.book_add(order)
                 else:
                         response=self.sell_side.book_add(order)
@@ -99,12 +99,12 @@ class Exchange(Orderbook):
         def del_order(self, time, order, verbose):
                 # delete a trader's quot/order from the exchange, update all internal records
                 tid = order.tid
-                if order.otype == 'Bid':
+                if order.otype == 'Buy':
                         self.buy_side.book_del(order)
                         cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
                         self.tape.append(cancel_record)
 
-                elif order.otype == 'Ask':
+                elif order.otype == 'Sell':
                         self.sell_side.book_del(order)
                         cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
                         self.tape.append(cancel_record)
@@ -138,10 +138,10 @@ class Exchange(Orderbook):
                 return public_data
 
         def print_order_book(self):
-            print("buy side order book:")
+            print("Buy side order book:")
             for key in self.buy_side.orders:
                 print(self.buy_side.orders[key])
-            print("sell side order book:")
+            print("Sell side order book:")
             for key in self.sell_side.orders:
                 print(self.sell_side.orders[key])
 
@@ -200,7 +200,7 @@ class Trader:
                 self.blotter.append(trade)  # add trade record to trader's blotter
                 # NB What follows is **LAZY** -- assumes all orders are quantity=1
                 transactionprice = trade['price']
-                if self.orders[0].otype == 'Bid':
+                if self.orders[0].otype == 'Buy':
                         profit = self.orders[0].price - transactionprice
                 else:
                         profit = transactionprice - self.orders[0].price
@@ -521,7 +521,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
 
                 # add the demand side (buyers) customer orders to the list of pending orders
                 issuetimes = getissuetimes(n_buyers, os['timemode'], os['interval'], shuffle_times, True)
-                ordertype = 'Bid'
+                ordertype = 'Buy'
                 (sched, mode) = getschedmode(time, os['dem'])             
                 for t in range(n_buyers):
                         issuetime = time + issuetimes[t]
@@ -535,7 +535,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         
                 # add the supply side (sellers) customer orders to the list of pending orders
                 issuetimes = getissuetimes(n_sellers, os['timemode'], os['interval'], shuffle_times, True)
-                ordertype = 'Ask'
+                ordertype = 'Sell'
                 (sched, mode) = getschedmode(time, os['sup'])
                 for t in range(n_sellers):
                         issuetime = time + issuetimes[t]
@@ -721,10 +721,10 @@ def test():
 
     # create some orders
     orders = []
-    orders.append(Order('B00', 'Bid', 1, 1, 25.0, 10))
-    orders.append(Order('B01', 'Bid', 1, 1, 35.0, 20))
-    orders.append(Order('S00', 'Ask', 1, 1, 45.0, 30))
-    orders.append(Order('S01', 'Ask', 1, 1, 55.0, 40))
+    orders.append(Order('B00', 'Buy', 1, 1, 25.0, 10))
+    orders.append(Order('B01', 'Buy', 1, 1, 35.0, 20))
+    orders.append(Order('S00', 'Sell', 1, 1, 45.0, 30))
+    orders.append(Order('S01', 'Sell', 1, 1, 55.0, 40))
     
     # add the orders to the exchange
     for order in orders:

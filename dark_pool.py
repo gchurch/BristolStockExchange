@@ -71,8 +71,8 @@ class Orderbook_half:
 class Orderbook(Orderbook_half):
 
         def __init__(self):
-                self.bids = Orderbook_half('Bid')
-                self.asks = Orderbook_half('Ask')
+                self.buy_side = Orderbook_half('Bid')
+                self.sell_side = Orderbook_half('Ask')
                 self.tape = []
                 self.quote_id = 0  #unique ID code for each quote accepted onto the book
 
@@ -89,9 +89,9 @@ class Exchange(Orderbook):
                 # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.qid, self.quote_id))
                 tid = order.tid
                 if order.otype == 'Bid':
-                        response=self.bids.book_add(order)
+                        response=self.buy_side.book_add(order)
                 else:
-                        response=self.asks.book_add(order)
+                        response=self.sell_side.book_add(order)
                 return [order.qid, response]
 
 
@@ -99,12 +99,12 @@ class Exchange(Orderbook):
                 # delete a trader's quot/order from the exchange, update all internal records
                 tid = order.tid
                 if order.otype == 'Bid':
-                        self.bids.book_del(order)
+                        self.buy_side.book_del(order)
                         cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
                         self.tape.append(cancel_record)
 
                 elif order.otype == 'Ask':
-                        self.asks.book_del(order)
+                        self.sell_side.book_del(order)
                         cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
                         self.tape.append(cancel_record)
                 else:
@@ -137,12 +137,12 @@ class Exchange(Orderbook):
                 return public_data
 
         def print_order_book(self):
-            print("bids order book:")
-            for key in self.bids.orders:
-                print(self.bids.orders[key])
-            print("asks order book:")
-            for key in self.asks.orders:
-                print(self.asks.orders[key])
+            print("buy side order book:")
+            for key in self.buy_side.orders:
+                print(self.buy_side.orders[key])
+            print("sell side order book:")
+            for key in self.sell_side.orders:
+                print(self.sell_side.orders[key])
 
 ##################--Traders below here--#############
 
@@ -723,12 +723,11 @@ def test():
     orders.append(Order('S01', 'Ask', 1, 55.0, 40))
     print(len(orders))
 
+    # add the orders to the exchange
     for order in orders:
         exchange.add_order(order, orders_verbose)
 
-    print(len(exchange.bids.orders))
-    print(len(exchange.bids.orders))
-
+    # print the order book
     exchange.print_order_book()
 
 

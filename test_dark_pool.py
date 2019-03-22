@@ -30,19 +30,22 @@ class Test_Order(unittest.TestCase):
 
 class Test_Orderbook_half(unittest.TestCase):
 
-    def test_init(self):
+    # testing whether the initialised variables are as expected
+    def test__init__simple(self):
 
         # create an instance of the Orderbook_half class
         booktype = "Buy"
         orderbook_half = dark_pool.Orderbook_half(booktype)
 
-        # test all intialised member variables
+        # tests
         self.assertEqual(orderbook_half.booktype, booktype)
         self.assertEqual(orderbook_half.orders, {})
         self.assertEqual(orderbook_half.order_book, [])
         self.assertEqual(orderbook_half.n_orders, 0)
 
-    def test_book_add(self):
+    # test that when a single order is added, it is added to the orders dictionary
+    # and the order_book list
+    def test__book_add__simple(self):
 
         # create the order book
         booktype = "Buy"
@@ -51,49 +54,88 @@ class Test_Orderbook_half(unittest.TestCase):
         # create some orders
         orders = []
         orders.append(dark_pool.Order('B00', 'Buy', 5, 3, 25.0))
-        orders.append(dark_pool.Order('B01', 'Buy', 10, 6, 35.0))
-        orders.append(dark_pool.Order('B02', 'Buy', 3, 1, 55.0))
-        orders.append(dark_pool.Order('B03', 'Buy', 3, 2, 75.0))
-        orders.append(dark_pool.Order('B04', 'Buy', 3, 2, 65.0))
 
         # add the orders
         for order in orders:
             orderbook_half.book_add(order)
 
-        keys = orderbook_half.orders.keys()
-
-        # need to add more tests
-        self.assertEqual(orderbook_half.orders.keys(), ['B01', 'B00', 'B03', 'B02', 'B04'])
-
-
-    def test_book_del(self):
-        
-        # create an instance of the Orderbook_half class
-        booktype = "Bid"
-        worstprice = 200
-        orderbook_half = dark_pool.Orderbook_half(booktype)
-
-        # create instances of the Order class
-        order1 = dark_pool.Order('B1', 'Bid', 1, 25.0, 10)
-        order2 = dark_pool.Order('B2', 'Bid', 1, 35.0, 20)
-
-        # add the order to the order book and then delete it
-        orderbook_half.book_add(order1)
-        orderbook_half.book_add(order2)
-
-        # delete order1
-        orderbook_half.book_del(order1)
-
-        # test that the orders are as expected
-        self.assertEqual(orderbook_half.orders, {'B2': order2})
+        # test
+        self.assertEqual(orderbook_half.orders.keys(), ['B00'])
+        self.assertEqual(orderbook_half.orders['B00'].__str__(), "[B00 Buy Q=5 MES=3 T=25.00 QID:-1]")
+        self.assertEqual(orderbook_half.order_book[0].__str__(), "[B00 Buy Q=5 MES=3 T=25.00 QID:-1]")
         self.assertEqual(orderbook_half.n_orders, 1)
 
-        # delete order2
-        orderbook_half.book_del(order2)
+    # testing that when that the order of orders in the order_book list is ordered by quantity then time
+    def test__book_add__ordering(self):
 
-        # test that the orders are as expected
-        self.assertEqual(orderbook_half.orders, {})
-        self.assertEqual(orderbook_half.n_orders, 0)
+        # create the order book
+        booktype = "Buy"
+        orderbook_half = dark_pool.Orderbook_half(booktype)
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order('B00', 'Buy', 5, 3, 25.0))
+        orders.append(dark_pool.Order('B01', 'Buy', 10, 4, 35.0))
+        orders.append(dark_pool.Order('B02', 'Buy', 10, 4, 45.0))
+
+        # add the orders
+        for order in orders:
+            orderbook_half.book_add(order)
+
+        self.assertEqual(orderbook_half.orders.keys(), ['B01', 'B00', 'B02'])
+        self.assertEqual(orderbook_half.orders['B00'].__str__(), "[B00 Buy Q=5 MES=3 T=25.00 QID:-1]")
+        self.assertEqual(orderbook_half.orders['B01'].__str__(), "[B01 Buy Q=10 MES=4 T=35.00 QID:-1]")
+        self.assertEqual(orderbook_half.orders['B02'].__str__(), "[B02 Buy Q=10 MES=4 T=45.00 QID:-1]")
+        self.assertEqual(orderbook_half.order_book[0].__str__(), "[B01 Buy Q=10 MES=4 T=35.00 QID:-1]")
+        self.assertEqual(orderbook_half.order_book[1].__str__(), "[B02 Buy Q=10 MES=4 T=45.00 QID:-1]")
+        self.assertEqual(orderbook_half.order_book[2].__str__(), "[B00 Buy Q=5 MES=3 T=25.00 QID:-1]")
+
+    def test__book_add__overwrite(self):
+        # create the order book
+        booktype = "Buy"
+        orderbook_half = dark_pool.Orderbook_half(booktype)
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order('B00', 'Buy', 5, 3, 25.0))
+        orders.append(dark_pool.Order('B01', 'Buy', 10, 4, 35.0))
+        orders.append(dark_pool.Order('B00', 'Buy', 10, 4, 45.0))
+
+        # add the orders and get the return values
+        return_values = []
+        for order in orders:
+            return_values.append(orderbook_half.book_add(order))
+
+        # tests
+        self.assertEqual(return_values, ['Addition', 'Addition', 'Overwrite'])
+        self.assertEqual(orderbook_half.orders.keys(), ['B01', 'B00'])
+        self.assertEqual(orderbook_half.order_book[0].__str__(), "[B01 Buy Q=10 MES=4 T=35.00 QID:-1]")
+        self.assertEqual(orderbook_half.order_book[1].__str__(), "[B00 Buy Q=10 MES=4 T=45.00 QID:-1]")
+        self.assertEqual(orderbook_half.n_orders, 2)
+        self.assertEqual(len(orderbook_half.order_book), 2)
+
+
+    def test__book_del(self):
+        
+        # create the order book
+        booktype = "Buy"
+        orderbook_half = dark_pool.Orderbook_half(booktype)
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order('B00', 'Buy', 5, 3, 25.0))
+        orders.append(dark_pool.Order('B01', 'Buy', 10, 4, 35.0))
+
+        # add the orders
+        return_values = []
+        for order in orders:
+            return_values.append(orderbook_half.book_add(order))
+
+        # delete an order
+        orderbook_half.book_del(orders[0])
+
+        self.assertEqual(orderbook_half.n_orders, 1)
+
 
 
 ################################################################################
@@ -172,6 +214,7 @@ class Test_Exchange(unittest.TestCase):
 
         # delete orders from the exchange
         exchange.del_order(100.0, orders[0], False)
+
         exchange.del_order(110.0, orders[-1], False)
 
 

@@ -51,8 +51,21 @@ class Orderbook_half:
                 position += 1
         return position
 
+    # remove all orders on the order book from the trader with the givin tid
+    def remove_from_order_book(self, tid):
+
+        # calling pop changes the length of order_book so we have to break afterwards
+        for i in range(0, len(self.order_book)):
+            if self.order_book[i].tid == tid:
+                self.order_book.pop(i)
+                break
+
     # add the order to the orders dictionary and to the order_book list
     def book_add(self, order):
+
+        # if the trader with this tid already has an order in the order_book, then remove it
+        if self.orders.get(order.tid) != None:
+            self.remove_from_order_book(order.tid)
         
         # add the order to the orders dictionary
         n_orders = self.n_orders
@@ -69,10 +82,12 @@ class Orderbook_half:
         else:
             return('Overwrite')
 
+    # delete the given order from the orders dictionary and from the order_book list
     def book_del(self, order):
                 
         if self.orders.get(order.tid) != None :
             del(self.orders[order.tid])
+            self.remove_from_order_book(order.tid)
             self.n_orders = len(self.orders)
 
 
@@ -146,6 +161,7 @@ class Exchange(Orderbook):
         public_data['tape'] = self.tape
         return public_data
 
+    # print the orders in the orders dictionary
     def print_orders(self):
         print("Buy orders:")
         for key in self.buy_side.orders:
@@ -154,6 +170,7 @@ class Exchange(Orderbook):
         for key in self.sell_side.orders:
             print(self.sell_side.orders[key])
 
+    # print the orders in the order_book list
     def print_order_book(self):
         print("Buy side order book:")
         for order in self.buy_side.order_book:

@@ -33,38 +33,42 @@ class Orderbook_half:
         def __init__(self, booktype):
                 # booktype: bids or asks?
                 self.booktype = booktype
-                # dictionary of orders received, indexed by Trader ID
-                self.orders = {}
+                # list of orders received, sorted by size and then time
+                self.orders = []
                 # summary stats
                 self.n_orders = 0  # how many orders?
 
-
-        def book_add(self, order):
-                # add order to the dictionary holding the list of orders
-                # either overwrites old order from this trader
-                # or dynamically creates new entry in the dictionary
-                # so, max of one order per trader per list
-                # checks whether length or order list has changed, to distinguish addition/overwrite
-                #print('book_add > %s %s' % (order, self.orders))
-                n_orders = self.n_orders
-                self.orders[order.tid] = order
-                self.n_orders = len(self.orders)
-                #print('book_add < %s %s' % (order, self.orders))
-                if n_orders != self.n_orders :
-                    return('Addition')
+        # find the position to insert the order into the orders list such that the orders list maintains
+        # it's ordering of (size,time)
+        def find_order_position(self, order):
+            quantity = order.qty
+            time = order.time
+            position = 0
+            for i in range(0,len(self.orders)):
+                if quantity > self.orders[i].qty or (quantity == self.orders[i].qty and time < self.orders[i].time):
+                    break
                 else:
-                    return('Overwrite')
+                    position += 1
+            return position
 
+        # add the order to the orders list
+        def book_add(self, order):
+
+            position = self.find_order_position(order)
+
+            n_orders = self.n_orders
+            self.orders.insert(position,order)
+            self.n_orders = len(self.orders)
+            if n_orders != self.n_orders :
+                return('Addition')
+            else:
+                return('Overwrite')
 
         def book_del(self, order):
-                # delete order from the dictionary holding the orders
-                # assumes max of one order per trader per list
-                # checks that the Trader ID does actually exist in the dict before deletion
-                # print('book_del %s',self.orders)
+                
                 if self.orders.get(order.tid) != None :
                         del(self.orders[order.tid])
                         self.n_orders = len(self.orders)
-                # print('book_del %s', self.orders)
 
 
 # Orderbook for a single instrument: list of bids and list of asks
@@ -139,11 +143,11 @@ class Exchange(Orderbook):
 
         def print_order_book(self):
             print("Buy side order book:")
-            for key in self.buy_side.orders:
-                print(self.buy_side.orders[key])
+            for order in self.buy_side.orders:
+                print(order)
             print("Sell side order book:")
-            for key in self.sell_side.orders:
-                print(self.sell_side.orders[key])
+            for order in self.sell_side.orders:
+                print(order)
 
 ##################--Traders below here--#############
 
@@ -721,12 +725,15 @@ def test():
 
     # create some orders
     orders = []
-    orders.append(Order('B00', 'Buy', 1, 1, 25.0))
-    orders.append(Order('B01', 'Buy', 1, 1, 35.0))
-    orders.append(Order('B02', 'Buy', 1, 1, 55.0))
-    orders.append(Order('S00', 'Sell', 1, 1, 45.0))
-    orders.append(Order('S01', 'Sell', 1, 1, 55.0))
-    orders.append(Order('S02', 'Sell', 1, 1, 65.0))
+    orders.append(Order('B00', 'Buy', 5, 3, 25.0))
+    orders.append(Order('B01', 'Buy', 10, 6, 35.0))
+    orders.append(Order('B02', 'Buy', 3, 1, 55.0))
+    orders.append(Order('B03', 'Buy', 3, 2, 75.0))
+    orders.append(Order('B04', 'Buy', 3, 2, 65.0))
+    orders.append(Order('S00', 'Sell', 11, 6, 45.0))
+    orders.append(Order('S01', 'Sell', 4, 2, 55.0))
+    orders.append(Order('S02', 'Sell', 6, 3, 65.0))
+    orders.append(Order('S03', 'Sell', 6, 4, 55.0))
     
     # add the orders to the exchange
     for order in orders:

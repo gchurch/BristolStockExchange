@@ -33,32 +33,39 @@ class Orderbook_half:
         def __init__(self, booktype):
                 # booktype: bids or asks?
                 self.booktype = booktype
+                # a dictionary of the the original orders placed in the orderbook
+                self.orders = {}
                 # list of orders received, sorted by size and then time
-                self.orders = []
+                self.order_book = []
                 # summary stats
                 self.n_orders = 0  # how many orders?
 
-        # find the position to insert the order into the orders list such that the orders list maintains
+        # find the position to insert the order into the order_book list such that the order_book list maintains
         # it's ordering of (size,time)
-        def find_order_position(self, order):
+        def find_order_book_position(self, order):
             quantity = order.qty
             time = order.time
             position = 0
-            for i in range(0,len(self.orders)):
-                if quantity > self.orders[i].qty or (quantity == self.orders[i].qty and time < self.orders[i].time):
+            for i in range(0,len(self.order_book)):
+                if quantity > self.order_book[i].qty or (quantity == self.order_book[i].qty and time < self.order_book[i].time):
                     break
                 else:
                     position += 1
             return position
 
-        # add the order to the orders list
+        # add the order to the orders dictionary and to the order_book list
         def book_add(self, order):
-
-            position = self.find_order_position(order)
-
+            
+            # add the order to the orders dictionary
             n_orders = self.n_orders
-            self.orders.insert(position,order)
+            self.orders[order.tid] = order
             self.n_orders = len(self.orders)
+
+            # add the order to order_book list
+            position = self.find_order_book_position(order)
+            self.order_book.insert(position,order)
+
+            # return whether this was an addition or an overwrite
             if n_orders != self.n_orders :
                 return('Addition')
             else:
@@ -141,12 +148,20 @@ class Exchange(Orderbook):
                 public_data['tape'] = self.tape
                 return public_data
 
+        def print_orders(self):
+            print("Buy orders:")
+            for key in self.buy_side.orders:
+                print(self.buy_side.orders[key])
+            print("Sell orders:")
+            for key in self.sell_side.orders:
+                print(self.sell_side.orders[key])
+
         def print_order_book(self):
             print("Buy side order book:")
-            for order in self.buy_side.orders:
+            for order in self.buy_side.order_book:
                 print(order)
             print("Sell side order book:")
-            for order in self.sell_side.orders:
+            for order in self.sell_side.order_book:
                 print(order)
 
 ##################--Traders below here--#############
@@ -704,7 +719,7 @@ def test():
 
     # variables which dictate what information is printed to the output
     verbose = False
-    traders_verbose = True
+    traders_verbose = False
     orders_verbose = False
     lob_verbose = False
     process_verbose = False
@@ -740,6 +755,7 @@ def test():
         exchange.add_order(order, orders_verbose)
 
     # print the order book
+    exchange.print_orders()
     exchange.print_order_book()
 
 

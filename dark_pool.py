@@ -12,13 +12,13 @@ ticksize = 1  # minimum change in price, in cents/pennies
 # an Order/quote has a trader id, a type (buy/sell) price, quantity, timestamp, and unique i.d.
 class Order:
 
-        def __init__(self, tid, otype, qty, MES, time, qid):
+        def __init__(self, tid, otype, qty, MES, time):
                 self.tid = tid      # trader i.d.
                 self.otype = otype  # order type
                 self.qty = qty      # quantity
                 self.MES = MES      # minimum execution size
                 self.time = time    # timestamp
-                self.qid = qid      # quote i.d. (unique to each quote)
+                self.qid = None      # quote i.d. (unique to each quote)
 
         def __str__(self):
                 return '[%s %s Q=%s MES=%s T=%5.2f QID:%d]' % \
@@ -242,7 +242,7 @@ class Trader_Giveaway(Trader):
                                     self.orders[0].otype,
                                     self.orders[0].qty,
                                     self.orders[0].MES,
-                                    time, lob['QID'])
+                                    time)
                         self.lastquote=order
                 return order
 
@@ -530,7 +530,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         # generating a random order quantity
                         quantity = random.randint(1,10)
                         MES = random.randint(1, quantity)
-                        order = Order(tname, ordertype, quantity, MES, issuetime, -3.14)
+                        order = Order(tname, ordertype, quantity, MES, issuetime)
                         new_pending.append(order)
                         
                 # add the supply side (sellers) customer orders to the list of pending orders
@@ -544,7 +544,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         # generating a random order quantity
                         quantity = random.randint(1,10)
                         MES = random.randint(1,quantity)
-                        order = Order(tname, ordertype, quantity, MES, issuetime, -3.14)
+                        order = Order(tname, ordertype, quantity, MES, issuetime)
                         new_pending.append(order)
         # if there are some pending orders
         else:
@@ -721,10 +721,12 @@ def test():
 
     # create some orders
     orders = []
-    orders.append(Order('B00', 'Buy', 1, 1, 25.0, 10))
-    orders.append(Order('B01', 'Buy', 1, 1, 35.0, 20))
-    orders.append(Order('S00', 'Sell', 1, 1, 45.0, 30))
-    orders.append(Order('S01', 'Sell', 1, 1, 55.0, 40))
+    orders.append(Order('B00', 'Buy', 1, 1, 25.0))
+    orders.append(Order('B01', 'Buy', 1, 1, 35.0))
+    orders.append(Order('B02', 'Buy', 1, 1, 55.0))
+    orders.append(Order('S00', 'Sell', 1, 1, 45.0))
+    orders.append(Order('S01', 'Sell', 1, 1, 55.0))
+    orders.append(Order('S02', 'Sell', 1, 1, 65.0))
     
     # add the orders to the exchange
     for order in orders:

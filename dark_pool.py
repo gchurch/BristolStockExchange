@@ -18,7 +18,7 @@ class Order:
         self.qty = qty      # quantity
         self.MES = MES      # minimum execution size
         self.time = time    # timestamp
-        self.qid = None      # quote i.d. (unique to each quote)
+        self.qid = -1      # quote i.d. (unique to each quote)
 
     def __str__(self):
         return '[%s %s Q=%s MES=%s T=%5.2f QID:%d]' % (self.tid, self.otype, self.qty, self.MES, self.time, self.qid)
@@ -102,7 +102,7 @@ class Exchange(Orderbook):
             response=self.buy_side.book_add(order)
         else:
             response=self.sell_side.book_add(order)
-            return [order.qid, response]
+        return [order.qid, response]
 
 
     def del_order(self, time, order, verbose):

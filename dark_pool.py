@@ -834,10 +834,20 @@ def test():
 
     match_info = exchange.find_order_match()
 
-    exchange.perform_trade(100.0, 50.0, match_info["buy_order"], match_info["sell_order"], match_info["trade_size"])
-    print("trade executed")
+    time = 0
 
-    exchange.print_order_book()
+    while match_info != None:
+
+        exchange.perform_trade(time, 50.0, match_info["buy_order"], match_info["sell_order"], match_info["trade_size"])
+        print("trade executed")
+
+        exchange.print_order_book()
+
+        match_info = exchange.find_order_match()
+
+        time += 1
+
+    print(exchange.tape)
 
     # end of an experiment -- dump the tape
     exchange.tape_dump('dark_transactions.csv', 'w', 'keep')

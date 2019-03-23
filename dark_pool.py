@@ -1,6 +1,7 @@
 import sys
 import math
 import random
+import copy
 
 
 bse_sys_minprice = 1  # minimum price in the system, in cents/pennies
@@ -66,6 +67,8 @@ class Orderbook_half:
         # if the trader with this tid already has an order in the order_book, then remove it
         if self.orders.get(order.tid) != None:
             self.remove_from_order_book(order.tid)
+
+        # Note. changing the order in the order_book list will also change the order in the orders dictonary
         
         # add the order to the orders dictionary
         n_orders = self.n_orders
@@ -74,7 +77,7 @@ class Orderbook_half:
 
         # add the order to order_book list
         position = self.find_order_book_position(order)
-        self.order_book.insert(position,order)
+        self.order_book.insert(position, order)
 
         # return whether this was an addition or an overwrite
         if n_orders != self.n_orders :
@@ -137,7 +140,9 @@ class Exchange(Orderbook):
             sys.exit('bad order type in del_quote()')
 
     # match two orders and perform the trade
-    def find_match(self):
+    # matching is buy-side friendly, so start with buys first
+    def find_order_match(self):
+
         for buy_order in self.buy_side.order_book:
             for sell_order in self.sell_side.order_book:
                 # find two matching orders in the order_book list
@@ -152,6 +157,35 @@ class Exchange(Orderbook):
                     # change the orders in the order_book
                     return {"buy_order": buy_order, "sell_order": sell_order, "trade_size": trade_size}
 
+        # if no match can be found, return None
+        return None
+
+    # given a buy order, a sell order and a trade size, perform the trade
+    def perform_trade(self, buy_order, sell_order, trade_size):
+
+        # subtract the trade quantity from the orders' quantity
+        buy_order.qty -= trade_size
+        sell_order.qty -= trade_size
+
+        # remove orders from the order_book
+        self.buy_side.book_del(buy_order)
+        self.sell_side.book_del(sell_order)
+
+        # re-add the order to the order_book if there is still some quantity left over
+        if buy_order.qty > 0:
+            # update the MES if necessary
+            if buy_order.MES > buy_order.qty:
+                buy_order.MES = buy_order.qty
+            # add the order to the order_book list
+            self.buy_side.book_add(buy_order)
+
+        # re-add the order to the order_book if there is still some quantity left over
+        if sell_order.qty > 0:
+            # update the MES if necessary
+            if sell_order.MES > sell_order.qty:
+                sell_order.MES = sell_order.qty
+            # add the order to the order_book list
+            self.sell_side.book_add(sell_order)
         
 
     # this function executes the uncross event
@@ -787,16 +821,14 @@ def test():
         exchange.add_order(order, orders_verbose)
 
     # print the order book
-    exchange.print_orders()
     exchange.print_order_book()
 
-    match_info = exchange.find_match()
-    print("buy order:")
-    print(match_info["buy_order"])
-    print("sell order:")
-    print(match_info["sell_order"])
-    print("trade size:")
-    print(match_info["trade_size"])
+    match_info = exchange.find_order_match()
+
+    exchange.perform_trade(match_info["buy_order"], match_info["sell_order"], match_info["trade_size"])
+    print("trade executed")
+
+    exchange.print_order_book()
 
 def main():
     test()

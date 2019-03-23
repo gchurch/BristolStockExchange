@@ -136,6 +136,23 @@ class Exchange(Orderbook):
             # neither bid nor ask?
             sys.exit('bad order type in del_quote()')
 
+    # match two orders and perform the trade
+    def find_match(self):
+        for buy_order in self.buy_side.order_book:
+            for sell_order in self.sell_side.order_book:
+                # find two matching orders in the order_book list
+                if buy_order.qty >= sell_order.MES and buy_order.MES <= sell_order.qty:
+                    # work out how large the trade size will be
+                    if buy_order.qty >= sell_order.qty:
+                        trade_size = sell_order.qty
+                    else:
+                        trade_size = buy_order.qty
+                    # return a dictionary containing the trade info
+                    # Note. Here we are returning references to the orders, so changing the returned orders will
+                    # change the orders in the order_book
+                    return {"buy_order": buy_order, "sell_order": sell_order, "trade_size": trade_size}
+
+        
 
     # this function executes the uncross event
     # PMP is the Primary market Midpoint Price, i.e. the midpoint price on BSE
@@ -773,7 +790,13 @@ def test():
     exchange.print_orders()
     exchange.print_order_book()
 
-
+    match_info = exchange.find_match()
+    print("buy order:")
+    print(match_info["buy_order"])
+    print("sell order:")
+    print(match_info["sell_order"])
+    print("trade size:")
+    print(match_info["trade_size"])
 
 def main():
     test()

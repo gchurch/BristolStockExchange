@@ -18,9 +18,11 @@ class Customer_Order:
         self.qty = qty        # the quantity to buy/sell
         self.time = time      # the time the customer order was issued
 
+    def __str__(self):
+        return 'Customer Order [%s %s P=%s Q=%s T=%5.2f]' % (self.tid, self.otype, self.price, self.qty, self.time)
 
 
-# an order put forward by a trader for the exchange
+# an order created by a trader for the exchange
 class Order:
 
     def __init__(self, tid, otype, qty, MES, time):
@@ -32,11 +34,10 @@ class Order:
         self.oid = -1       # order i.d. (unique to each order on the Exchange)
 
     def __str__(self):
-        return '[%s %s Q=%s MES=%s T=%5.2f OID:%d]' % (self.tid, self.otype, self.qty, self.MES, self.time, self.oid)
+        return 'Order [%s %s Q=%s MES=%s T=%5.2f OID=%d]' % (self.tid, self.otype, self.qty, self.MES, self.time, self.oid)
 
 
 # Orderbook_half is one side of the book: a list of bids or a list of asks, each sorted best-first
-
 class Orderbook_half:
 
     def __init__(self, booktype):
@@ -171,7 +172,7 @@ class Exchange(Orderbook):
         return None
 
     # given a buy order, a sell order and a trade size, perform the trade
-    def perform_trade(self, time, price, buy_order, sell_order, trade_size):
+    def perform_trade(self, traders, time, price, buy_order, sell_order, trade_size):
 
         # subtract the trade quantity from the orders' quantity
         buy_order.qty -= trade_size
@@ -181,7 +182,7 @@ class Exchange(Orderbook):
         self.buy_side.book_del(buy_order)
         self.sell_side.book_del(sell_order)
 
-        # re-add the order to the order_book if there is still some quantity left over
+        # re-add the the residual
         if buy_order.qty > 0:
             # update the MES if necessary
             if buy_order.MES > buy_order.qty:
@@ -189,7 +190,7 @@ class Exchange(Orderbook):
             # add the order to the order_book list
             self.buy_side.book_add(buy_order)
 
-        # re-add the order to the order_book if there is still some quantity left over
+        # re-add the residual
         if sell_order.qty > 0:
             # update the MES if necessary
             if sell_order.MES > sell_order.qty:
@@ -197,20 +198,25 @@ class Exchange(Orderbook):
             # add the order to the order_book list
             self.sell_side.book_add(sell_order)
 
-        # add a record of the transaction to the tape
-        transaction_record = {  'type': 'Trade',
-                                'time': time,
-                                'price': price,
-                                'party1': buy_order.tid,
-                                'party2': sell_order.tid,
-                                'qty': trade_size}
-        self.tape.append(transaction_record)
-        return transaction_record
+        # create a record of the transaction to the tape
+        trade = {   'type': 'Trade',
+                    'time': time,
+                    'price': price,
+                    'qty': trade_size,
+                    'party1': buy_order.tid,
+                    'party2': sell_order.tid}
+
+        # inform the traders of the trade
+        traders[buy_order.tid].bookkeep(trade, False)
+        traders[sell_order.tid].bookkeep(trade, False)
+
+        # add a record to the tape
+        self.tape.append(trade)
         
 
     # this function executes the uncross event, trades occur at the given time at the given price
     # keep making trades out of matching order until no more matches can be found
-    def uncross(self, time, price):
+    def uncross(self, traders, time, price):
 
         # find a match between a buy order a sell order
         match_info = self.find_order_match()
@@ -219,7 +225,7 @@ class Exchange(Orderbook):
         while match_info != None:
 
             # execute the trade with the matched orders
-            self.perform_trade(time, 50.0, match_info["buy_order"], match_info["sell_order"], match_info["trade_size"])
+            self.perform_trade(traders, time, 50.0, match_info["buy_order"], match_info["sell_order"], match_info["trade_size"])
 
             # find another match
             match_info = self.find_order_match()
@@ -269,26 +275,26 @@ class Exchange(Orderbook):
 class Trader:
 
         def __init__(self, ttype, tid, balance, time):
-                self.ttype = ttype      # what type / strategy this trader is
-                self.tid = tid          # trader unique ID code
-                self.balance = balance  # money in the bank
-                self.blotter = []       # record of trades executed
-                self.orders = []        # customer orders currently being worked (fixed at 1)
-                self.n_quotes = 0       # number of quotes live on LOB
-                self.willing = 1        # used in ZIP etc
-                self.able = 1           # used in ZIP etc
-                self.birthtime = time   # used when calculating age of a trader/strategy
-                self.profitpertime = 0  # profit per unit time
-                self.n_trades = 0       # how many trades has this trader done?
-                self.lastquote = None   # record of what its last quote was
+                self.ttype = ttype             # what type / strategy this trader is
+                self.tid = tid                 # trader unique ID code
+                self.balance = balance         # money in the bank
+                self.blotter = []              # record of trades executed
+                self.customer_order = None     # customer orders currently being worked (fixed at 1)
+                self.n_quotes = 0              # number of quotes live on LOB
+                self.willing = 1               # used in ZIP etc
+                self.able = 1                  # used in ZIP etc
+                self.birthtime = time          # used when calculating age of a trader/strategy
+                self.profitpertime = 0         # profit per unit time
+                self.n_trades = 0              # how many trades has this trader done?
+                self.lastquote = None          # record of what its last quote was
 
 
         def __str__(self):
-                return '[TID %s type %s balance %s blotter %s orders %s n_trades %s profitpertime %s]' \
-                       % (self.tid, self.ttype, self.balance, self.blotter, self.orders, self.n_trades, self.profitpertime)
+                return '[TID %s type %s balance %s blotter %s customer order %s n_trades %s profitpertime %s]' \
+                       % (self.tid, self.ttype, self.balance, self.blotter, self.customer_order, self.n_trades, self.profitpertime)
 
 
-        def add_order(self, order, verbose):
+        def add_order(self, customer_order, verbose):
                 # in this version, trader has at most one order,
                 # if allow more than one, this needs to be self.orders.append(order)
                 if self.n_quotes > 0 :
@@ -297,7 +303,7 @@ class Trader:
                     response = 'LOB_Cancel'
                 else:
                     response = 'Proceed'
-                self.orders = [order]
+                self.customer_order = customer_order
                 if verbose : print('add_order < response=%s' % response)
                 return response
 
@@ -305,33 +311,25 @@ class Trader:
         def del_order(self, order):
                 # this is lazy: assumes each trader has only one customer order with quantity=1, so deleting sole order
                 # CHANGE TO DELETE THE HEAD OF THE LIST AND KEEP THE TAIL
-                self.orders = []
+                self.customer_order = None
 
 
-        def bookkeep(self, trade, order, verbose, time):
+        def bookkeep(self, trade, verbose):
 
-                outstr=""
-                for order in self.orders: outstr = outstr + str(order)
+                outstr=str(self.customer_order)
 
                 self.blotter.append(trade)  # add trade record to trader's blotter
                 # NB What follows is **LAZY** -- assumes all orders are quantity=1
                 transactionprice = trade['price']
-                if self.orders[0].otype == 'Buy':
-                        profit = self.orders[0].price - transactionprice
+                if self.customer_order.otype == 'Buy':
+                        profit = self.customer_order.price - transactionprice
                 else:
-                        profit = transactionprice - self.orders[0].price
+                        profit = transactionprice - self.customer_order.price
                 self.balance += profit
                 self.n_trades += 1
-                self.profitpertime = self.balance/(time - self.birthtime)
-
-                if profit < 0 :
-                        print(profit)
-                        print(trade)
-                        print(order)
-                        sys.exit()
+                self.profitpertime = self.balance/(trade['time'] - self.birthtime)
 
                 if verbose: print('%s profit=%d balance=%d profit/time=%d' % (outstr, profit, self.balance, self.profitpertime))
-                self.del_order(order)  # delete the order
 
 
         # specify how trader responds to events in the market
@@ -350,17 +348,13 @@ class Trader:
 # (but never makes a loss)
 class Trader_Giveaway(Trader):
 
-        def getorder(self, time, countdown, lob):
-                if len(self.orders) < 1:
-                        order = None
-                else:
-                        order = Order(self.tid,
-                                    self.orders[0].otype,
-                                    self.orders[0].qty,
-                                    self.orders[0].MES,
-                                    time)
-                        self.lastquote=order
-                return order
+    def getorder(self, time, countdown, lob):
+        if self.customer_order == None:
+            order = None
+        else:
+            order = Order(self.tid, self.customer_order.otype, self.customer_order.qty, 0, time)
+            self.lastquote=order
+            return order
 
 
 
@@ -835,7 +829,22 @@ def test():
     traders = {}
     trader_stats = populate_market(traders_spec, traders, True, traders_verbose)
 
-    # create some orders
+    # crate some customer orders
+    customer_orders = []
+    customer_orders.append(Customer_Order('B00', 'Buy', 100, 5, 25.0))
+    customer_orders.append(Customer_Order('B01', 'Buy', 100, 10, 35.0))
+    customer_orders.append(Customer_Order('B02', 'Buy', 100, 3, 55.0))
+    customer_orders.append(Customer_Order('B03', 'Buy', 100, 3, 75.0))
+    customer_orders.append(Customer_Order('B04', 'Buy', 100, 3, 65.0))
+    customer_orders.append(Customer_Order('S00', 'Sell', 0, 11, 45.0))
+    customer_orders.append(Customer_Order('S01', 'Sell', 0, 4, 55.0))
+    customer_orders.append(Customer_Order('S02', 'Sell', 0, 6, 65.0))
+    customer_orders.append(Customer_Order('S03', 'Sell', 0, 6, 55.0))
+
+    for customer_order in customer_orders:
+        traders[customer_order.tid].add_order(customer_order, False)
+
+    # create some example orders
     orders = []
     orders.append(Order('B00', 'Buy', 5, 3, 25.0))
     orders.append(Order('B01', 'Buy', 10, 6, 35.0))
@@ -856,7 +865,7 @@ def test():
     exchange.print_order_book()
 
     # invoke an uncross event
-    exchange.uncross(5.0, 25.0)
+    exchange.uncross(traders, 5.0, 25.0)
 
     # print the order book after the uncross event
     print("\nEnding order book")

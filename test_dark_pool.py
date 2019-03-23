@@ -143,7 +143,7 @@ class Test_Orderbook_half(unittest.TestCase):
 
 class Test_Orderbook(unittest.TestCase):
 
-    def test_init(self):
+    def test__init__simple(self):
 
         orderbook = dark_pool.Orderbook()
 
@@ -159,7 +159,7 @@ class Test_Orderbook(unittest.TestCase):
 
 class Test_Exchange(unittest.TestCase):
 
-    def test_add_init(self):
+    def test__init__simple(self):
 
         exchange = dark_pool.Exchange()
 
@@ -168,7 +168,7 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(exchange.buy_side.orders, {})
         self.assertEqual(exchange.sell_side.orders, {})
 
-    def test_add_order(self):
+    def test__add_order(self):
         
         # create an exchange
         exchange = dark_pool.Exchange()

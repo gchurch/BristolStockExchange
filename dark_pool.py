@@ -8,9 +8,19 @@ bse_sys_minprice = 1  # minimum price in the system, in cents/pennies
 bse_sys_maxprice = 1000  # maximum price in the system, in cents/pennies
 ticksize = 1  # minimum change in price, in cents/pennies
 
+# a customer order which is given to a trader to complete
+class Customer_Order:
+
+    def __init__(self, tid, otype, price, qty, time):
+        self.tid = tid        # the trader i.d. that this order is for
+        self.otype = otype    # the order type of the customer order i.e. buy/sell
+        self.price = price    # the limit price of the customer order
+        self.qty = qty        # the quantity to buy/sell
+        self.time = time      # the time the customer order was issued
 
 
-# an Order/quote has a trader id, a type (buy/sell) price, quantity, timestamp, and unique i.d.
+
+# an order put forward by a trader for the exchange
 class Order:
 
     def __init__(self, tid, otype, qty, MES, time):
@@ -19,10 +29,10 @@ class Order:
         self.qty = qty      # quantity
         self.MES = MES      # minimum execution size
         self.time = time    # timestamp
-        self.qid = -1      # quote i.d. (unique to each quote)
+        self.oid = -1       # order i.d. (unique to each order on the Exchange)
 
     def __str__(self):
-        return '[%s %s Q=%s MES=%s T=%5.2f QID:%d]' % (self.tid, self.otype, self.qty, self.MES, self.time, self.qid)
+        return '[%s %s Q=%s MES=%s T=%5.2f OID:%d]' % (self.tid, self.otype, self.qty, self.MES, self.time, self.oid)
 
 
 # Orderbook_half is one side of the book: a list of bids or a list of asks, each sorted best-first
@@ -112,15 +122,15 @@ class Exchange(Orderbook):
 
     def add_order(self, order, verbose):
         # add a quote/order to the exchange and update all internal records; return unique i.d.
-        order.qid = self.quote_id
-        self.quote_id = order.qid + 1
-        # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.qid, self.quote_id))
+        order.oid = self.quote_id
+        self.quote_id = order.oid + 1
+        # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.oid, self.quote_id))
         tid = order.tid
         if order.otype == 'Buy':
             response=self.buy_side.book_add(order)
         else:
             response=self.sell_side.book_add(order)
-        return [order.qid, response]
+        return [order.oid, response]
 
 
     def del_order(self, time, order, verbose):
@@ -195,6 +205,7 @@ class Exchange(Orderbook):
                                 'party2': sell_order.tid,
                                 'qty': trade_size}
         self.tape.append(transaction_record)
+        return transaction_record
         
 
     # this function executes the uncross event, trades occur at the given time at the given price
@@ -228,7 +239,7 @@ class Exchange(Orderbook):
     def publish_lob(self, time, verbose):
         public_data = {}
         public_data['time'] = time
-        public_data['QID'] = self.quote_id
+        public_data['OID'] = self.quote_id
         public_data['tape'] = self.tape
         return public_data
 

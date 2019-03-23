@@ -161,7 +161,7 @@ class Exchange(Orderbook):
         return None
 
     # given a buy order, a sell order and a trade size, perform the trade
-    def perform_trade(self, buy_order, sell_order, trade_size):
+    def perform_trade(self, time, price, buy_order, sell_order, trade_size):
 
         # subtract the trade quantity from the orders' quantity
         buy_order.qty -= trade_size
@@ -186,6 +186,15 @@ class Exchange(Orderbook):
                 sell_order.MES = sell_order.qty
             # add the order to the order_book list
             self.sell_side.book_add(sell_order)
+
+        # add a record of the transaction to the tape
+        transaction_record = {  'type': 'Trade',
+                                'time': time,
+                                'price': price,
+                                'party1': buy_order.tid,
+                                'party2': sell_order.tid,
+                                'qty': trade_size}
+        self.tape.append(transaction_record)
         
 
     # this function executes the uncross event
@@ -825,10 +834,13 @@ def test():
 
     match_info = exchange.find_order_match()
 
-    exchange.perform_trade(match_info["buy_order"], match_info["sell_order"], match_info["trade_size"])
+    exchange.perform_trade(100.0, 50.0, match_info["buy_order"], match_info["sell_order"], match_info["trade_size"])
     print("trade executed")
 
     exchange.print_order_book()
+
+    # end of an experiment -- dump the tape
+    exchange.tape_dump('dark_transactions.csv', 'w', 'keep')
 
 def main():
     test()

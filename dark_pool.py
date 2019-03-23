@@ -197,10 +197,21 @@ class Exchange(Orderbook):
         self.tape.append(transaction_record)
         
 
-    # this function executes the uncross event
-    # PMP is the Primary market Midpoint Price, i.e. the midpoint price on BSE
-    def uncross(self, PMP):
-        return
+    # this function executes the uncross event, trades occur at the given time at the given price
+    # keep making trades out of matching order until no more matches can be found
+    def uncross(self, time, price):
+
+        # find a match between a buy order a sell order
+        match_info = self.find_order_match()
+
+        # keep on going until no more matches can be found
+        while match_info != None:
+
+            # execute the trade with the matched orders
+            self.perform_trade(time, 50.0, match_info["buy_order"], match_info["sell_order"], match_info["trade_size"])
+
+            # find another match
+            match_info = self.find_order_match()
 
     def tape_dump(self, fname, fmode, tmode):
         dumpfile = open(fname, fmode)
@@ -829,24 +840,19 @@ def test():
     for order in orders:
         exchange.add_order(order, orders_verbose)
 
-    # print the order book
+    # print the order book before the uncross event
+    print("\nStarting order book")
     exchange.print_order_book()
 
-    match_info = exchange.find_order_match()
+    # invoke an uncross event
+    exchange.uncross(5.0, 25.0)
 
-    time = 0
+    # print the order book after the uncross event
+    print("\nEnding order book")
+    exchange.print_order_book()
 
-    while match_info != None:
-
-        exchange.perform_trade(time, 50.0, match_info["buy_order"], match_info["sell_order"], match_info["trade_size"])
-        print("trade executed")
-
-        exchange.print_order_book()
-
-        match_info = exchange.find_order_match()
-
-        time += 1
-
+    # print the tape at the end of the uncross event
+    print("\ntape")
     print(exchange.tape)
 
     # end of an experiment -- dump the tape

@@ -45,8 +45,8 @@ class Orderbook_half:
     def __init__(self, booktype):
         # booktype: bids or asks?
         self.booktype = booktype
-        # a dictionary of the the original orders placed in the orderbook
-        self.orders = {}
+        # a dictionary containing all traders and the number of orders they have in this order book
+        self.traders = {}
         # list of orders received, sorted by size and then time
         self.order_book = []
         # number of current orders
@@ -78,15 +78,15 @@ class Orderbook_half:
     def book_add(self, order):
 
         # if the trader with this tid already has an order in the order_book, then remove it
-        if self.orders.get(order.tid) != None:
+        if self.traders.get(order.tid) != None:
             self.remove_from_order_book(order.tid)
 
         # Note. changing the order in the order_book list will also change the order in the orders dictonary
         
-        # add the order to the orders dictionary
+        # add the order to the traders dictionary
         num_orders = self.num_orders
-        self.orders[order.tid] = order
-        self.num_orders = len(self.orders)
+        self.traders[order.tid] = 1
+        self.num_orders = len(self.traders)
 
         # add the order to order_book list
         position = self.find_order_book_position(order)
@@ -98,13 +98,11 @@ class Orderbook_half:
         else:
             return('Overwrite')
 
-    # delete the given order from the orders dictionary and from the order_book list
-    def book_del(self, order):
-                
-        if self.orders.get(order.tid) != None :
-            del(self.orders[order.tid])
-            self.remove_from_order_book(order.tid)
-            self.num_orders = len(self.orders)
+    # delete the order by the trader with the given tid
+    def book_del(self, tid):
+        del(self.traders[tid])
+        self.remove_from_order_book(tid)
+        self.num_orders = len(self.order_book)
 
 
 # Orderbook for a single instrument: list of bids and list of asks
@@ -145,12 +143,12 @@ class Exchange:
         # delete a trader's quot/order from the exchange, update all internal records
         tid = order.tid
         if order.otype == 'Buy':
-            self.order_book.buy_side.book_del(order)
+            self.order_book.buy_side.book_del(order.tid)
             cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
             self.order_book.tape.append(cancel_record)
 
         elif order.otype == 'Sell':
-            self.order_book.sell_side.book_del(order)
+            self.order_book.sell_side.book_del(order.tid)
             cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
             self.order_book.tape.append(cancel_record)
         else:
@@ -186,8 +184,8 @@ class Exchange:
         sell_order.qty -= trade_size
 
         # remove orders from the order_book
-        self.order_book.buy_side.book_del(buy_order)
-        self.order_book.sell_side.book_del(sell_order)
+        self.order_book.buy_side.book_del(buy_order.tid)
+        self.order_book.sell_side.book_del(sell_order.tid)
 
         # re-add the the residual
         if buy_order.qty > 0:

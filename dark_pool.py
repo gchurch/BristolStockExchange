@@ -344,7 +344,8 @@ class Trader_Giveaway(Trader):
         if self.customer_order == None:
             order = None
         else:
-            order = Order(self.tid, self.customer_order.otype, self.customer_order.qty, 0, time)
+            MES = random.randint(1, self.customer_order.qty)
+            order = Order(self.tid, self.customer_order.otype, self.customer_order.qty, MES, time)
             self.lastquote=order
             return order
 
@@ -631,9 +632,8 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         orderprice = getorderprice(t, sched, n_buyers, mode, issuetime)
                         # generating a random order quantity
                         quantity = random.randint(1,10)
-                        MES = random.randint(1, quantity)
-                        order = Order(tname, ordertype, quantity, MES, issuetime)
-                        new_pending.append(order)
+                        customer_order = Customer_Order(tname, ordertype, orderprice, quantity, issuetime)
+                        new_pending.append(customer_order)
                         
                 # add the supply side (sellers) customer orders to the list of pending orders
                 issuetimes = getissuetimes(n_sellers, os['timemode'], os['interval'], shuffle_times, True)
@@ -645,9 +645,8 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         orderprice = getorderprice(t, sched, n_sellers, mode, issuetime)
                         # generating a random order quantity
                         quantity = random.randint(1,10)
-                        MES = random.randint(1,quantity)
-                        order = Order(tname, ordertype, quantity, MES, issuetime)
-                        new_pending.append(order)
+                        customer_order = Customer_Order(tname, ordertype, orderprice, quantity, issuetime)
+                        new_pending.append(customer_order)
         # if there are some pending orders
         else:
                 # there are pending future orders: issue any whose timestamp is in the past
@@ -874,7 +873,7 @@ def test():
     trade_stats(1, traders, dumpfile, 200)
 
 def main():
-    test()
+    experiment1()
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":

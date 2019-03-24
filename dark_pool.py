@@ -126,11 +126,10 @@ class Orderbook:
 
     # add an order to the order book
     def add_order(self, order, verbose):
-        # add a quote/order to the exchange and update all internal records; return unique i.d.
+        # add a order to the exchange and update all internal records; return unique i.d.
         order.oid = self.order_id
         self.order_id = order.oid + 1
         # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.oid, self.order_id))
-        tid = order.tid
         if order.otype == 'Buy':
             response=self.buy_side.book_add(order)
         else:
@@ -139,8 +138,7 @@ class Orderbook:
 
     # delete an order from the order book
     def del_order(self, time, order, verbose):
-        # delete a trader's quot/order from the exchange, update all internal records
-        tid = order.tid
+        # delete a trader's order from the exchange, update all internal records
         if order.otype == 'Buy':
             self.buy_side.book_del(order.tid)
             cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
@@ -256,15 +254,18 @@ class Block_Indication_Book:
         self.sell_side = Orderbook_half('Sell')
         self.tape = []
         self.BI_id = 0
+        self.reputation_scores = {}
 
     
     # add block indication
     def add_block_indication(self, order, verbose):
-        # add a quote/order to the exchange and update all internal records; return unique i.d.
+        # if a new trader, then give it an initial reputational score
+        if self.reputation_scores.get(order.tid) == None:
+            self.reputation_scores[order.tid] = 50
+        # set the orders order id member variable
         order.oid = self.BI_id
         self.BI_id = order.oid + 1
-        # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.oid, self.order_id))
-        tid = order.tid
+        # add a order to the correct order book
         if order.otype == 'Buy':
             response=self.buy_side.book_add(order)
         else:
@@ -273,8 +274,7 @@ class Block_Indication_Book:
 
     # delete block indication
     def del_block_indication(self, time, order, verbose):
-        # delete a trader's quot/order from the exchange, update all internal records
-        tid = order.tid
+        # delete a trader's order from the exchange, update all internal records
         if order.otype == 'Buy':
             self.buy_side.book_del(order.tid)
             cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
@@ -287,6 +287,12 @@ class Block_Indication_Book:
         else:
             # neither bid nor ask?
             sys.exit('bad order type in del_quote()')
+
+    # print the reputational score of all known traders
+    def print_reputational_scores(self):
+        print("Reputational scores:")
+        for key in self.reputation_scores:
+            print("%s : %d" % (key, self.reputation_scores[key]))
 
     # print the current traders with block indications
     def print_traders(self):
@@ -358,6 +364,9 @@ class Exchange:
 
     def print_block_indications(self):
         self.block_indications.print_block_indications()
+
+    def print_reputation_scores(self):
+        self.block_indications.print_reputational_scores()
 
 ##################--Traders below here--#############
 
@@ -992,6 +1001,7 @@ def test2():
 
     exchange.print_order_book()
     exchange.print_block_indications()
+    exchange.print_reputation_scores()
 
     # invoke an uncross event, setting the traders parameters to None to avoid using traders
     exchange.uncross(None, 5.0, 25.0)

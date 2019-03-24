@@ -104,11 +104,12 @@ class Orderbook_half:
         self.remove_order(tid)
         self.num_orders = len(self.orders)
 
-    # print the curr
+    # print the current traders
     def print_traders(self):
         for key in self.traders:
             print("%s: %d" % (key, self.traders[key]))
 
+    # print the current orders
     def print_orders(self):
         for order in self.orders:
             print(order)
@@ -116,7 +117,7 @@ class Orderbook_half:
 
 # Orderbook for a single instrument: list of bids and list of asks
 
-class Orderbook(Orderbook_half):
+class Orderbook:
 
     def __init__(self):
         self.buy_side = Orderbook_half('Buy')
@@ -124,53 +125,43 @@ class Orderbook(Orderbook_half):
         self.tape = []
         self.order_id = 0  #unique ID code for each quote accepted onto the book
 
-
-
-# Exchange's internal orderbook
-
-class Exchange:
-
-    # constructor method
-    def __init__(self):
-        self.order_book = Orderbook()
-        self.block_indications = Orderbook()
-
-    # add an order to the exchange
+    # add an order to the order book
     def add_order(self, order, verbose):
         # add a quote/order to the exchange and update all internal records; return unique i.d.
-        order.oid = self.order_book.order_id
-        self.order_book.order_id = order.oid + 1
+        order.oid = self.order_id
+        self.order_id = order.oid + 1
         # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.oid, self.order_id))
         tid = order.tid
         if order.otype == 'Buy':
-            response=self.order_book.buy_side.book_add(order)
+            response=self.buy_side.book_add(order)
         else:
-            response=self.order_book.sell_side.book_add(order)
+            response=self.sell_side.book_add(order)
         return [order.oid, response]
 
-    # delete an order from the exchange
+    # delete an order from the order book
     def del_order(self, time, order, verbose):
         # delete a trader's quot/order from the exchange, update all internal records
         tid = order.tid
         if order.otype == 'Buy':
-            self.order_book.buy_side.book_del(order.tid)
+            self.buy_side.book_del(order.tid)
             cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
-            self.order_book.tape.append(cancel_record)
+            self.tape.append(cancel_record)
 
         elif order.otype == 'Sell':
-            self.order_book.sell_side.book_del(order.tid)
+            self.sell_side.book_del(order.tid)
             cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
-            self.order_book.tape.append(cancel_record)
+            self.tape.append(cancel_record)
         else:
             # neither bid nor ask?
             sys.exit('bad order type in del_quote()')
+
 
     # match two orders and perform the trade
     # matching is buy-side friendly, so start with buys first
     def find_order_match(self):
 
-        for buy_order in self.order_book.buy_side.orders:
-            for sell_order in self.order_book.sell_side.orders:
+        for buy_order in self.buy_side.orders:
+            for sell_order in self.sell_side.orders:
                 # find two matching orders in the order_book list
                 if buy_order.qty >= sell_order.MES and buy_order.MES <= sell_order.qty:
                     # work out how large the trade size will be
@@ -194,8 +185,8 @@ class Exchange:
         sell_order.qty -= trade_size
 
         # remove orders from the order_book
-        self.order_book.buy_side.book_del(buy_order.tid)
-        self.order_book.sell_side.book_del(sell_order.tid)
+        self.buy_side.book_del(buy_order.tid)
+        self.sell_side.book_del(sell_order.tid)
 
         # re-add the the residual
         if buy_order.qty > 0:
@@ -203,7 +194,7 @@ class Exchange:
             if buy_order.MES > buy_order.qty:
                 buy_order.MES = buy_order.qty
             # add the order to the order_book list
-            self.order_book.buy_side.book_add(buy_order)
+            self.buy_side.book_add(buy_order)
 
         # re-add the residual
         if sell_order.qty > 0:
@@ -211,7 +202,7 @@ class Exchange:
             if sell_order.MES > sell_order.qty:
                 sell_order.MES = sell_order.qty
             # add the order to the order_book list
-            self.order_book.sell_side.book_add(sell_order)
+            self.sell_side.book_add(sell_order)
 
         # create a record of the transaction to the tape
         trade = {   'type': 'Trade',
@@ -228,50 +219,80 @@ class Exchange:
             traders[sell_order.tid].bookkeep(trade, False)
 
         # add a record to the tape
-        self.order_book.tape.append(trade)
-        
+        self.tape.append(trade)
+
+    # write the tape to an output file
+    def tape_dump(self, fname, fmode, tmode):
+        dumpfile = open(fname, fmode)
+        # write the title for each column
+        dumpfile.write('time, quantity, price\n')
+        # write the information for each trade
+        for tapeitem in self.tape:
+            if tapeitem['type'] == 'Trade' :
+                dumpfile.write('%s, %s, %s\n' % (tapeitem['time'], tapeitem['quantity'], tapeitem['price']))
+        dumpfile.close()
+        if tmode == 'wipe':
+            self.tape = []
+
+    # print the current orders in the orders dictionary
+    def print_traders(self):
+        print("Buy orders:")
+        self.buy_side.print_traders()
+        print("Sell orders:")
+        self.sell_side.print_traders()
+
+    # print the current orders in the order_book list
+    def print_order_book(self):
+        print("Buy side order book:")
+        self.buy_side.print_orders()
+        print("Sell side order book:")
+        self.sell_side.print_orders()
+
+
+# Exchange
+
+class Exchange:
+
+    # constructor method
+    def __init__(self):
+        self.order_book = Orderbook()
+        self.block_indications = Orderbook()
+
+    # add an order to the exchange
+    def add_order(self, order, verbose):
+        self.order_book.add_order(order, verbose)
+
+    # delete an order from the exchange
+    def del_order(self, time, order, verbose):
+        self.order_book.del_order(time, order, verbose)
 
     # this function executes the uncross event, trades occur at the given time at the given price
     # keep making trades out of matching order until no more matches can be found
     def uncross(self, traders, time, price):
 
         # find a match between a buy order a sell order
-        match_info = self.find_order_match()
+        match_info = self.order_book.find_order_match()
 
         # keep on going until no more matches can be found
         while match_info != None:
 
             # execute the trade with the matched orders
-            self.perform_trade(traders, time, 50.0, match_info["buy_order"], match_info["sell_order"], match_info["trade_size"])
+            self.order_book.perform_trade(traders, time, 50.0, match_info["buy_order"], match_info["sell_order"], match_info["trade_size"])
 
             # find another match
-            match_info = self.find_order_match()
+            match_info = self.order_book.find_order_match()
 
+    # write the order_book's tape to the output file
     def tape_dump(self, fname, fmode, tmode):
-        dumpfile = open(fname, fmode)
-        # write the title for each column
-        dumpfile.write('time, quantity, price\n')
-        # write the information for each trade
-        for tapeitem in self.order_book.tape:
-            if tapeitem['type'] == 'Trade' :
-                dumpfile.write('%s, %s, %s\n' % (tapeitem['time'], tapeitem['quantity'], tapeitem['price']))
-        dumpfile.close()
-        if tmode == 'wipe':
-            self.order_book.tape = []
+        self.order_book.tape_dump(fname, fmode, tmode)
 
     # print the current orders in the orders dictionary
     def print_traders(self):
-        print("Buy orders:")
-        self.order_book.buy_side.print_traders()
-        print("Sell orders:")
-        self.order_book.sell_side.print_traders()
+        self.order_book.print_traders()
 
     # print the current orders in the order_book list
     def print_order_book(self):
-        print("Buy side order book:")
-        self.order_book.buy_side.print_orders();
-        print("Sell side order book:")
-        self.order_book.sell_side.print_orders();
+        self.order_book.print_order_book()
 
 ##################--Traders below here--#############
 

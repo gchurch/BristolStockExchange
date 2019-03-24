@@ -26,12 +26,13 @@ class Customer_Order:
 # an order created by a trader for the exchange
 class Order:
 
-    def __init__(self, time, tid, otype, qty, MES):
+    def __init__(self, time, tid, otype, qty, MES, BI):
         self.time = time    # timestamp
         self.tid = tid      # trader i.d.
         self.otype = otype  # order type
         self.qty = qty      # quantity
         self.MES = MES      # minimum execution size
+        self.BI = BI        # if true, this signifies that the order is a Block Indication
         self.oid = -1       # order i.d. (unique to each order on the Exchange)
 
     def __str__(self):
@@ -354,7 +355,7 @@ class Trader_Giveaway(Trader):
             order = None
         else:
             MES = 2
-            order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES)
+            order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, False)
             self.lastquote=order
             return order
 

@@ -43,6 +43,12 @@ class Test_Orderbook_half(unittest.TestCase):
         self.assertEqual(orderbook_half.order_book, [])
         self.assertEqual(orderbook_half.n_orders, 0)
 
+    def test__find_order_position(self):
+        return
+
+    def test__remove_from_order_book(self):
+        return
+
     # test that when a single order is added, it is added to the orders dictionary
     # and the order_book list
     def test__book_add__simple(self):
@@ -217,6 +223,9 @@ class Test_Exchange(unittest.TestCase):
 
         exchange.del_order(110.0, orders[-1], False)
 
+    def test__perform_trade(self):
+        return
+
     def test__uncross(self):
         # initialise the exchange
         exchange = dark_pool.Exchange()
@@ -252,6 +261,8 @@ class Test_Exchange(unittest.TestCase):
         # test the tape
         self.assertEqual(exchange.tape, [{'party2': 'S00', 'party1': 'B01', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 10}, {'party2': 'S03', 'party1': 'B00', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 5}, {'party2': 'S02', 'party1': 'B02', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}, {'party2': 'S01', 'party1': 'B04', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}, {'party2': 'S02', 'party1': 'B03', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}])
 
+        def test__tape_dump(self):
+            return
 
 class Test_Functions(unittest.TestCase):
 

@@ -241,16 +241,6 @@ class Exchange(Orderbook):
         if tmode == 'wipe':
             self.tape = []
 
-
-    # this returns the LOB data "published" by the exchange,
-    # i.e., what is accessible to the traders
-    def publish_lob(self, time, verbose):
-        public_data = {}
-        public_data['time'] = time
-        public_data['OID'] = self.quote_id
-        public_data['tape'] = self.tape
-        return public_data
-
     # print the orders in the orders dictionary
     def print_orders(self):
         print("Buy orders:")
@@ -350,7 +340,7 @@ class Trader:
 # (but never makes a loss)
 class Trader_Giveaway(Trader):
 
-    def getorder(self, time, countdown, lob):
+    def getorder(self, time, countdown):
         if self.customer_order == None:
             order = None
         else:
@@ -744,7 +734,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
                 # get a limit-order quote (or None) from a randomly chosen trader
                 tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
-                order = traders[tid].getorder(time, time_left, exchange.publish_lob(time, lob_verbose))
+                order = traders[tid].getorder(time, time_left)
 
                 if verbose: print('Trader Quote: %s' % (order))
 

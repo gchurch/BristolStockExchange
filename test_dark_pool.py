@@ -61,8 +61,8 @@ class Test_Orderbook_half(unittest.TestCase):
 
         # test
         self.assertEqual(orderbook_half.orders.keys(), ['B00'])
-        self.assertEqual(orderbook_half.orders['B00'].__str__(), "[B00 Buy Q=5 MES=3 T=25.00 QID:-1]")
-        self.assertEqual(orderbook_half.order_book[0].__str__(), "[B00 Buy Q=5 MES=3 T=25.00 QID:-1]")
+        self.assertEqual(orderbook_half.orders['B00'].__str__(), "Order [B00 Buy Q=5 MES=3 T=25.00 OID=-1]")
+        self.assertEqual(orderbook_half.order_book[0].__str__(), "Order [B00 Buy Q=5 MES=3 T=25.00 OID=-1]")
         self.assertEqual(orderbook_half.n_orders, 1)
 
     # testing that when that the order of orders in the order_book list is ordered by quantity then time
@@ -83,12 +83,12 @@ class Test_Orderbook_half(unittest.TestCase):
             orderbook_half.book_add(order)
 
         self.assertEqual(orderbook_half.orders.keys(), ['B01', 'B00', 'B02'])
-        self.assertEqual(orderbook_half.orders['B00'].__str__(), "[B00 Buy Q=5 MES=3 T=25.00 QID:-1]")
-        self.assertEqual(orderbook_half.orders['B01'].__str__(), "[B01 Buy Q=10 MES=4 T=35.00 QID:-1]")
-        self.assertEqual(orderbook_half.orders['B02'].__str__(), "[B02 Buy Q=10 MES=4 T=45.00 QID:-1]")
-        self.assertEqual(orderbook_half.order_book[0].__str__(), "[B01 Buy Q=10 MES=4 T=35.00 QID:-1]")
-        self.assertEqual(orderbook_half.order_book[1].__str__(), "[B02 Buy Q=10 MES=4 T=45.00 QID:-1]")
-        self.assertEqual(orderbook_half.order_book[2].__str__(), "[B00 Buy Q=5 MES=3 T=25.00 QID:-1]")
+        self.assertEqual(orderbook_half.orders['B00'].__str__(), "Order [B00 Buy Q=5 MES=3 T=25.00 OID=-1]")
+        self.assertEqual(orderbook_half.orders['B01'].__str__(), "Order [B01 Buy Q=10 MES=4 T=35.00 OID=-1]")
+        self.assertEqual(orderbook_half.orders['B02'].__str__(), "Order [B02 Buy Q=10 MES=4 T=45.00 OID=-1]")
+        self.assertEqual(orderbook_half.order_book[0].__str__(), "Order [B01 Buy Q=10 MES=4 T=35.00 OID=-1]")
+        self.assertEqual(orderbook_half.order_book[1].__str__(), "Order [B02 Buy Q=10 MES=4 T=45.00 OID=-1]")
+        self.assertEqual(orderbook_half.order_book[2].__str__(), "Order [B00 Buy Q=5 MES=3 T=25.00 OID=-1]")
 
     def test__book_add__overwrite(self):
         # create the order book
@@ -109,8 +109,8 @@ class Test_Orderbook_half(unittest.TestCase):
         # tests
         self.assertEqual(return_values, ['Addition', 'Addition', 'Overwrite'])
         self.assertEqual(orderbook_half.orders.keys(), ['B01', 'B00'])
-        self.assertEqual(orderbook_half.order_book[0].__str__(), "[B01 Buy Q=10 MES=4 T=35.00 QID:-1]")
-        self.assertEqual(orderbook_half.order_book[1].__str__(), "[B00 Buy Q=10 MES=4 T=45.00 QID:-1]")
+        self.assertEqual(orderbook_half.order_book[0].__str__(), "Order [B01 Buy Q=10 MES=4 T=35.00 OID=-1]")
+        self.assertEqual(orderbook_half.order_book[1].__str__(), "Order [B00 Buy Q=10 MES=4 T=45.00 OID=-1]")
         self.assertEqual(orderbook_half.n_orders, 2)
         self.assertEqual(len(orderbook_half.order_book), 2)
 
@@ -191,7 +191,7 @@ class Test_Exchange(unittest.TestCase):
             return_values.append(exchange.add_order(order, False))
 
 
-    def test_del_order(self):
+    def test__del_order(self):
 
         # create an exchange
         exchange = dark_pool.Exchange()

@@ -104,6 +104,15 @@ class Orderbook_half:
         self.remove_order(tid)
         self.num_orders = len(self.orders)
 
+    # print the curr
+    def print_traders(self):
+        for key in self.traders:
+            print("%s: %d" % (key, self.traders[key]))
+
+    def print_orders(self):
+        for order in self.orders:
+            print(order)
+
 
 # Orderbook for a single instrument: list of bids and list of asks
 
@@ -250,31 +259,18 @@ class Exchange:
             self.order_book.tape = []
 
     # print the current orders in the orders dictionary
-    def print_current_traders(self):
+    def print_traders(self):
         print("Buy orders:")
-        for key in self.order_book.buy_side.traders:
-            print(self.order_book.buy_side.traders[key])
+        self.order_book.buy_side.print_traders()
         print("Sell orders:")
-        for key in self.order_book.sell_side.traders:
-            print(self.order_book.sell_side.traders[key])
-
-    # print the current block indications
-    def print_block_indications(self):
-        print("Buy side block indications:")
-        for bi in self.order_book.buy_side.block_indications:
-            print(bi)
-        print("Sell side block indications:")
-        for bi in self.order_book.sell_side.block_indications:
-            print(bi)
+        self.order_book.sell_side.print_traders()
 
     # print the current orders in the order_book list
     def print_order_book(self):
         print("Buy side order book:")
-        for order in self.order_book.buy_side.orders:
-            print(order)
+        self.order_book.buy_side.print_orders();
         print("Sell side order book:")
-        for order in self.order_book.sell_side.orders:
-            print(order)
+        self.order_book.sell_side.print_orders();
 
 ##################--Traders below here--#############
 
@@ -858,6 +854,7 @@ def test1():
 
     # print the order book before the uncross event
     print("\nStarting order book")
+    exchange.print_traders()
     exchange.print_order_book()
 
     # invoke an uncross event
@@ -866,6 +863,7 @@ def test1():
     # print the order book after the uncross event
     print("\nEnding order book")
     exchange.print_order_book()
+    exchange.print_traders()
 
     # print the tape at the end of the uncross event
     print("\ntape")

@@ -122,7 +122,7 @@ class Orderbook(Orderbook_half):
         self.buy_side = Orderbook_half('Buy')
         self.sell_side = Orderbook_half('Sell')
         self.tape = []
-        self.quote_id = 0  #unique ID code for each quote accepted onto the book
+        self.order_id = 0  #unique ID code for each quote accepted onto the book
 
 
 
@@ -133,13 +133,14 @@ class Exchange:
     # constructor method
     def __init__(self):
         self.order_book = Orderbook()
+        self.block_indications = Orderbook()
 
     # add an order to the exchange
     def add_order(self, order, verbose):
         # add a quote/order to the exchange and update all internal records; return unique i.d.
-        order.oid = self.order_book.quote_id
-        self.order_book.quote_id = order.oid + 1
-        # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.oid, self.quote_id))
+        order.oid = self.order_book.order_id
+        self.order_book.order_id = order.oid + 1
+        # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.oid, self.order_id))
         tid = order.tid
         if order.otype == 'Buy':
             response=self.order_book.buy_side.book_add(order)

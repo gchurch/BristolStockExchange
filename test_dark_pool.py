@@ -154,7 +154,7 @@ class Test_Orderbook(unittest.TestCase):
         orderbook = dark_pool.Orderbook()
 
         self.assertEqual(orderbook.tape, [])
-        self.assertEqual(orderbook.quote_id, 0)
+        self.assertEqual(orderbook.order_id, 0)
         self.assertEqual(orderbook.buy_side.traders, {})
         self.assertEqual(orderbook.sell_side.traders, {})
         self.assertEqual(orderbook.buy_side.orders, [])
@@ -170,7 +170,7 @@ class Test_Exchange(unittest.TestCase):
         exchange = dark_pool.Exchange()
 
         self.assertEqual(exchange.order_book.tape, [])
-        self.assertEqual(exchange.order_book.quote_id, 0)
+        self.assertEqual(exchange.order_book.order_id, 0)
         self.assertEqual(exchange.order_book.buy_side.traders, {})
         self.assertEqual(exchange.order_book.sell_side.traders, {})
 

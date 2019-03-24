@@ -206,9 +206,11 @@ class Exchange(Orderbook):
                     'party1': buy_order.tid,
                     'party2': sell_order.tid}
 
-        # inform the traders of the trade
-        traders[buy_order.tid].bookkeep(trade, False)
-        traders[sell_order.tid].bookkeep(trade, False)
+        # the traders parameter may be set to none when we are just trying to test the uncross function
+        if traders != None:
+            # inform the traders of the trade
+            traders[buy_order.tid].bookkeep(trade, False)
+            traders[sell_order.tid].bookkeep(trade, False)
 
         # add a record to the tape
         self.tape.append(trade)

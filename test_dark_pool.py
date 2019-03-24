@@ -217,6 +217,41 @@ class Test_Exchange(unittest.TestCase):
 
         exchange.del_order(110.0, orders[-1], False)
 
+    def test__uncross(self):
+        # initialise the exchange
+        exchange = dark_pool.Exchange()
+
+        # create some example orders
+        orders = []
+        orders.append(dark_pool.Order('B00', 'Buy', 5, 3, 25.0))
+        orders.append(dark_pool.Order('B01', 'Buy', 10, 6, 35.0))
+        orders.append(dark_pool.Order('B02', 'Buy', 3, 1, 55.0))
+        orders.append(dark_pool.Order('B03', 'Buy', 3, 2, 75.0))
+        orders.append(dark_pool.Order('B04', 'Buy', 3, 2, 65.0))
+        orders.append(dark_pool.Order('S00', 'Sell', 11, 6, 45.0))
+        orders.append(dark_pool.Order('S01', 'Sell', 4, 2, 55.0))
+        orders.append(dark_pool.Order('S02', 'Sell', 6, 3, 65.0))
+        orders.append(dark_pool.Order('S03', 'Sell', 6, 4, 55.0))
+
+        # add the orders to the exchange
+        for order in orders:
+            exchange.add_order(order, False)
+
+        # invoke an uncross event, setting the traders parameters to None to avoid using traders
+        exchange.uncross(None, 5.0, 25.0)
+
+        # test the buy side
+        self.assertEqual(len(exchange.buy_side.order_book), 0)
+
+        # test the sell side
+        self.assertEqual(len(exchange.sell_side.order_book), 3)
+        self.assertEqual(exchange.sell_side.order_book[0].__str__(), "Order [S00 Sell Q=1 MES=1 T=45.00 OID=5]")
+        self.assertEqual(exchange.sell_side.order_book[1].__str__(), "Order [S03 Sell Q=1 MES=1 T=55.00 OID=8]")
+        self.assertEqual(exchange.sell_side.order_book[2].__str__(), "Order [S01 Sell Q=1 MES=1 T=55.00 OID=6]")
+
+        # test the tape
+        self.assertEqual(exchange.tape, [{'party2': 'S00', 'party1': 'B01', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 10}, {'party2': 'S03', 'party1': 'B00', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 5}, {'party2': 'S02', 'party1': 'B02', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}, {'party2': 'S01', 'party1': 'B04', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}, {'party2': 'S02', 'party1': 'B03', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}])
+
 
 class Test_Functions(unittest.TestCase):
 

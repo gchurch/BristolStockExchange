@@ -234,9 +234,12 @@ class Exchange(Orderbook):
 
     def tape_dump(self, fname, fmode, tmode):
         dumpfile = open(fname, fmode)
+        # write the title for each column
+        dumpfile.write('time, quantity, price\n')
+        # write the information for each trade
         for tapeitem in self.tape:
             if tapeitem['type'] == 'Trade' :
-                dumpfile.write('%s, %s\n' % (tapeitem['time'], tapeitem['price']))
+                dumpfile.write('%s, %s, %s\n' % (tapeitem['time'], tapeitem['quantity'], tapeitem['price']))
         dumpfile.close()
         if tmode == 'wipe':
             self.tape = []
@@ -340,11 +343,11 @@ class Trader:
 # (but never makes a loss)
 class Trader_Giveaway(Trader):
 
-    def getorder(self, time, countdown):
+    def getorder(self, time):
         if self.customer_order == None:
             order = None
         else:
-            MES = random.randint(1, self.customer_order.qty)
+            MES = 2
             order = Order(self.tid, self.customer_order.otype, self.customer_order.qty, MES, time)
             self.lastquote=order
             return order
@@ -362,6 +365,7 @@ class Trader_Giveaway(Trader):
 # between successive calls, but that does make it inefficient as it has to
 # re-analyse the entire set of traders on each call
 def trade_stats(expid, traders, dumpfile, time):
+
         # calculate the total balance sum for each type of trader and the number of each type of trader
         trader_types = {}
         n_traders = len(traders)
@@ -374,6 +378,11 @@ def trade_stats(expid, traders, dumpfile, time):
                         t_balance = traders[t].balance
                         n = 1
                 trader_types[ttype] = {'n':n, 'balance_sum':t_balance}
+
+        # write the title for each column
+        dumpfile.write('trial, time,')
+        for i in range(0, len(trader_types)):
+            dumpfile.write('type, sum, n, avg\n')
 
         # write the trial number followed by the time
         dumpfile.write('%s, %06d, ' % (expid, time))
@@ -820,7 +829,7 @@ def test():
     traders = {}
     trader_stats = populate_market(traders_spec, traders, True, traders_verbose)
 
-    # crate some customer orders
+    # create some customer orders
     customer_orders = []
     customer_orders.append(Customer_Order('B00', 'Buy', 100, 5, 25.0))
     customer_orders.append(Customer_Order('B01', 'Buy', 100, 10, 35.0))
@@ -835,21 +844,12 @@ def test():
     for customer_order in customer_orders:
         traders[customer_order.tid].add_order(customer_order, False)
 
-    # create some example orders
-    orders = []
-    orders.append(Order('B00', 'Buy', 5, 3, 25.0))
-    orders.append(Order('B01', 'Buy', 10, 6, 35.0))
-    orders.append(Order('B02', 'Buy', 3, 1, 55.0))
-    orders.append(Order('B03', 'Buy', 3, 2, 75.0))
-    orders.append(Order('B04', 'Buy', 3, 2, 65.0))
-    orders.append(Order('S00', 'Sell', 11, 6, 45.0))
-    orders.append(Order('S01', 'Sell', 4, 2, 55.0))
-    orders.append(Order('S02', 'Sell', 6, 3, 65.0))
-    orders.append(Order('S03', 'Sell', 6, 4, 55.0))
-    
-    # add the orders to the exchange
-    for order in orders:
-        exchange.add_order(order, orders_verbose)
+    print(traders)
+
+    for tid in traders:
+        order = traders[tid].getorder(20.0)
+        if order != None:
+            exchange.add_order(order, orders_verbose)
 
     # print the order book before the uncross event
     print("\nStarting order book")
@@ -873,7 +873,7 @@ def test():
     trade_stats(1, traders, dumpfile, 200)
 
 def main():
-    experiment1()
+    test()
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":

@@ -202,7 +202,7 @@ class Exchange(Orderbook):
         trade = {   'type': 'Trade',
                     'time': time,
                     'price': price,
-                    'qty': trade_size,
+                    'quantity': trade_size,
                     'party1': buy_order.tid,
                     'party2': sell_order.tid}
 
@@ -322,9 +322,9 @@ class Trader:
                 # NB What follows is **LAZY** -- assumes all orders are quantity=1
                 transactionprice = trade['price']
                 if self.customer_order.otype == 'Buy':
-                        profit = self.customer_order.price - transactionprice
+                        profit = (self.customer_order.price - transactionprice) * trade['quantity']
                 else:
-                        profit = transactionprice - self.customer_order.price
+                        profit = (transactionprice - self.customer_order.price) * trade['quantity']
                 self.balance += profit
                 self.n_trades += 1
                 self.profitpertime = self.balance/(trade['time'] - self.birthtime)
@@ -368,7 +368,7 @@ class Trader_Giveaway(Trader):
 # the number of traders of any one type -- allows either/both to change
 # between successive calls, but that does make it inefficient as it has to
 # re-analyse the entire set of traders on each call
-def trade_stats(expid, traders, dumpfile, time, lob):
+def trade_stats(expid, traders, dumpfile, time):
         # calculate the total balance sum for each type of trader and the number of each type of trader
         trader_types = {}
         n_traders = len(traders)
@@ -762,7 +762,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
 
         # write trade_stats for this experiment NB end-of-session summary only
-        trade_stats(sess_id, traders, dumpfile, time, exchange.publish_lob(time, lob_verbose))
+        trade_stats(sess_id, traders, dumpfile, time)
 
 
 
@@ -877,6 +877,9 @@ def test():
 
     # end of an experiment -- dump the tape
     exchange.tape_dump('dark_transactions.csv', 'w', 'keep')
+    # write trade_stats for this experiment NB end-of-session summary only
+    dumpfile = open('dark_avg_balance.csv','w')
+    trade_stats(1, traders, dumpfile, 200)
 
 def main():
     test()

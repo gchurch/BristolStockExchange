@@ -169,10 +169,10 @@ class Test_Exchange(unittest.TestCase):
 
         exchange = dark_pool.Exchange()
 
-        self.assertEqual(exchange.tape, [])
-        self.assertEqual(exchange.quote_id, 0)
-        self.assertEqual(exchange.buy_side.orders, {})
-        self.assertEqual(exchange.sell_side.orders, {})
+        self.assertEqual(exchange.order_book.tape, [])
+        self.assertEqual(exchange.order_book.quote_id, 0)
+        self.assertEqual(exchange.order_book.buy_side.orders, {})
+        self.assertEqual(exchange.order_book.sell_side.orders, {})
 
     def test__add_order(self):
         
@@ -250,16 +250,16 @@ class Test_Exchange(unittest.TestCase):
         exchange.uncross(None, 5.0, 25.0)
 
         # test the buy side
-        self.assertEqual(len(exchange.buy_side.order_book), 0)
+        self.assertEqual(len(exchange.order_book.buy_side.order_book), 0)
 
         # test the sell side
-        self.assertEqual(len(exchange.sell_side.order_book), 3)
-        self.assertEqual(exchange.sell_side.order_book[0].__str__(), "Order [T=45.00 S00 Sell Q=1 MES=1 OID=5]")
-        self.assertEqual(exchange.sell_side.order_book[1].__str__(), "Order [T=55.00 S03 Sell Q=1 MES=1 OID=8]")
-        self.assertEqual(exchange.sell_side.order_book[2].__str__(), "Order [T=55.00 S01 Sell Q=1 MES=1 OID=6]")
+        self.assertEqual(len(exchange.order_book.sell_side.order_book), 3)
+        self.assertEqual(exchange.order_book.sell_side.order_book[0].__str__(), "Order [T=45.00 S00 Sell Q=1 MES=1 OID=5]")
+        self.assertEqual(exchange.order_book.sell_side.order_book[1].__str__(), "Order [T=55.00 S03 Sell Q=1 MES=1 OID=8]")
+        self.assertEqual(exchange.order_book.sell_side.order_book[2].__str__(), "Order [T=55.00 S01 Sell Q=1 MES=1 OID=6]")
 
         # test the tape
-        self.assertEqual(exchange.tape, [{'party2': 'S00', 'party1': 'B01', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 10}, {'party2': 'S03', 'party1': 'B00', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 5}, {'party2': 'S02', 'party1': 'B02', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}, {'party2': 'S01', 'party1': 'B04', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}, {'party2': 'S02', 'party1': 'B03', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}])
+        self.assertEqual(exchange.order_book.tape, [{'party2': 'S00', 'party1': 'B01', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 10}, {'party2': 'S03', 'party1': 'B00', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 5}, {'party2': 'S02', 'party1': 'B02', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}, {'party2': 'S01', 'party1': 'B04', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}, {'party2': 'S02', 'party1': 'B03', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}])
 
         def test__tape_dump(self):
             return

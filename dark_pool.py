@@ -26,13 +26,12 @@ class Customer_Order:
 # an order created by a trader for the exchange
 class Order:
 
-    def __init__(self, time, tid, otype, qty, MES, BI):
+    def __init__(self, time, tid, otype, qty, MES):
         self.time = time    # timestamp
         self.tid = tid      # trader i.d.
         self.otype = otype  # order type
         self.qty = qty      # quantity
         self.MES = MES      # minimum execution size
-        self.BI = BI        # if true, this signifies that the order is a Block Indication
         self.oid = -1       # order i.d. (unique to each order on the Exchange)
 
     def __str__(self):
@@ -249,6 +248,60 @@ class Orderbook:
         self.sell_side.print_orders()
 
 
+class Block_Indication_Book:
+
+    # constructer function for the Block_Indication_Book class
+    def __init__(self):
+        self.buy_side = Orderbook_half('Buy')
+        self.sell_side = Orderbook_half('Sell')
+        self.tape = []
+        self.BI_id = 0
+
+    
+    # add block indication
+    def add_block_indication(self, order, verbose):
+        # add a quote/order to the exchange and update all internal records; return unique i.d.
+        order.oid = self.BI_id
+        self.BI_id = order.oid + 1
+        # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.oid, self.order_id))
+        tid = order.tid
+        if order.otype == 'Buy':
+            response=self.buy_side.book_add(order)
+        else:
+            response=self.sell_side.book_add(order)
+        return [order.oid, response]
+
+    # delete block indication
+    def del_block_indication(self, time, order, verbose):
+        # delete a trader's quot/order from the exchange, update all internal records
+        tid = order.tid
+        if order.otype == 'Buy':
+            self.buy_side.book_del(order.tid)
+            cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
+            self.tape.append(cancel_record)
+
+        elif order.otype == 'Sell':
+            self.sell_side.book_del(order.tid)
+            cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
+            self.tape.append(cancel_record)
+        else:
+            # neither bid nor ask?
+            sys.exit('bad order type in del_quote()')
+
+    # print the current traders with block indications
+    def print_traders(self):
+        print("Buy orders:")
+        self.buy_side.print_traders()
+        print("Sell orders:")
+        self.sell_side.print_traders()
+
+    # print the current block indications
+    def print_block_indications(self):
+        print("Buy side order book:")
+        self.buy_side.print_orders()
+        print("Sell side order book:")
+        self.sell_side.print_orders()
+
 # Exchange
 
 class Exchange:
@@ -256,7 +309,7 @@ class Exchange:
     # constructor method
     def __init__(self):
         self.order_book = Orderbook()
-        self.block_indications = Orderbook()
+        self.block_indications = Block_Indication_Book()
 
     # add an order to the exchange
     def add_order(self, order, verbose):
@@ -282,6 +335,12 @@ class Exchange:
             # find another match
             match_info = self.order_book.find_order_match()
 
+    def add_block_indication(self, order, verbose):
+        self.block_indications.add_block_indication(order, verbose)
+
+    def del_block_indication(self, time, order, verbose):
+        self.block_indications.del_block_indication(time, order, verbose)
+
     # write the order_book's tape to the output file
     def tape_dump(self, fname, fmode, tmode):
         self.order_book.tape_dump(fname, fmode, tmode)
@@ -293,6 +352,12 @@ class Exchange:
     # print the current orders in the order_book list
     def print_order_book(self):
         self.order_book.print_order_book()
+
+    def print_block_indication_traders(self):
+        self.block_indications.print_block_indication_traders()
+
+    def print_block_indications(self):
+        self.block_indications.print_block_indications()
 
 ##################--Traders below here--#############
 
@@ -380,7 +445,7 @@ class Trader_Giveaway(Trader):
             order = None
         else:
             MES = 2
-            order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, False)
+            order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES)
             self.lastquote=order
             return order
 
@@ -904,21 +969,26 @@ def test2():
 
     # create some example orders
     orders = []
-    orders.append(Order(25.0, 'B00', 'Buy', 5, 3, False))
-    orders.append(Order(35.0, 'B01', 'Buy', 10, 6, False))
-    orders.append(Order(55.0, 'B02', 'Buy', 3, 1, False))
-    orders.append(Order(75.0, 'B03', 'Buy', 3, 2, False))
-    orders.append(Order(65.0, 'B04', 'Buy', 3, 2, False))
-    orders.append(Order(65.0, 'B05', 'Buy', 25, 15, True))
-    orders.append(Order(45.0, 'S00', 'Sell', 11, 6, False))
-    orders.append(Order(55.0, 'S01', 'Sell', 4, 2, False))
-    orders.append(Order(65.0, 'S02', 'Sell', 6, 3, False))
-    orders.append(Order(55.0, 'S03', 'Sell', 6, 4, False))
-    orders.append(Order(85.0, 'S04', 'Sell', 30, 23, True))
+    orders.append(Order(25.0, 'B00', 'Buy', 5, 3))
+    orders.append(Order(35.0, 'B01', 'Buy', 10, 6))
+    orders.append(Order(55.0, 'B02', 'Buy', 3, 1))
+    orders.append(Order(75.0, 'B03', 'Buy', 3, 2))
+    orders.append(Order(65.0, 'B04', 'Buy', 3, 2))
+    orders.append(Order(45.0, 'S00', 'Sell', 11, 6))
+    orders.append(Order(55.0, 'S01', 'Sell', 4, 2))
+    orders.append(Order(65.0, 'S02', 'Sell', 6, 3))
+    orders.append(Order(55.0, 'S03', 'Sell', 6, 4))
 
     # add the orders to the exchange
     for order in orders:
         exchange.add_order(order, False)
+
+    block_indications = []
+    block_indications.append(Order(65.0, 'B05', 'Buy', 25, 15))
+    block_indications.append(Order(85.0, 'S04', 'Sell', 30, 23))
+
+    for block_indication in block_indications:
+        exchange.add_block_indication(block_indication, False)
 
     exchange.print_order_book()
     exchange.print_block_indications()
@@ -926,9 +996,6 @@ def test2():
     # invoke an uncross event, setting the traders parameters to None to avoid using traders
     exchange.uncross(None, 5.0, 25.0)
 
-def main():
-    test1()
-
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    main()
+    test2()

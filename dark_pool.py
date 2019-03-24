@@ -8,33 +8,34 @@ bse_sys_minprice = 1  # minimum price in the system, in cents/pennies
 bse_sys_maxprice = 1000  # maximum price in the system, in cents/pennies
 ticksize = 1  # minimum change in price, in cents/pennies
 
+
 # a customer order which is given to a trader to complete
 class Customer_Order:
 
-    def __init__(self, tid, otype, price, qty, time):
+    def __init__(self, time, tid, otype, price, qty):
+        self.time = time      # the time the customer order was issued
         self.tid = tid        # the trader i.d. that this order is for
         self.otype = otype    # the order type of the customer order i.e. buy/sell
         self.price = price    # the limit price of the customer order
         self.qty = qty        # the quantity to buy/sell
-        self.time = time      # the time the customer order was issued
 
     def __str__(self):
-        return 'Customer Order [%s %s P=%s Q=%s T=%5.2f]' % (self.tid, self.otype, self.price, self.qty, self.time)
+        return 'Customer Order [T=%5.2f %s %s P=%s Q=%s]' % (self.time, self.tid, self.otype, self.price, self.qty)
 
 
 # an order created by a trader for the exchange
 class Order:
 
-    def __init__(self, tid, otype, qty, MES, time):
+    def __init__(self, time, tid, otype, qty, MES):
+        self.time = time    # timestamp
         self.tid = tid      # trader i.d.
         self.otype = otype  # order type
         self.qty = qty      # quantity
         self.MES = MES      # minimum execution size
-        self.time = time    # timestamp
         self.oid = -1       # order i.d. (unique to each order on the Exchange)
 
     def __str__(self):
-        return 'Order [%s %s Q=%s MES=%s T=%5.2f OID=%d]' % (self.tid, self.otype, self.qty, self.MES, self.time, self.oid)
+        return 'Order [T=%5.2f %s %s Q=%s MES=%s OID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid)
 
 
 # Orderbook_half is one side of the book: a list of bids or a list of asks, each sorted best-first
@@ -47,8 +48,12 @@ class Orderbook_half:
         self.orders = {}
         # list of orders received, sorted by size and then time
         self.order_book = []
-        # summary stats
-        self.n_orders = 0  # how many orders?
+        # number of current orders
+        self.num_orders = 0
+        # block indications, indications from traders that they want to trade a block order
+        self.block_indications = []
+        # number of current block indications
+        self.num_block_indications = 0
 
     # find the position to insert the order into the order_book list such that the order_book list maintains
     # it's ordering of (size,time)
@@ -82,16 +87,16 @@ class Orderbook_half:
         # Note. changing the order in the order_book list will also change the order in the orders dictonary
         
         # add the order to the orders dictionary
-        n_orders = self.n_orders
+        num_orders = self.num_orders
         self.orders[order.tid] = order
-        self.n_orders = len(self.orders)
+        self.num_orders = len(self.orders)
 
         # add the order to order_book list
         position = self.find_order_book_position(order)
         self.order_book.insert(position, order)
 
         # return whether this was an addition or an overwrite
-        if n_orders != self.n_orders :
+        if num_orders != self.num_orders :
             return('Addition')
         else:
             return('Overwrite')
@@ -102,7 +107,7 @@ class Orderbook_half:
         if self.orders.get(order.tid) != None :
             del(self.orders[order.tid])
             self.remove_from_order_book(order.tid)
-            self.n_orders = len(self.orders)
+            self.num_orders = len(self.orders)
 
 
 # Orderbook for a single instrument: list of bids and list of asks
@@ -114,6 +119,7 @@ class Orderbook(Orderbook_half):
         self.sell_side = Orderbook_half('Sell')
         self.tape = []
         self.quote_id = 0  #unique ID code for each quote accepted onto the book
+        self.MIV = 20 # the Minimum Invocation Size for Block Indications
 
 
 
@@ -348,7 +354,7 @@ class Trader_Giveaway(Trader):
             order = None
         else:
             MES = 2
-            order = Order(self.tid, self.customer_order.otype, self.customer_order.qty, MES, time)
+            order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES)
             self.lastquote=order
             return order
 
@@ -641,7 +647,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         orderprice = getorderprice(t, sched, n_buyers, mode, issuetime)
                         # generating a random order quantity
                         quantity = random.randint(1,10)
-                        customer_order = Customer_Order(tname, ordertype, orderprice, quantity, issuetime)
+                        customer_order = Customer_Order(issuetime, tname, ordertype, orderprice, quantity)
                         new_pending.append(customer_order)
                         
                 # add the supply side (sellers) customer orders to the list of pending orders
@@ -654,7 +660,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         orderprice = getorderprice(t, sched, n_sellers, mode, issuetime)
                         # generating a random order quantity
                         quantity = random.randint(1,10)
-                        customer_order = Customer_Order(tname, ordertype, orderprice, quantity, issuetime)
+                        customer_order = Customer_Order(issuetime, tname, ordertype, orderprice, quantity)
                         new_pending.append(customer_order)
         # if there are some pending orders
         else:
@@ -831,15 +837,15 @@ def test():
 
     # create some customer orders
     customer_orders = []
-    customer_orders.append(Customer_Order('B00', 'Buy', 100, 5, 25.0))
-    customer_orders.append(Customer_Order('B01', 'Buy', 100, 10, 35.0))
-    customer_orders.append(Customer_Order('B02', 'Buy', 100, 3, 55.0))
-    customer_orders.append(Customer_Order('B03', 'Buy', 100, 3, 75.0))
-    customer_orders.append(Customer_Order('B04', 'Buy', 100, 3, 65.0))
-    customer_orders.append(Customer_Order('S00', 'Sell', 0, 11, 45.0))
-    customer_orders.append(Customer_Order('S01', 'Sell', 0, 4, 55.0))
-    customer_orders.append(Customer_Order('S02', 'Sell', 0, 6, 65.0))
-    customer_orders.append(Customer_Order('S03', 'Sell', 0, 6, 55.0))
+    customer_orders.append(Customer_Order(25.0, 'B00', 'Buy', 100, 5))
+    customer_orders.append(Customer_Order(35.0, 'B01', 'Buy', 100, 10))
+    customer_orders.append(Customer_Order(55.0, 'B02', 'Buy', 100, 3))
+    customer_orders.append(Customer_Order(75.0, 'B03', 'Buy', 100, 3))
+    customer_orders.append(Customer_Order(65.0, 'B04', 'Buy', 100, 3))
+    customer_orders.append(Customer_Order(45.0, 'S00', 'Sell', 0, 11))
+    customer_orders.append(Customer_Order(55.0, 'S01', 'Sell', 0, 4))
+    customer_orders.append(Customer_Order(65.0, 'S02', 'Sell', 0, 6))
+    customer_orders.append(Customer_Order(55.0, 'S03', 'Sell', 0, 6))
 
     for customer_order in customer_orders:
         traders[customer_order.tid].add_order(customer_order, False)

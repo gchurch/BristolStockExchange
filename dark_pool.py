@@ -48,30 +48,30 @@ class Orderbook_half:
         # a dictionary containing all traders and the number of orders they have in this order book
         self.traders = {}
         # list of orders received, sorted by size and then time
-        self.order_book = []
+        self.orders = []
         # number of current orders
         self.num_orders = 0
 
     # find the position to insert the order into the order_book list such that the order_book list maintains
     # it's ordering of (size,time)
-    def find_order_book_position(self, order):
+    def find_order_position(self, order):
         quantity = order.qty
         time = order.time
         position = 0
-        for i in range(0,len(self.order_book)):
-            if quantity > self.order_book[i].qty or (quantity == self.order_book[i].qty and time < self.order_book[i].time):
+        for i in range(0,len(self.orders)):
+            if quantity > self.orders[i].qty or (quantity == self.orders[i].qty and time < self.orders[i].time):
                 break
             else:
                 position += 1
         return position
 
     # remove all orders on the order book from the trader with the givin tid
-    def remove_from_order_book(self, tid):
+    def remove_order(self, tid):
 
         # calling pop changes the length of order_book so we have to break afterwards
-        for i in range(0, len(self.order_book)):
-            if self.order_book[i].tid == tid:
-                self.order_book.pop(i)
+        for i in range(0, len(self.orders)):
+            if self.orders[i].tid == tid:
+                self.orders.pop(i)
                 break
 
     # add the order to the orders dictionary and to the order_book list
@@ -79,7 +79,7 @@ class Orderbook_half:
 
         # if the trader with this tid already has an order in the order_book, then remove it
         if self.traders.get(order.tid) != None:
-            self.remove_from_order_book(order.tid)
+            self.remove_order(order.tid)
 
         # Note. changing the order in the order_book list will also change the order in the orders dictonary
         
@@ -89,8 +89,8 @@ class Orderbook_half:
         self.num_orders = len(self.traders)
 
         # add the order to order_book list
-        position = self.find_order_book_position(order)
-        self.order_book.insert(position, order)
+        position = self.find_order_position(order)
+        self.orders.insert(position, order)
 
         # return whether this was an addition or an overwrite
         if num_orders != self.num_orders :
@@ -101,8 +101,8 @@ class Orderbook_half:
     # delete the order by the trader with the given tid
     def book_del(self, tid):
         del(self.traders[tid])
-        self.remove_from_order_book(tid)
-        self.num_orders = len(self.order_book)
+        self.remove_order(tid)
+        self.num_orders = len(self.orders)
 
 
 # Orderbook for a single instrument: list of bids and list of asks
@@ -159,8 +159,8 @@ class Exchange:
     # matching is buy-side friendly, so start with buys first
     def find_order_match(self):
 
-        for buy_order in self.order_book.buy_side.order_book:
-            for sell_order in self.order_book.sell_side.order_book:
+        for buy_order in self.order_book.buy_side.orders:
+            for sell_order in self.order_book.sell_side.orders:
                 # find two matching orders in the order_book list
                 if buy_order.qty >= sell_order.MES and buy_order.MES <= sell_order.qty:
                     # work out how large the trade size will be
@@ -250,13 +250,13 @@ class Exchange:
             self.order_book.tape = []
 
     # print the current orders in the orders dictionary
-    def print_orders(self):
+    def print_current_traders(self):
         print("Buy orders:")
-        for key in self.order_book.buy_side.orders:
-            print(self.order_book.buy_side.orders[key])
+        for key in self.order_book.buy_side.traders:
+            print(self.order_book.buy_side.traders[key])
         print("Sell orders:")
-        for key in self.order_book.sell_side.orders:
-            print(self.order_book.sell_side.orders[key])
+        for key in self.order_book.sell_side.traders:
+            print(self.order_book.sell_side.traders[key])
 
     # print the current block indications
     def print_block_indications(self):
@@ -270,10 +270,10 @@ class Exchange:
     # print the current orders in the order_book list
     def print_order_book(self):
         print("Buy side order book:")
-        for order in self.order_book.buy_side.order_book:
+        for order in self.order_book.buy_side.orders:
             print(order)
         print("Sell side order book:")
-        for order in self.order_book.sell_side.order_book:
+        for order in self.order_book.sell_side.orders:
             print(order)
 
 ##################--Traders below here--#############

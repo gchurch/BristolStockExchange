@@ -122,7 +122,7 @@ class Test_Orderbook_half(unittest.TestCase):
 
 
     def test__book_del(self):
-        
+
         # create the order book
         booktype = "Buy"
         orderbook_half = dark_pool.Orderbook_half(booktype)
@@ -159,6 +159,27 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(orderbook.sell_side.traders, {})
         self.assertEqual(orderbook.buy_side.orders, [])
         self.assertEqual(orderbook.sell_side.orders, [])
+
+    def test__add_order__simple(self):
+
+        orderbook = dark_pool.Orderbook()
+
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6))
+
+        for order in orders:
+            orderbook.add_order(order, False)
+
+        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order [T=25.00 B00 Buy Q=5 MES=3 OID=0]")
+        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order [T=45.00 S00 Sell Q=11 MES=6 OID=1]")
+        self.assertEqual(orderbook.order_id, 2)
+
+    def test__find_order_match(self):
+        return
+
+    def perform_trade(self, traders, time, price, buy_order, sell_order, trade_size):
+        return
 
 ###############################################################################
 # tests for Exchange class
@@ -222,9 +243,6 @@ class Test_Exchange(unittest.TestCase):
         exchange.del_order(100.0, orders[0], False)
 
         exchange.del_order(110.0, orders[-1], False)
-
-    def test__perform_trade(self):
-        return
 
     def test__uncross(self):
         # initialise the exchange

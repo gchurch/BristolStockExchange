@@ -262,7 +262,6 @@ class Block_Indication_Book:
         # than in order to be accepted
         self.MIV = 20
     
-    
     # add block indication
     def add_block_indication(self, order, verbose):
 
@@ -299,6 +298,7 @@ class Block_Indication_Book:
         else:
             # neither bid nor ask?
             sys.exit('bad order type in del_quote()')
+        
 
     # attempt to find two matching block indications
     def find_matching_block_indications(self):
@@ -315,7 +315,7 @@ class Block_Indication_Book:
                     # return a dictionary containing the trade info
                     # Note. Here we are returning references to the orders, so changing the returned orders will
                     # change the orders in the order_book
-                    return {"buy_order": buy_order, "sell_order": sell_order, "trade_size": trade_size}
+                    return {"buy_order": buy_order, "sell_order": sell_order, "trade_size": trade_size, "id": random.randint(1,100000)}
         return None
 
 
@@ -356,6 +356,8 @@ class Exchange:
             return self.order_book.add_order(order, verbose)
         elif order.params[0] == "BI":
             return self.block_indications.add_block_indication(order, verbose)
+        elif order.params[0] == "QBO":
+            return self.block_indications.add_qualifying_block_order(order, verbose)
 
     # delete an order from the exchange
     def del_order(self, time, order, verbose):
@@ -488,6 +490,7 @@ class Trader_Giveaway(Trader):
             order = None
         elif self.customer_order.qty >= 20:
             MES = 20
+            # return a block indication
             order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, ["BI"])
             return order
         else:
@@ -495,6 +498,13 @@ class Trader_Giveaway(Trader):
             order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, ["Normal"])
             self.lastquote=order
             return order
+
+    # the trader recieves an Order Submission Request (OSR), the trader needs to respond with a
+    # Qualifying Block Order (QBO) in order to confirm their trade
+    def order_submission_request(self, time, match_id):
+        MES = 20
+        order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, ["QBO", match_id])
+        return order
 
 
 
@@ -1052,6 +1062,40 @@ def test2():
     exchange.print_block_indications()
     exchange.print_reputational_scores()
 
+def test3():
+
+    # initialise the exchange
+    exchange = Exchange()
+
+    # create some example orders
+    orders = []
+    orders.append(Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
+    orders.append(Order(35.0, 'B01', 'Buy', 10, 6, ["Normal"]))
+    orders.append(Order(55.0, 'B02', 'Buy', 3, 1, ["Normal"]))
+    orders.append(Order(75.0, 'B03', 'Buy', 3, 2, ["Normal"]))
+    orders.append(Order(65.0, 'B04', 'Buy', 3, 2, ["Normal"]))
+    orders.append(Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
+    orders.append(Order(55.0, 'S01', 'Sell', 4, 2, ["Normal"]))
+    orders.append(Order(65.0, 'S02', 'Sell', 6, 3, ["Normal"]))
+    orders.append(Order(55.0, 'S03', 'Sell', 6, 4, ["Normal"]))
+    orders.append(Order(65.0, 'B05', 'Buy', 25, 15, ["BI"]))
+    orders.append(Order(85.0, 'S04', 'Sell', 30, 23, ["BI"]))
+
+    # add the orders to the exchange
+    for order in orders:
+        exchange.add_order(order, False)
+        response = exchange.block_indications.find_matching_block_indications()
+        if response != None:
+            print("Block indication match!")
+            print(response)
+            buy_side_tid = response["buy_order"].tid
+            sell_side_tid = response["sell_order"].tid
+            match_id = response["id"]
+            print(buy_side_tid, sell_side_tid, match_id)
+
+    exchange.print_block_indications()
+    exchange.print_reputational_scores()
+
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    test2()
+    test3()

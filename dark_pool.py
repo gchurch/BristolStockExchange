@@ -261,6 +261,7 @@ class Block_Indication_Book:
         # The minimum indication value (MIV) is the quantity that a block indication must be greater
         # than in order to be accepted
         self.MIV = 20
+        self.qualifying_block_orders = {}
     
     # add block indication
     def add_block_indication(self, order, verbose):
@@ -299,6 +300,12 @@ class Block_Indication_Book:
             # neither bid nor ask?
             sys.exit('bad order type in del_quote()')
         
+    def add_qualifying_block_order(self, order, verbose):
+        match_id = order.params[1]
+        if self.qualifying_block_orders.get(match_id) == None:
+            self.qualifying_block_orders[match_id] = [order]
+        else:
+            self.qualifying_block_orders[match_id].append(order)
 
     # attempt to find two matching block indications
     def find_matching_block_indications(self):
@@ -324,6 +331,7 @@ class Block_Indication_Book:
         print("Reputational scores:")
         for key in self.reputational_scores:
             print("%s : %d" % (key, self.reputational_scores[key]))
+        print("")
 
     # print the current traders with block indications
     def print_traders(self):
@@ -340,6 +348,13 @@ class Block_Indication_Book:
         print("Sell side order book:")
         self.sell_side.print_orders()
         print("")
+
+    def print_qualifying_block_orders(self):
+        print("Qualifying block orders:")
+        for key in self.qualifying_block_orders.keys():
+            print(key)
+            for order in self.qualifying_block_orders.get(key):
+                print(order)
 
 # Exchange
 
@@ -403,6 +418,9 @@ class Exchange:
 
     def print_reputational_scores(self):
         self.block_indications.print_reputational_scores()
+
+    def print_qualifying_block_orders(self):
+        self.block_indications.print_qualifying_block_orders()
 
 ##################--Traders below here--#############
 
@@ -1074,11 +1092,11 @@ def test3():
     orders.append(Order(55.0, 'B02', 'Buy', 3, 1, ["Normal"]))
     orders.append(Order(75.0, 'B03', 'Buy', 3, 2, ["Normal"]))
     orders.append(Order(65.0, 'B04', 'Buy', 3, 2, ["Normal"]))
+    orders.append(Order(65.0, 'B05', 'Buy', 25, 15, ["BI"]))
     orders.append(Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
     orders.append(Order(55.0, 'S01', 'Sell', 4, 2, ["Normal"]))
     orders.append(Order(65.0, 'S02', 'Sell', 6, 3, ["Normal"]))
     orders.append(Order(55.0, 'S03', 'Sell', 6, 4, ["Normal"]))
-    orders.append(Order(65.0, 'B05', 'Buy', 25, 15, ["BI"]))
     orders.append(Order(85.0, 'S04', 'Sell', 30, 23, ["BI"]))
 
     # add the orders to the exchange
@@ -1092,9 +1110,14 @@ def test3():
             sell_side_tid = response["sell_order"].tid
             match_id = response["id"]
             print(buy_side_tid, sell_side_tid, match_id)
+            buy_side_qbo = Order(65.0, 'B05', 'Buy', 25, 15, ["QBO", match_id])
+            sell_side_qbo = Order(85.0, 'S04', 'Sell', 30, 23, ["QBO", match_id])
+            exchange.add_order(buy_side_qbo, False)
+            exchange.add_order(sell_side_qbo, False)
 
     exchange.print_block_indications()
     exchange.print_reputational_scores()
+    exchange.print_qualifying_block_orders()
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":

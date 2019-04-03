@@ -256,6 +256,7 @@ class Block_Indication_Book:
         self.buy_side = Orderbook_half('Buy')
         self.sell_side = Orderbook_half('Sell')
         self.tape = []
+        # ID to be given to next block indication
         self.BI_id = 0
         self.reputational_scores = {}
         # The minimum indication value (MIV) is the quantity that a block indication must be greater
@@ -263,6 +264,9 @@ class Block_Indication_Book:
         self.MIV = 20
         # A dictionary to contain the qualifying block orders that have been received
         self.qualifying_block_orders = {}
+        # ID to be given to next qualifying block order
+        self.QBO_id = 0
+        # ID to be given to the matching of two block indications
         self.match_id = 0
     
     # add block indication
@@ -284,6 +288,8 @@ class Block_Indication_Book:
 
             # return the order id and the response
             return [order.oid, response]
+
+        # if the quantity of the order was not greater than the MIV then return a message
         return "Rejected"
 
     # delete block indication
@@ -302,9 +308,13 @@ class Block_Indication_Book:
             # neither bid nor ask?
             sys.exit('bad order type in del_quote()')
     
-    # add a qualifying block order. If matchind qualifying block orders are recieved then they are
+    # add a qualifying block order. If matching qualifying block orders are recieved then they are
     # both returned.
     def add_qualifying_block_order(self, order, verbose):
+
+        # give each qualifying block order its own unique id
+        order.oid = self.QBO_id
+        self.QBO_id += 1
 
         # get the match id for the orginally matched block indications
         match_id = order.params[1]
@@ -545,7 +555,7 @@ class Trader_Giveaway(Trader):
             return order
 
     # the trader recieves an Order Submission Request (OSR), the trader needs to respond with a
-    # Qualifying Block Order (QBO) in order to confirm their trade
+    # Qualifying Block Order (QBO) in order to confirm their block indication
     def order_submission_request(self, time, match_id):
         MES = 20
         order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, ["QBO", match_id])
@@ -1118,31 +1128,39 @@ def test3():
     orders.append(Order(35.0, 'B01', 'Buy', 10, 6, ["Normal"]))
     orders.append(Order(55.0, 'B02', 'Buy', 3, 1, ["Normal"]))
     orders.append(Order(75.0, 'B03', 'Buy', 3, 2, ["Normal"]))
-    orders.append(Order(65.0, 'B04', 'Buy', 3, 2, ["Normal"]))
+    orders.append(Order(65.0, 'B04', 'Buy', 50, 29, ["BI"]))
     orders.append(Order(65.0, 'B05', 'Buy', 25, 15, ["BI"]))
     orders.append(Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
     orders.append(Order(55.0, 'S01', 'Sell', 4, 2, ["Normal"]))
     orders.append(Order(65.0, 'S02', 'Sell', 6, 3, ["Normal"]))
     orders.append(Order(55.0, 'S03', 'Sell', 6, 4, ["Normal"]))
     orders.append(Order(85.0, 'S04', 'Sell', 30, 23, ["BI"]))
+    orders.append(Order(95.0, 'S05', 'Sell', 34, 21, ["BI"]))
 
     # add the orders to the exchange
     for order in orders:
+
+        # add the order to the exchange
         exchange.add_order(order, False)
+
+        # check if there is a match between any two block indications
         match = exchange.block_indications.find_matching_block_indications()
+
         if match != None:
-            print("Block indication match!")
-            print(match)
+
             buy_side_tid = match["buy_order"].tid
             sell_side_tid = match["sell_order"].tid
             match_id = match["match_id"]
-            print(buy_side_tid, sell_side_tid, match_id)
-            buy_side_qbo = Order(65.0, 'B05', 'Buy', 25, 15, ["QBO", match_id])
-            sell_side_qbo = Order(85.0, 'S04', 'Sell', 30, 23, ["QBO", match_id])
+
+            # create QBOs for matched BIs
+            buy_side_qbo = copy.deepcopy(match["buy_order"])
+            buy_side_qbo.params = ["QBO", match_id]
+            sell_side_qbo = copy.deepcopy(match["sell_order"])
+            sell_side_qbo.params = ["QBO", match_id]
+
+            # add the QBOs to the exchange
             print(exchange.add_order(buy_side_qbo, False))
-            QBOs = exchange.add_order(sell_side_qbo, False)
-            print(QBOs["buy_side"])
-            print(QBOs["sell_side"])
+            print(exchange.add_order(sell_side_qbo, False))
 
     exchange.print_order_book()
     exchange.print_block_indications()

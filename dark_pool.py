@@ -116,7 +116,6 @@ class Orderbook_half:
 
 
 # Orderbook for a single instrument: list of bids and list of asks
-
 class Orderbook:
 
     def __init__(self):

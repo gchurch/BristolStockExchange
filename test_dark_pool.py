@@ -46,7 +46,27 @@ class Test_Orderbook_half(unittest.TestCase):
         self.assertEqual(orderbook_half.num_orders, 0)
 
     def test__find_order_position(self):
-        return
+        
+        # create the order book
+        booktype = "Buy"
+        orderbook_half = dark_pool.Orderbook_half(booktype)
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
+        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 4, ["Normal"]))
+        orders.append(dark_pool.Order(45.0, 'B02', 'Buy', 10, 4, ["Normal"]))
+
+        # add the orders
+        for order in orders:
+            orderbook_half.book_add(order)
+
+        # test the positions are as expected
+        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 12, 4, ["Normal"])), 0)
+        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 10, 4, ["Normal"])), 2)
+        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 9, 4, ["Normal"])), 2)
+        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 4, 4, ["Normal"])), 3)
+        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(40.0, 'B03', 'Buy', 10, 4, ["Normal"])), 1)
 
     def test__remove_from_order_book(self):
         return

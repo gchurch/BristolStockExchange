@@ -154,9 +154,9 @@ class Orderbook:
 
 
     # match two orders and perform the trade
-    # matching is buy-side friendly, so start with buys first
     def find_order_match(self):
 
+        # matching is buy-side friendly, so start with buys first
         for buy_order in self.buy_side.orders:
             for sell_order in self.sell_side.orders:
                 # find two matching orders in the order_book list
@@ -240,10 +240,12 @@ class Orderbook:
 
     # print the current orders in the order_book list
     def print_order_book(self):
+        print("Orders:")
         print("Buy side order book:")
         self.buy_side.print_orders()
         print("Sell side order book:")
         self.sell_side.print_orders()
+        print("")
 
 
 class Block_Indication_Book:
@@ -254,14 +256,14 @@ class Block_Indication_Book:
         self.sell_side = Orderbook_half('Sell')
         self.tape = []
         self.BI_id = 0
-        self.reputation_scores = {}
+        self.reputational_scores = {}
 
     
     # add block indication
     def add_block_indication(self, order, verbose):
         # if a new trader, then give it an initial reputational score
-        if self.reputation_scores.get(order.tid) == None:
-            self.reputation_scores[order.tid] = 50
+        if self.reputational_scores.get(order.tid) == None:
+            self.reputational_scores[order.tid] = 50
         # set the orders order id member variable
         order.oid = self.BI_id
         self.BI_id = order.oid + 1
@@ -288,11 +290,30 @@ class Block_Indication_Book:
             # neither bid nor ask?
             sys.exit('bad order type in del_quote()')
 
+    # attempt to find two matching block indications
+    def find_matching_block_indications(self):
+        # starting with the buy side first
+        for buy_order in self.buy_side.orders:
+            for sell_order in self.sell_side.orders:
+                # check if the two block indications match
+                if buy_order.qty >= sell_order.MES and buy_order.MES <= sell_order.qty:
+                    # work out how large the trade size will be
+                    if buy_order.qty >= sell_order.qty:
+                        trade_size = sell_order.qty
+                    else:
+                        trade_size = buy_order.qty
+                    # return a dictionary containing the trade info
+                    # Note. Here we are returning references to the orders, so changing the returned orders will
+                    # change the orders in the order_book
+                    return {"buy_order": buy_order, "sell_order": sell_order, "trade_size": trade_size}
+        return None
+
+
     # print the reputational score of all known traders
     def print_reputational_scores(self):
         print("Reputational scores:")
-        for key in self.reputation_scores:
-            print("%s : %d" % (key, self.reputation_scores[key]))
+        for key in self.reputational_scores:
+            print("%s : %d" % (key, self.reputational_scores[key]))
 
     # print the current traders with block indications
     def print_traders(self):
@@ -303,10 +324,12 @@ class Block_Indication_Book:
 
     # print the current block indications
     def print_block_indications(self):
+        print("Block Indications:")
         print("Buy side order book:")
         self.buy_side.print_orders()
         print("Sell side order book:")
         self.sell_side.print_orders()
+        print("")
 
 # Exchange
 
@@ -365,7 +388,7 @@ class Exchange:
     def print_block_indications(self):
         self.block_indications.print_block_indications()
 
-    def print_reputation_scores(self):
+    def print_reputational_scores(self):
         self.block_indications.print_reputational_scores()
 
 ##################--Traders below here--#############
@@ -1001,10 +1024,9 @@ def test2():
 
     exchange.print_order_book()
     exchange.print_block_indications()
-    exchange.print_reputation_scores()
+    exchange.print_reputational_scores()
 
-    # invoke an uncross event, setting the traders parameters to None to avoid using traders
-    exchange.uncross(None, 5.0, 25.0)
+    print(exchange.block_indications.find_matching_block_indications())
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":

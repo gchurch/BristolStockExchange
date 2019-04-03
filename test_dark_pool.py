@@ -199,7 +199,32 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(orderbook.order_id, 2)
 
     def test__find_order_match(self):
-        return
+        
+        # create the orderbook
+        orderbook = dark_pool.Orderbook()
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
+
+        # add the orders to the orderbook
+        for order in orders:
+            orderbook.add_order(order, False)
+
+        # attempt to find a match, none should be found
+        self.assertEqual(orderbook.find_order_match(),None)
+
+        # add add another order to the order book
+        orderbook.add_order(dark_pool.Order(25.0, 'B01', 'Buy', 8, 7, ["Normal"]), False)
+
+        # find a match
+        match = orderbook.find_order_match()
+
+        # test that the match is as expected
+        self.assertEqual(match["trade_size"], 8)
+        self.assertEqual(match["sell_order"].__str__(), "Order [T=45.00 S00 Sell Q=11 MES=6 OID=1]")
+        self.assertEqual(match["buy_order"].__str__(), "Order [T=25.00 B01 Buy Q=8 MES=7 OID=2]")
 
     def perform_trade(self, traders, time, price, buy_order, sell_order, trade_size):
         return

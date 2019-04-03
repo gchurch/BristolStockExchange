@@ -301,28 +301,33 @@ class Block_Indication_Book:
         else:
             # neither bid nor ask?
             sys.exit('bad order type in del_quote()')
-        
+    
+    # add a qualifying block order. If matchind qualifying block orders are recieved then they are
+    # both returned.
     def add_qualifying_block_order(self, order, verbose):
-        # get the match id for the matched block indications
+
+        # get the match id for the orginally matched block indications
         match_id = order.params[1]
 
         # and the order to the qualifying_block_orders dictionary with the key as match_id
         if self.qualifying_block_orders.get(match_id) == None:
             if order.otype == 'Buy':
                 self.qualifying_block_orders[match_id] = {"buy_side": order}
-            else:
+            elif order.otype == "Sell":
                 self.qualifying_block_orders[match_id] = {"sell_side": order}
         else:
             if order.otype == 'Buy':
                 self.qualifying_block_orders[match_id]["buy_side"] = order
-            else:
+            elif order.otype == 'Sell':
                 self.qualifying_block_orders[match_id]["sell_side"] = order
         
         # if both QBOs have been received then return appropriate message
         if len(self.qualifying_block_orders.get(match_id)) == 2:
-            return "Both QBOs received!"
+            QBOs = self.qualifying_block_orders.get(match_id)
+            # del(self.qualifying_block_orders[match_id])
+            return QBOs
         else:
-            return "Other QBO not yet received."
+            return None
 
     # attempt to find two matching block indications
     def find_matching_block_indications(self):
@@ -376,7 +381,7 @@ class Block_Indication_Book:
             if self.qualifying_block_orders[key]["buy_side"]:
                 print(self.qualifying_block_orders[key]["buy_side"])
             if self.qualifying_block_orders[key]["sell_side"]:
-                print(self.qualifying_block_orders[key]["buy_side"])
+                print(self.qualifying_block_orders[key]["sell_side"])
 
 # Exchange
 
@@ -1135,7 +1140,9 @@ def test3():
             buy_side_qbo = Order(65.0, 'B05', 'Buy', 25, 15, ["QBO", match_id])
             sell_side_qbo = Order(85.0, 'S04', 'Sell', 30, 23, ["QBO", match_id])
             print(exchange.add_order(buy_side_qbo, False))
-            print(exchange.add_order(sell_side_qbo, False))
+            QBOs = exchange.add_order(sell_side_qbo, False)
+            print(QBOs["buy_side"])
+            print(QBOs["sell_side"])
 
     exchange.print_order_book()
     exchange.print_block_indications()

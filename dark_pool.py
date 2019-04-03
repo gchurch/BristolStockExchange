@@ -392,6 +392,7 @@ class Block_Indication_Book:
                 print(self.qualifying_block_orders[key]["buy_side"])
             if self.qualifying_block_orders[key]["sell_side"]:
                 print(self.qualifying_block_orders[key]["sell_side"])
+        print("")
 
 # Exchange
 
@@ -1159,13 +1160,29 @@ def test3():
             sell_side_qbo.params = ["QBO", match_id]
 
             # add the QBOs to the exchange
-            print(exchange.add_order(buy_side_qbo, False))
-            print(exchange.add_order(sell_side_qbo, False))
+            exchange.add_order(buy_side_qbo, False)
+            QBOs = exchange.add_order(sell_side_qbo, False)
 
-    exchange.print_order_book()
+            # create normal orders out of these QBOs
+            buy_side_order = copy.deepcopy(QBOs["buy_side"])
+            buy_side_order.params = ["Normal"]
+            sell_side_order = copy.deepcopy(QBOs["sell_side"])
+            sell_side_order.params = ["Normal"]
+
+            # add these orders to the exchange
+            exchange.add_order(buy_side_order, False)
+            exchange.add_order(sell_side_order, False)
+
+            exchange.uncross(None, 0, 50)
+
+
     exchange.print_block_indications()
     exchange.print_reputational_scores()
     exchange.print_qualifying_block_orders()
+    exchange.print_order_book()
+
+    # end of an experiment -- dump the tape
+    exchange.tape_dump('dark_transactions.csv', 'w', 'keep')
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":

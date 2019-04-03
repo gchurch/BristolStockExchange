@@ -36,7 +36,12 @@ class Order:
         self.params = params 
 
     def __str__(self):
-        return 'Order [T=%5.2f %s %s Q=%s MES=%s OID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid)
+        if self.params[0] == "Normal":
+            return 'Order [T=%5.2f %s %s Q=%s MES=%s OID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid)
+        elif self.params[0] == "BI":
+            return 'BI [T=%5.2f %s %s Q=%s MES=%s OID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid)
+        elif self.params[0] == "QBO":
+            return 'QBO [T=%5.2f %s %s Q=%s MES=%s OID=%d MID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid, self.params[1])
 
 
 # Orderbook_half is one side of the book: a list of bids or a list of asks, each sorted best-first
@@ -65,25 +70,20 @@ class Orderbook_half:
                 position += 1
         return position
 
-    # remove all orders on the order book from the trader with the givin tid
-    def remove_order(self, tid):
-
-        # calling pop changes the length of order_book so we have to break afterwards
-        for i in range(0, len(self.orders)):
-            if self.orders[i].tid == tid:
-                self.orders.pop(i)
-                break
-
     # add the order to the orders dictionary and to the order_book list
     def book_add(self, order):
 
         # if the trader with this tid already has an order in the order_book, then remove it
+        # also set the write reponse to return
         if self.traders.get(order.tid) != None:
-            self.remove_order(order.tid)
+            self.book_del(order.tid)
+            response = 'Overwrite'
+        else:
+            response = 'Addition'
 
         # Note. changing the order in the order_book list will also change the order in the orders dictonary
         
-        # add the order to the traders dictionary
+        # add the trader to the traders dictionary
         num_orders = self.num_orders
         self.traders[order.tid] = 1
         self.num_orders = len(self.traders)
@@ -93,15 +93,18 @@ class Orderbook_half:
         self.orders.insert(position, order)
 
         # return whether this was an addition or an overwrite
-        if num_orders != self.num_orders :
-            return('Addition')
-        else:
-            return('Overwrite')
+        return response
 
     # delete the order by the trader with the given tid
     def book_del(self, tid):
         del(self.traders[tid])
-        self.remove_order(tid)
+        
+        # calling pop changes the length of order_book so we have to break afterwards
+        for i in range(0, len(self.orders)):
+            if self.orders[i].tid == tid:
+                self.orders.pop(i)
+                break
+
         self.num_orders = len(self.orders)
 
     # print the current traders

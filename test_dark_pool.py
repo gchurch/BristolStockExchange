@@ -163,6 +163,7 @@ class Test_Orderbook_half(unittest.TestCase):
         orderbook_half.book_del(orders[0].tid)
 
         self.assertEqual(orderbook_half.num_orders, 1)
+        self.assertEqual(orderbook_half.orders[0].__str__(), "Order [T=35.00 B01 Buy Q=10 MES=4 OID=-1]")
 
 
 

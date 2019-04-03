@@ -261,7 +261,9 @@ class Block_Indication_Book:
         # The minimum indication value (MIV) is the quantity that a block indication must be greater
         # than in order to be accepted
         self.MIV = 20
+        # A dictionary to contain the qualifying block orders that have been received
         self.qualifying_block_orders = {}
+        self.match_id = 0
     
     # add block indication
     def add_block_indication(self, order, verbose):
@@ -301,11 +303,26 @@ class Block_Indication_Book:
             sys.exit('bad order type in del_quote()')
         
     def add_qualifying_block_order(self, order, verbose):
+        # get the match id for the matched block indications
         match_id = order.params[1]
+
+        # and the order to the qualifying_block_orders dictionary with the key as match_id
         if self.qualifying_block_orders.get(match_id) == None:
-            self.qualifying_block_orders[match_id] = [order]
+            if order.otype == 'Buy':
+                self.qualifying_block_orders[match_id] = {"buy_side": order}
+            else:
+                self.qualifying_block_orders[match_id] = {"sell_side": order}
         else:
-            self.qualifying_block_orders[match_id].append(order)
+            if order.otype == 'Buy':
+                self.qualifying_block_orders[match_id]["buy_side"] = order
+            else:
+                self.qualifying_block_orders[match_id]["sell_side"] = order
+        
+        # if both QBOs have been received then return appropriate message
+        if len(self.qualifying_block_orders.get(match_id)) == 2:
+            return "Both QBOs received!"
+        else:
+            return "Other QBO not yet received."
 
     # attempt to find two matching block indications
     def find_matching_block_indications(self):
@@ -319,10 +336,12 @@ class Block_Indication_Book:
                         trade_size = sell_order.qty
                     else:
                         trade_size = buy_order.qty
-                    # return a dictionary containing the trade info
+                    # return a dictionary containing the match info
                     # Note. Here we are returning references to the orders, so changing the returned orders will
                     # change the orders in the order_book
-                    return {"buy_order": buy_order, "sell_order": sell_order, "trade_size": trade_size, "id": random.randint(1,100000)}
+                    response = {"buy_order": buy_order, "sell_order": sell_order, "trade_size": trade_size, "match_id": self.match_id}
+                    self.match_id += 1
+                    return response
         return None
 
 
@@ -349,12 +368,15 @@ class Block_Indication_Book:
         self.sell_side.print_orders()
         print("")
 
+    # print all of the current qualifying block orders
     def print_qualifying_block_orders(self):
         print("Qualifying block orders:")
         for key in self.qualifying_block_orders.keys():
             print(key)
-            for order in self.qualifying_block_orders.get(key):
-                print(order)
+            if self.qualifying_block_orders[key]["buy_side"]:
+                print(self.qualifying_block_orders[key]["buy_side"])
+            if self.qualifying_block_orders[key]["sell_side"]:
+                print(self.qualifying_block_orders[key]["buy_side"])
 
 # Exchange
 
@@ -1102,19 +1124,20 @@ def test3():
     # add the orders to the exchange
     for order in orders:
         exchange.add_order(order, False)
-        response = exchange.block_indications.find_matching_block_indications()
-        if response != None:
+        match = exchange.block_indications.find_matching_block_indications()
+        if match != None:
             print("Block indication match!")
-            print(response)
-            buy_side_tid = response["buy_order"].tid
-            sell_side_tid = response["sell_order"].tid
-            match_id = response["id"]
+            print(match)
+            buy_side_tid = match["buy_order"].tid
+            sell_side_tid = match["sell_order"].tid
+            match_id = match["match_id"]
             print(buy_side_tid, sell_side_tid, match_id)
             buy_side_qbo = Order(65.0, 'B05', 'Buy', 25, 15, ["QBO", match_id])
             sell_side_qbo = Order(85.0, 'S04', 'Sell', 30, 23, ["QBO", match_id])
-            exchange.add_order(buy_side_qbo, False)
-            exchange.add_order(sell_side_qbo, False)
+            print(exchange.add_order(buy_side_qbo, False))
+            print(exchange.add_order(sell_side_qbo, False))
 
+    exchange.print_order_book()
     exchange.print_block_indications()
     exchange.print_reputational_scores()
     exchange.print_qualifying_block_orders()

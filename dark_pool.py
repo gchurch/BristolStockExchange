@@ -26,13 +26,14 @@ class Customer_Order:
 # an order created by a trader for the exchange
 class Order:
 
-    def __init__(self, time, tid, otype, qty, MES):
+    def __init__(self, time, tid, otype, qty, MES, params):
         self.time = time    # timestamp
         self.tid = tid      # trader i.d.
         self.otype = otype  # order type
         self.qty = qty      # quantity
         self.MES = MES      # minimum execution size
         self.oid = -1       # order i.d. (unique to each order on the Exchange)
+        self.params = params 
 
     def __str__(self):
         return 'Order [T=%5.2f %s %s Q=%s MES=%s OID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid)
@@ -351,7 +352,10 @@ class Exchange:
 
     # add an order to the exchange
     def add_order(self, order, verbose):
-        return self.order_book.add_order(order, verbose)
+        if order.params[0] == "Normal":
+            return self.order_book.add_order(order, verbose)
+        elif order.params[0] == "BI":
+            return self.block_indications.add_block_indication(order, verbose)
 
     # delete an order from the exchange
     def del_order(self, time, order, verbose):
@@ -372,10 +376,6 @@ class Exchange:
 
             # find another match
             match_info = self.order_book.find_order_match()
-
-    def add_block_indication(self, order, verbose):
-        response = self.block_indications.add_block_indication(order, verbose)
-        return response
 
     def del_block_indication(self, time, order, verbose):
         response = self.block_indications.del_block_indication(time, order, verbose)
@@ -488,7 +488,7 @@ class Trader_Giveaway(Trader):
             order = None
         else:
             MES = 2
-            order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES)
+            order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, ["Normal"])
             self.lastquote=order
             return order
 
@@ -962,7 +962,7 @@ def test1():
 
     # create some customer orders
     customer_orders = []
-    customer_orders.append(Customer_Order(25.0, 'B00', 'Buy', 100, 5))
+    customer_orders.append(Customer_Order(25.0, 'B00', 'Buy', 100, 5,))
     customer_orders.append(Customer_Order(35.0, 'B01', 'Buy', 100, 10))
     customer_orders.append(Customer_Order(55.0, 'B02', 'Buy', 100, 3))
     customer_orders.append(Customer_Order(75.0, 'B03', 'Buy', 100, 3))
@@ -1012,30 +1012,31 @@ def test2():
 
     # create some example orders
     orders = []
-    orders.append(Order(25.0, 'B00', 'Buy', 5, 3))
-    orders.append(Order(35.0, 'B01', 'Buy', 10, 6))
-    orders.append(Order(55.0, 'B02', 'Buy', 3, 1))
-    orders.append(Order(75.0, 'B03', 'Buy', 3, 2))
-    orders.append(Order(65.0, 'B04', 'Buy', 3, 2))
-    orders.append(Order(45.0, 'S00', 'Sell', 11, 6))
-    orders.append(Order(55.0, 'S01', 'Sell', 4, 2))
-    orders.append(Order(65.0, 'S02', 'Sell', 6, 3))
-    orders.append(Order(55.0, 'S03', 'Sell', 6, 4))
+    orders.append(Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
+    orders.append(Order(35.0, 'B01', 'Buy', 10, 6, ["Normal"]))
+    orders.append(Order(55.0, 'B02', 'Buy', 3, 1, ["Normal"]))
+    orders.append(Order(75.0, 'B03', 'Buy', 3, 2, ["Normal"]))
+    orders.append(Order(65.0, 'B04', 'Buy', 3, 2, ["Normal"]))
+    orders.append(Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
+    orders.append(Order(55.0, 'S01', 'Sell', 4, 2, ["Normal"]))
+    orders.append(Order(65.0, 'S02', 'Sell', 6, 3, ["Normal"]))
+    orders.append(Order(55.0, 'S03', 'Sell', 6, 4, ["Normal"]))
 
     # add the orders to the exchange
     for order in orders:
         exchange.add_order(order, False)
 
     block_indications = []
-    block_indications.append(Order(65.0, 'B05', 'Buy', 25, 15))
-    block_indications.append(Order(85.0, 'S04', 'Sell', 30, 23))
+    block_indications.append(Order(65.0, 'B05', 'Buy', 25, 15, ["BI"]))
+    block_indications.append(Order(85.0, 'S04', 'Sell', 30, 23, ["BI"]))
 
     for block_indication in block_indications:
-        print(exchange.add_block_indication(block_indication, False))
+        print(exchange.add_order(block_indication, False))
         response = exchange.block_indications.find_matching_block_indications()
         if response != None:
             print("Block indication match!")
 
+    exchange.print_order_book()
     exchange.print_block_indications()
     exchange.print_reputational_scores()
 

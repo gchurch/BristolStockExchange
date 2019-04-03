@@ -260,7 +260,7 @@ class Block_Indication_Book:
         # The minimum indication value (MIV) is the quantity that a block indication must be greater
         # than in order to be accepted
         self.MIV = 20
-
+    
     
     # add block indication
     def add_block_indication(self, order, verbose):
@@ -278,6 +278,8 @@ class Block_Indication_Book:
                 response=self.buy_side.book_add(order)
             else:
                 response=self.sell_side.book_add(order)
+
+            # return the order id and the response
             return [order.oid, response]
         return "Rejected"
 
@@ -372,10 +374,12 @@ class Exchange:
             match_info = self.order_book.find_order_match()
 
     def add_block_indication(self, order, verbose):
-        return self.block_indications.add_block_indication(order, verbose)
+        response = self.block_indications.add_block_indication(order, verbose)
+        return response
 
     def del_block_indication(self, time, order, verbose):
-        return self.block_indications.del_block_indication(time, order, verbose)
+        response = self.block_indications.del_block_indication(time, order, verbose)
+        return response
 
     # write the order_book's tape to the output file
     def tape_dump(self, fname, fmode, tmode):
@@ -1028,12 +1032,12 @@ def test2():
 
     for block_indication in block_indications:
         print(exchange.add_block_indication(block_indication, False))
+        response = exchange.block_indications.find_matching_block_indications()
+        if response != None:
+            print("Block indication match!")
 
-    exchange.print_order_book()
     exchange.print_block_indications()
     exchange.print_reputational_scores()
-
-    print(exchange.block_indications.find_matching_block_indications())
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":

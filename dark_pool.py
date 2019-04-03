@@ -486,6 +486,10 @@ class Trader_Giveaway(Trader):
     def getorder(self, time):
         if self.customer_order == None:
             order = None
+        elif self.customer_order.qty >= 20:
+            MES = 20
+            order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, ["BI"])
+            return order
         else:
             MES = 2
             order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, ["Normal"])
@@ -1010,31 +1014,39 @@ def test2():
     # initialise the exchange
     exchange = Exchange()
 
-    # create some example orders
-    orders = []
-    orders.append(Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-    orders.append(Order(35.0, 'B01', 'Buy', 10, 6, ["Normal"]))
-    orders.append(Order(55.0, 'B02', 'Buy', 3, 1, ["Normal"]))
-    orders.append(Order(75.0, 'B03', 'Buy', 3, 2, ["Normal"]))
-    orders.append(Order(65.0, 'B04', 'Buy', 3, 2, ["Normal"]))
-    orders.append(Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
-    orders.append(Order(55.0, 'S01', 'Sell', 4, 2, ["Normal"]))
-    orders.append(Order(65.0, 'S02', 'Sell', 6, 3, ["Normal"]))
-    orders.append(Order(55.0, 'S03', 'Sell', 6, 4, ["Normal"]))
+    # create the trader specs
+    buyers_spec = [('GVWY',6)]
+    sellers_spec = buyers_spec
+    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
 
-    # add the orders to the exchange
-    for order in orders:
-        exchange.add_order(order, False)
+    # create a bunch of traders
+    traders = {}
+    trader_stats = populate_market(traders_spec, traders, True, False)
 
-    block_indications = []
-    block_indications.append(Order(65.0, 'B05', 'Buy', 25, 15, ["BI"]))
-    block_indications.append(Order(85.0, 'S04', 'Sell', 30, 23, ["BI"]))
+    # create some customer orders
+    customer_orders = []
+    customer_orders.append(Customer_Order(25.0, 'B00', 'Buy', 100, 5,))
+    customer_orders.append(Customer_Order(35.0, 'B01', 'Buy', 100, 10))
+    customer_orders.append(Customer_Order(55.0, 'B02', 'Buy', 100, 3))
+    customer_orders.append(Customer_Order(75.0, 'B03', 'Buy', 100, 3))
+    customer_orders.append(Customer_Order(65.0, 'B04', 'Buy', 100, 3))
+    customer_orders.append(Customer_Order(45.0, 'B05', 'Buy', 100, 25))
+    customer_orders.append(Customer_Order(45.0, 'S00', 'Sell', 0, 11))
+    customer_orders.append(Customer_Order(55.0, 'S01', 'Sell', 0, 4))
+    customer_orders.append(Customer_Order(65.0, 'S02', 'Sell', 0, 6))
+    customer_orders.append(Customer_Order(55.0, 'S03', 'Sell', 0, 6))
+    customer_orders.append(Customer_Order(75.0, 'S04', 'Sell', 0, 31))
 
-    for block_indication in block_indications:
-        print(exchange.add_order(block_indication, False))
-        response = exchange.block_indications.find_matching_block_indications()
-        if response != None:
-            print("Block indication match!")
+    # assign customer orders to traders
+    for customer_order in customer_orders:
+        traders[customer_order.tid].add_order(customer_order, False)
+
+
+    # add each traders order to the exchange
+    for tid in traders:
+        order = traders[tid].getorder(20.0)
+        if order != None:
+            print(exchange.add_order(order, False))
 
     exchange.print_order_book()
     exchange.print_block_indications()

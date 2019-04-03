@@ -257,22 +257,29 @@ class Block_Indication_Book:
         self.tape = []
         self.BI_id = 0
         self.reputational_scores = {}
+        # The minimum indication value (MIV) is the quantity that a block indication must be greater
+        # than in order to be accepted
+        self.MIV = 20
 
     
     # add block indication
     def add_block_indication(self, order, verbose):
-        # if a new trader, then give it an initial reputational score
-        if self.reputational_scores.get(order.tid) == None:
-            self.reputational_scores[order.tid] = 50
-        # set the orders order id member variable
-        order.oid = self.BI_id
-        self.BI_id = order.oid + 1
-        # add a order to the correct order book
-        if order.otype == 'Buy':
-            response=self.buy_side.book_add(order)
-        else:
-            response=self.sell_side.book_add(order)
-        return [order.oid, response]
+
+        # the quantity of the order must be greater than the MIV
+        if order.qty > self.MIV:
+            # if a new trader, then give it an initial reputational score
+            if self.reputational_scores.get(order.tid) == None:
+                self.reputational_scores[order.tid] = 50
+            # set the orders order id member variable
+            order.oid = self.BI_id
+            self.BI_id = order.oid + 1
+            # add a order to the correct order book
+            if order.otype == 'Buy':
+                response=self.buy_side.book_add(order)
+            else:
+                response=self.sell_side.book_add(order)
+            return [order.oid, response]
+        return "Rejected"
 
     # delete block indication
     def del_block_indication(self, time, order, verbose):
@@ -342,11 +349,11 @@ class Exchange:
 
     # add an order to the exchange
     def add_order(self, order, verbose):
-        self.order_book.add_order(order, verbose)
+        return self.order_book.add_order(order, verbose)
 
     # delete an order from the exchange
     def del_order(self, time, order, verbose):
-        self.order_book.del_order(time, order, verbose)
+        return self.order_book.del_order(time, order, verbose)
 
     # this function executes the uncross event, trades occur at the given time at the given price
     # keep making trades out of matching order until no more matches can be found
@@ -365,10 +372,10 @@ class Exchange:
             match_info = self.order_book.find_order_match()
 
     def add_block_indication(self, order, verbose):
-        self.block_indications.add_block_indication(order, verbose)
+        return self.block_indications.add_block_indication(order, verbose)
 
     def del_block_indication(self, time, order, verbose):
-        self.block_indications.del_block_indication(time, order, verbose)
+        return self.block_indications.del_block_indication(time, order, verbose)
 
     # write the order_book's tape to the output file
     def tape_dump(self, fname, fmode, tmode):
@@ -1020,7 +1027,7 @@ def test2():
     block_indications.append(Order(85.0, 'S04', 'Sell', 30, 23))
 
     for block_indication in block_indications:
-        exchange.add_block_indication(block_indication, False)
+        print(exchange.add_block_indication(block_indication, False))
 
     exchange.print_order_book()
     exchange.print_block_indications()

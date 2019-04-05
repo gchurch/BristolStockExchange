@@ -167,7 +167,8 @@ class Test_Orderbook_half(unittest.TestCase):
 
 
 
-################################################################################
+
+##################################################################################################
 # tests for the Orderbook class
 
 class Test_Orderbook(unittest.TestCase):
@@ -185,18 +186,48 @@ class Test_Orderbook(unittest.TestCase):
 
     def test__add_order__simple(self):
 
+        # create the order book
         orderbook = dark_pool.Orderbook()
 
+        # create some orders
         orders = []
         orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
         orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
 
+        # add the orders to the order book
         for order in orders:
             orderbook.add_order(order, False)
 
+        # check the state of the orderbook is as expected
         self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order [T=25.00 B00 Buy Q=5 MES=3 OID=0]")
         self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order [T=45.00 S00 Sell Q=11 MES=6 OID=1]")
+        self.assertEqual(orderbook.buy_side.num_orders, 1)
+        self.assertEqual(orderbook.sell_side.num_orders, 1)
         self.assertEqual(orderbook.order_id, 2)
+
+    def test__del_order(self):
+        # create the order book
+        orderbook = dark_pool.Orderbook()
+ 
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
+        orders.append(dark_pool.Order(55.0, 'B01', 'Buy', 12, 3, ["Normal"]))
+
+        # add the orders to the order book
+        for order in orders:
+            orderbook.add_order(order, False)
+
+        # delete the first order
+        orderbook.del_order(65.0, orders[0], False)
+
+        # check that the state of the orderbook is as expected
+        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order [T=55.00 B01 Buy Q=12 MES=3 OID=2]")
+        self.assertEqual(orderbook.buy_side.num_orders, 1)
+        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order [T=45.00 S00 Sell Q=11 MES=6 OID=1]")
+        self.assertEqual(orderbook.sell_side.num_orders, 1)
+
 
     def test__find_order_match(self):
         

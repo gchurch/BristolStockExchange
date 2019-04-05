@@ -251,6 +251,8 @@ class Orderbook:
         print("")
 
 
+# Block Indication Book class for a single instrument. The class hold and performs operations with 
+# received block indications
 class Block_Indication_Book:
 
     # constructer function for the Block_Indication_Book class

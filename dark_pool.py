@@ -257,18 +257,23 @@ class Orderbook:
         print("")
 
 
-# Block Indication Book class for a single instrument. The class hold and performs operations with 
+# Block Indication Book class for a single instrument. The class holds and performs operations with 
 # received block indications
 class Block_Indication_Book:
 
     # constructer function for the Block_Indication_Book class
     def __init__(self):
+        # the buy side contains all of the block indications to buy
         self.buy_side = Orderbook_half('Buy')
+        # the sell side contains all of the block indications to sell
         self.sell_side = Orderbook_half('Sell')
-        self.tape = []
         # ID to be given to next block indication
         self.BI_id = 0
+        # the reputational_scores dictionary contains the reputation score for each trader TID
         self.reputational_scores = {}
+        # the reputational score threshold (RST). All traders with a reputational score below this threshold
+        # are no longer able to use the block discovery service
+        self.RST = 20
         # The minimum indication value (MIV) is the quantity that a block indication must be greater
         # than in order to be accepted
         self.MIV = 20
@@ -278,19 +283,25 @@ class Block_Indication_Book:
         self.QBO_id = 0
         # ID to be given to the matching of two block indications
         self.match_id = 0
+        # The tape contains the history of block indications sent to the exchange
+        self.tape = []
+
     
     # add block indication
     def add_block_indication(self, order, verbose):
 
+        # if a new trader, then give it an initial reputational score
+        if self.reputational_scores.get(order.tid) == None:
+            self.reputational_scores[order.tid] = 50
+
         # the quantity of the order must be greater than the MIV
-        if order.qty > self.MIV:
-            # if a new trader, then give it an initial reputational score
-            if self.reputational_scores.get(order.tid) == None:
-                self.reputational_scores[order.tid] = 50
+        if order.qty > self.MIV and self.reputational_scores.get(order.tid) > self.RST:
+
             # set the orders order id member variable
             order.oid = self.BI_id
             self.BI_id = order.oid + 1
-            # add a order to the correct order book
+
+            # add the block indication to the correct order book
             if order.otype == 'Buy':
                 response=self.buy_side.book_add(order)
             else:
@@ -300,7 +311,7 @@ class Block_Indication_Book:
             return [order.oid, response]
 
         # if the quantity of the order was not greater than the MIV then return a message
-        return "Rejected"
+        return "Block Indication Rejected"
 
     # delete block indication
     def del_block_indication(self, time, order, verbose):
@@ -1196,4 +1207,4 @@ def test3():
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    test3()
+    test2()

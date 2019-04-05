@@ -269,7 +269,8 @@ class Block_Indication_Book:
         self.sell_side = Orderbook_half('Sell')
         # ID to be given to next block indication
         self.BI_id = 0
-        # the reputational_scores dictionary contains the reputation score for each trader TID
+        # the reputational_scores dictionary contains the reputation score for each trader TID. The score will be
+        # between 0 and 100
         self.reputational_scores = {}
         # the reputational score threshold (RST). All traders with a reputational score below this threshold
         # are no longer able to use the block discovery service
@@ -330,7 +331,7 @@ class Block_Indication_Book:
             sys.exit('bad order type in del_quote()')
     
     # add a qualifying block order. If matching qualifying block orders are recieved then they are
-    # both returned.
+    # both returned. These are the final orders to be used in the exchange
     def add_qualifying_block_order(self, order, verbose):
 
         # give each qualifying block order its own unique id
@@ -380,6 +381,36 @@ class Block_Indication_Book:
                     return response
         return None
 
+    # return the reputational score for the given TID, if the TID is not known then return None
+    def get_reputational_score(self, tid):
+        return self.reputational_scores.get(tid)
+
+    # calculate the reputational score of a trader for a single event
+    def calculate_event_reputational_score(self, QBO, BI):
+
+        # if the QBO's MES is greater than the BI's MES then it is not "marketable" so give score zero
+        if QBO.MES > BI.MES:
+            return 0
+
+        # calculate the score for this event
+        score = 100
+        
+        MES_percent_diff = 100 * (BI.MES - QBO.MES) / BI.MES
+
+        quantity_percent_diff = 100 * (BI.qty - QBO.qty) / BI.qty
+
+        score = 100 - MES_percent_diff - quantity_percent_diff
+
+        if score > 100: score = 100
+        if score < 50: score = 50
+
+        return score
+
+
+    # update a traders reputational score given an event_score
+    def update_trader_reputational_score(self, tid, event_score):
+        self.reputational_scores[tid] = self.reputational_scores[tid] * 0.75 + event_score * 0.25
+
 
     # print the reputational score of all known traders
     def print_reputational_scores(self):
@@ -408,7 +439,7 @@ class Block_Indication_Book:
     def print_qualifying_block_orders(self):
         print("Qualifying block orders:")
         for key in self.qualifying_block_orders.keys():
-            print(key)
+            print("Match id: %d" % key)
             if self.qualifying_block_orders[key]["buy_side"]:
                 print(self.qualifying_block_orders[key]["buy_side"])
             if self.qualifying_block_orders[key]["sell_side"]:
@@ -460,6 +491,10 @@ class Exchange:
     # write the order_book's tape to the output file
     def tape_dump(self, fname, fmode, tmode):
         self.order_book.tape_dump(fname, fmode, tmode)
+
+    # get the reputational score of a tid from the block indication book
+    def get_reputational_score(self, tid):
+        return self.block_indications.get_reputational_score(tid)
 
     # print the current orders in the orders dictionary
     def print_traders(self):
@@ -1207,4 +1242,4 @@ def test3():
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    test2()
+    test3()

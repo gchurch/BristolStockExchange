@@ -297,7 +297,7 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(exchange.order_book.buy_side.traders, {})
         self.assertEqual(exchange.order_book.sell_side.traders, {})
 
-    def test__add_order(self):
+    def test__add_order__normal(self):
         
         # create an exchange
         exchange = dark_pool.Exchange()
@@ -305,19 +305,14 @@ class Test_Exchange(unittest.TestCase):
         # create some orders
         orders = []
         orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 6, ["Normal"]))
-        orders.append(dark_pool.Order(55.0, 'B02', 'Buy', 3, 1, ["Normal"]))
-        orders.append(dark_pool.Order(75.0, 'B03', 'Buy', 3, 2, ["Normal"]))
-        orders.append(dark_pool.Order(65.0, 'B04', 'Buy', 3, 2, ["Normal"]))
         orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
-        orders.append(dark_pool.Order(55.0, 'S01', 'Sell', 4, 2, ["Normal"]))
-        orders.append(dark_pool.Order(65.0, 'S02', 'Sell', 6, 3, ["Normal"]))
-        orders.append(dark_pool.Order(55.0, 'S03', 'Sell', 6, 4, ["Normal"]))
 
         # add the orders to the exchange
-        return_values = []
-        for order in orders:
-            return_values.append(exchange.add_order(order, False))
+        self.assertEqual(exchange.add_order(orders[0], False), [0, 'Addition'])
+        self.assertEqual(exchange.add_order(orders[1], False), [1, 'Addition'])
+
+        self.assertEqual(exchange.order_book.buy_side.num_orders, 1)
+        self.assertEqual(exchange.order_book.sell_side.num_orders, 1)
 
 
     def test__del_order(self):
@@ -328,23 +323,17 @@ class Test_Exchange(unittest.TestCase):
         # create some orders
         orders = []
         orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 6, ["Normal"]))
-        orders.append(dark_pool.Order(55.0, 'B02', 'Buy', 3, 1, ["Normal"]))
-        orders.append(dark_pool.Order(75.0, 'B03', 'Buy', 3, 2, ["Normal"]))
-        orders.append(dark_pool.Order(65.0, 'B04', 'Buy', 3, 2, ["Normal"]))
         orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
-        orders.append(dark_pool.Order(55.0, 'S01', 'Sell', 4, 2, ["Normal"]))
-        orders.append(dark_pool.Order(65.0, 'S02', 'Sell', 6, 3, ["Normal"]))
-        orders.append(dark_pool.Order(55.0, 'S03', 'Sell', 6, 4, ["Normal"]))
+        orders.append(dark_pool.Order(55.0, 'B01', 'Buy', 31, 3, ["Normal"]))
 
         # add the orders to the exchange
+        return_values = []
         for order in orders:
             exchange.add_order(order, False)
 
-        # delete orders from the exchange
-        exchange.del_order(100.0, orders[0], False)
-
-        exchange.del_order(110.0, orders[-1], False)
+        self.assertEqual(exchange.del_order(100.0, orders[0], False), None)
+        self.assertEqual(exchange.order_book.buy_side.num_orders, 1)
+        self.assertEqual(exchange.order_book.sell_side.num_orders, 1)
 
     def test__uncross(self):
         # initialise the exchange

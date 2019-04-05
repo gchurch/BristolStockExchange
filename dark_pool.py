@@ -178,45 +178,45 @@ class Orderbook:
         return None
 
     # given a buy order, a sell order and a trade size, perform the trade
-    def perform_trade(self, traders, time, price, buy_order, sell_order, trade_size):
+    def perform_trade(self, traders, time, price, trade_info):
 
         # subtract the trade quantity from the orders' quantity
-        buy_order.qty -= trade_size
-        sell_order.qty -= trade_size
+        trade_info["buy_order"].qty -= trade_info["trade_size"]
+        trade_info["sell_order"].qty -= trade_info["trade_size"]
 
         # remove orders from the order_book
-        self.buy_side.book_del(buy_order.tid)
-        self.sell_side.book_del(sell_order.tid)
+        self.buy_side.book_del(trade_info["buy_order"].tid)
+        self.sell_side.book_del(trade_info["sell_order"].tid)
 
         # re-add the the residual
-        if buy_order.qty > 0:
+        if trade_info["buy_order"].qty > 0:
             # update the MES if necessary
-            if buy_order.MES > buy_order.qty:
-                buy_order.MES = buy_order.qty
+            if trade_info["buy_order"].MES > trade_info["buy_order"].qty:
+                trade_info["buy_order"].MES = trade_info["buy_order"].qty
             # add the order to the order_book list
-            self.buy_side.book_add(buy_order)
+            self.buy_side.book_add(trade_info["buy_order"])
 
         # re-add the residual
-        if sell_order.qty > 0:
+        if trade_info["sell_order"].qty > 0:
             # update the MES if necessary
-            if sell_order.MES > sell_order.qty:
-                sell_order.MES = sell_order.qty
+            if trade_info["sell_order"].MES > trade_info["sell_order"].qty:
+                trade_info["sell_order"].MES = trade_info["sell_order"].qty
             # add the order to the order_book list
-            self.sell_side.book_add(sell_order)
+            self.sell_side.book_add(trade_info["sell_order"])
 
         # create a record of the transaction to the tape
         trade = {   'type': 'Trade',
                     'time': time,
                     'price': price,
-                    'quantity': trade_size,
-                    'party1': buy_order.tid,
-                    'party2': sell_order.tid}
+                    'quantity': trade_info["trade_size"],
+                    'party1': trade_info["buy_order"].tid,
+                    'party2': trade_info["sell_order"].tid}
 
         # the traders parameter may be set to none when we are just trying to test the uncross function
         if traders != None:
             # inform the traders of the trade
-            traders[buy_order.tid].bookkeep(trade, False)
-            traders[sell_order.tid].bookkeep(trade, False)
+            traders[trade_info["buy_order"].tid].bookkeep(trade, False)
+            traders[trade_info["sell_order"].tid].bookkeep(trade, False)
 
         # add a record to the tape
         self.tape.append(trade)
@@ -243,11 +243,17 @@ class Orderbook:
 
     # print the current orders in the order_book list
     def print_order_book(self):
-        print("Orders:")
+        print("Order Book:")
         print("Buy side order book:")
         self.buy_side.print_orders()
         print("Sell side order book:")
         self.sell_side.print_orders()
+        print("")
+
+    def print_tape(self):
+        print("Tape:")
+        for trade in self.tape:
+            print(trade)
         print("")
 
 
@@ -431,7 +437,7 @@ class Exchange:
         while match_info != None:
 
             # execute the trade with the matched orders
-            self.order_book.perform_trade(traders, time, 50.0, match_info["buy_order"], match_info["sell_order"], match_info["trade_size"])
+            self.order_book.perform_trade(traders, time, 50.0, match_info)
 
             # find another match
             match_info = self.order_book.find_order_match()

@@ -195,8 +195,8 @@ class Test_Orderbook(unittest.TestCase):
         orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
 
         # add the orders to the order book
-        for order in orders:
-            orderbook.add_order(order, False)
+        self.assertEqual(orderbook.add_order(orders[0], False), [0, 'Addition'])
+        self.assertEqual(orderbook.add_order(orders[1], False), [1, 'Addition'])
 
         # check the state of the orderbook is as expected
         self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order [T=25.00 B00 Buy Q=5 MES=3 OID=0]")
@@ -257,8 +257,31 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(match["sell_order"].__str__(), "Order [T=45.00 S00 Sell Q=11 MES=6 OID=1]")
         self.assertEqual(match["buy_order"].__str__(), "Order [T=25.00 B01 Buy Q=8 MES=7 OID=2]")
 
-    def perform_trade(self, traders, time, price, buy_order, sell_order, trade_size):
-        return
+    def test__perform_trade(self):
+        # create the orderbook
+        orderbook = dark_pool.Orderbook()
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
+
+        # add the orders to the orderbook
+        for order in orders:
+            orderbook.add_order(order, False)
+
+        # add add another order to the order book
+        orderbook.add_order(dark_pool.Order(25.0, 'B01', 'Buy', 8, 7, ["Normal"]), False)
+
+        # find a match
+        match_info = orderbook.find_order_match()
+        orderbook.perform_trade(None, 100.0, 50, match_info)
+
+        self.assertEqual(orderbook.tape, [{'party2': 'S00', 'party1': 'B01', 'price': 50, 'time': 100.0, 'type': 'Trade', 'quantity': 8}])
+        self.assertEqual(orderbook.buy_side.num_orders, 1)
+        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order [T=25.00 B00 Buy Q=5 MES=3 OID=0]")
+        self.assertEqual(orderbook.sell_side.num_orders, 1)
+        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order [T=45.00 S00 Sell Q=3 MES=3 OID=1]")
 
 ###############################################################################
 # tests for Exchange class

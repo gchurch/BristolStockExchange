@@ -35,7 +35,7 @@ class Order:
         self.MES = MES      # minimum execution size
 
     def __str__(self):
-        return 'Order [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES)
+        return 'Order: [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES)
 
 # a block indication created by a trader for the exchange
 class Block_Indication:
@@ -49,7 +49,7 @@ class Block_Indication:
         self.MES = MES
 
     def __str__(self):
-        return 'BI [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES)
+        return 'BI: [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES)
 
 # a qualifying block order created by a trader for the exchange
 class Qualifying_Block_Order:
@@ -64,7 +64,7 @@ class Qualifying_Block_Order:
         self.match_id = match_id
 
     def __str__(self):
-        return 'QBO [ID=%d T=%5.2f %s %s Q=%s MES=%s MID=%d]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES, self.match_id)
+        return 'QBO: [ID=%d T=%5.2f %s %s Q=%s MES=%s MID=%d]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES, self.match_id)
 
 
 # Orderbook_half is one side of the book: a list of bids or a list of asks, each sorted best-first

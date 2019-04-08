@@ -582,7 +582,7 @@ class Exchange:
     def update_reputational_scores(self, match_id):
         return self.block_indications.update_reputational_scores(match_id)
 
-    def add_block_indication_match_to_order_book(self, match_id):
+    def add_firm_orders_to_order_book(self, match_id):
         full_match = self.get_block_indication_match(match_id)
         buy_side_QBO = full_match["buy_side_QBO"]
         sell_side_QBO = full_match["sell_side_QBO"]
@@ -600,7 +600,6 @@ class Exchange:
                                 sell_side_QBO.MES)
         self.add_order(buy_side_order, False)
         self.add_order(sell_side_order, False)
-        self.delete_block_indication_match(match_id)
 
     # print the current orders in the orders dictionary
     def print_traders(self):
@@ -721,12 +720,13 @@ class Trader_Giveaway(Trader):
             self.lastquote=order
             return order
 
-    # the trader recieves an Order Submission Request (OSR), the trader needs to respond with a
+    # the trader recieves an Order Submission Request (OSR). The trader needs to respond with a
     # Qualifying Block Order (QBO) in order to confirm their block indication
+    # Currently we are sending a QBO with the same quantity as in the BI
     def order_submission_request(self, time, match_id):
         MES = 20
-        order = Qualifying_Block_Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, match_id)
-        return order
+        QOB = Qualifying_Block_Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, match_id)
+        return QOB
 
 
 
@@ -886,21 +886,17 @@ def test():
         order = traders[tid].getorder(20.0)
         if order != None:
             if isinstance(order, Order):
-                print(exchange.add_order(order, False))
+                exchange.add_order(order, False)
             elif isinstance(order, Block_Indication):
-                print(exchange.add_block_indication(order, False))
+                exchange.add_block_indication(order, False)
 
-    print("Before:")
-    exchange.print_order_book()
     exchange.print_block_indications()
-    exchange.print_matches()
 
-
+    # find a match between block indications
     for i in range(0,1):
 
         # check if there is a match between any two block indications
         match_id = exchange.find_matching_block_indications()
-        print(match_id)
 
         if match_id != None:
 
@@ -910,33 +906,29 @@ def test():
             sell_side_BI = full_match["sell_side_BI"]
 
             # create QBOs for matched BIs
-            buy_side_qbo = Qualifying_Block_Order(buy_side_BI.time, 
-                                                  buy_side_BI.tid, 
-                                                  buy_side_BI.otype, 
-                                                  buy_side_BI.qty, 
-                                                  buy_side_BI.MES, 
-                                                  match_id)
-            sell_side_qbo = Qualifying_Block_Order(sell_side_BI.time, 
-                                                   sell_side_BI.tid, 
-                                                   sell_side_BI.otype, 
-                                                   sell_side_BI.qty, 
-                                                   sell_side_BI.MES, 
-                                                   match_id)
+            buy_side_qbo = traders[buy_side_BI.tid].order_submission_request(100.0, match_id)
+            sell_side_qbo = traders[sell_side_BI.tid].order_submission_request(100.0, match_id)
 
             # add the QBOs to the exchange
-            print(exchange.add_qualifying_block_order(buy_side_qbo, False))
-            print(exchange.add_qualifying_block_order(sell_side_qbo, False))
+            exchange.add_qualifying_block_order(buy_side_qbo, False)
+            exchange.add_qualifying_block_order(sell_side_qbo, False)
+
+            # update the reputational scores of the traders in the match
             exchange.update_reputational_scores(match_id)
-            exchange.add_block_indication_match_to_order_book(match_id)
+            # add the firm orders to the order book.
+            exchange.add_firm_orders_to_order_book(match_id)
+            # delete the block indication match
+            exchange.delete_block_indication_match(match_id)
        
     exchange.print_order_book()     
-    exchange.print_block_indications()
-    exchange.print_matches()
 
+    # start trading
     exchange.uncross(traders, 100.0, 50)
 
     exchange.print_order_book()
+    exchange.print_reputational_scores()
 
+    # dump the trading data
     exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
 
 

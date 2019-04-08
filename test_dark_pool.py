@@ -15,8 +15,7 @@ class Test_Order(unittest.TestCase):
         qty = 1
         MES = 1
         time = 25.0
-        params = ["Normal"]
-        order = dark_pool.Order(time, tid, otype, qty, MES, params)
+        order = dark_pool.Order(time, tid, otype, qty, MES)
 
         # test all initialised member variables
         self.assertEqual(order.tid, tid)
@@ -24,7 +23,6 @@ class Test_Order(unittest.TestCase):
         self.assertEqual(order.qty, qty)
         self.assertEqual(order.MES, MES)
         self.assertEqual(order.time, time)
-        self.assertEqual(order.params, params)
 
 
 #################################################################################
@@ -53,20 +51,20 @@ class Test_Orderbook_half(unittest.TestCase):
 
         # create some orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 4, ["Normal"]))
-        orders.append(dark_pool.Order(45.0, 'B02', 'Buy', 10, 4, ["Normal"]))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
+        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 4))
+        orders.append(dark_pool.Order(45.0, 'B02', 'Buy', 10, 4))
 
         # add the orders
         for order in orders:
             orderbook_half.book_add(order)
 
         # test the positions are as expected
-        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 12, 4, ["Normal"])), 0)
-        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 10, 4, ["Normal"])), 2)
-        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 9, 4, ["Normal"])), 2)
-        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 4, 4, ["Normal"])), 3)
-        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(40.0, 'B03', 'Buy', 10, 4, ["Normal"])), 1)
+        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 12, 4)), 0)
+        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 10, 4)), 2)
+        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 9, 4)), 2)
+        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 4, 4)), 3)
+        self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(40.0, 'B03', 'Buy', 10, 4)), 1)
 
     def test__remove_from_order_book(self):
         return
@@ -81,7 +79,7 @@ class Test_Orderbook_half(unittest.TestCase):
 
         # create some orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
 
         # add the orders
         for order in orders:
@@ -102,9 +100,9 @@ class Test_Orderbook_half(unittest.TestCase):
 
         # create some orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 4, ["Normal"]))
-        orders.append(dark_pool.Order(45.0, 'B02', 'Buy', 10, 4, ["Normal"]))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
+        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 4))
+        orders.append(dark_pool.Order(45.0, 'B02', 'Buy', 10, 4))
 
         # add the orders
         for order in orders:
@@ -125,9 +123,9 @@ class Test_Orderbook_half(unittest.TestCase):
 
         # create some orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 4, ["Normal"]))
-        orders.append(dark_pool.Order(45.0, 'B00', 'Buy', 10, 4, ["Normal"]))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
+        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 4))
+        orders.append(dark_pool.Order(45.0, 'B00', 'Buy', 10, 4))
 
         # add the orders and get the return values
         return_values = []
@@ -151,8 +149,8 @@ class Test_Orderbook_half(unittest.TestCase):
 
         # create some orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 4, ["Normal"]))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
+        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 4))
 
         # add the orders
         return_values = []
@@ -191,8 +189,8 @@ class Test_Orderbook(unittest.TestCase):
 
         # create some orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6))
 
         # add the orders to the order book
         self.assertEqual(orderbook.add_order(orders[0], False), [0, 'Addition'])
@@ -211,9 +209,9 @@ class Test_Orderbook(unittest.TestCase):
  
         # create some orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
-        orders.append(dark_pool.Order(55.0, 'B01', 'Buy', 12, 3, ["Normal"]))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6))
+        orders.append(dark_pool.Order(55.0, 'B01', 'Buy', 12, 3))
 
         # add the orders to the order book
         for order in orders:
@@ -236,8 +234,8 @@ class Test_Orderbook(unittest.TestCase):
 
         # create some orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6))
 
         # add the orders to the orderbook
         for order in orders:
@@ -247,7 +245,7 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(orderbook.find_order_match(),None)
 
         # add add another order to the order book
-        orderbook.add_order(dark_pool.Order(25.0, 'B01', 'Buy', 8, 7, ["Normal"]), False)
+        orderbook.add_order(dark_pool.Order(25.0, 'B01', 'Buy', 8, 7), False)
 
         # find a match
         match = orderbook.find_order_match()
@@ -263,15 +261,15 @@ class Test_Orderbook(unittest.TestCase):
 
         # create some orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6))
 
         # add the orders to the orderbook
         for order in orders:
             orderbook.add_order(order, False)
 
         # add add another order to the order book
-        orderbook.add_order(dark_pool.Order(25.0, 'B01', 'Buy', 8, 7, ["Normal"]), False)
+        orderbook.add_order(dark_pool.Order(25.0, 'B01', 'Buy', 8, 7), False)
 
         # find a match
         match_info = orderbook.find_order_match()
@@ -304,8 +302,8 @@ class Test_Exchange(unittest.TestCase):
 
         # create some orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6))
 
         # add the orders to the exchange
         self.assertEqual(exchange.add_order(orders[0], False), [0, 'Addition'])
@@ -322,9 +320,9 @@ class Test_Exchange(unittest.TestCase):
 
         # create some orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
-        orders.append(dark_pool.Order(55.0, 'B01', 'Buy', 31, 3, ["Normal"]))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6))
+        orders.append(dark_pool.Order(55.0, 'B01', 'Buy', 31, 3))
 
         # add the orders to the exchange
         return_values = []
@@ -341,15 +339,15 @@ class Test_Exchange(unittest.TestCase):
 
         # create some example orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3, ["Normal"]))
-        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 6, ["Normal"]))
-        orders.append(dark_pool.Order(55.0, 'B02', 'Buy', 3, 1, ["Normal"]))
-        orders.append(dark_pool.Order(75.0, 'B03', 'Buy', 3, 2, ["Normal"]))
-        orders.append(dark_pool.Order(65.0, 'B04', 'Buy', 3, 2, ["Normal"]))
-        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
-        orders.append(dark_pool.Order(55.0, 'S01', 'Sell', 4, 2, ["Normal"]))
-        orders.append(dark_pool.Order(65.0, 'S02', 'Sell', 6, 3, ["Normal"]))
-        orders.append(dark_pool.Order(55.0, 'S03', 'Sell', 6, 4, ["Normal"]))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 3))
+        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 6))
+        orders.append(dark_pool.Order(55.0, 'B02', 'Buy', 3, 1))
+        orders.append(dark_pool.Order(75.0, 'B03', 'Buy', 3, 2))
+        orders.append(dark_pool.Order(65.0, 'B04', 'Buy', 3, 2))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 6))
+        orders.append(dark_pool.Order(55.0, 'S01', 'Sell', 4, 2))
+        orders.append(dark_pool.Order(65.0, 'S02', 'Sell', 6, 3))
+        orders.append(dark_pool.Order(55.0, 'S03', 'Sell', 6, 4))
 
         # add the orders to the exchange
         for order in orders:

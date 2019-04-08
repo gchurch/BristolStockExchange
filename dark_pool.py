@@ -251,8 +251,8 @@ class Orderbook:
                     'time': time,
                     'price': price,
                     'quantity': trade_info["trade_size"],
-                    'party1': trade_info["buy_order"].tid,
-                    'party2': trade_info["sell_order"].tid}
+                    'buyer': trade_info["buy_order"].tid,
+                    'seller': trade_info["sell_order"].tid}
 
         # the traders parameter may be set to none when we are just trying to test the uncross function
         if traders != None:
@@ -267,11 +267,11 @@ class Orderbook:
     def tape_dump(self, fname, fmode, tmode):
         dumpfile = open(fname, fmode)
         # write the title for each column
-        dumpfile.write('time, quantity, price\n')
+        dumpfile.write('time, buyer, seller, quantity, price\n')
         # write the information for each trade
         for tapeitem in self.tape:
             if tapeitem['type'] == 'Trade' :
-                dumpfile.write('%s, %s, %s\n' % (tapeitem['time'], tapeitem['quantity'], tapeitem['price']))
+                dumpfile.write('%s, %s, %s, %s, %s\n' % (tapeitem['time'], tapeitem['buyer'], tapeitem['seller'], tapeitem['quantity'], tapeitem['price']))
         dumpfile.close()
         if tmode == 'wipe':
             self.tape = []
@@ -576,8 +576,31 @@ class Exchange:
     def get_block_indication_match(self, match_id):
         return self.block_indications.get_block_indication_match(match_id)
 
+    def delete_block_indication_match(self, match_id):
+        return self.block_indications.delete_match(match_id)
+
     def update_reputational_scores(self, match_id):
         return self.block_indications.update_reputational_scores(match_id)
+
+    def add_block_indication_match_to_order_book(self, match_id):
+        full_match = self.get_block_indication_match(match_id)
+        buy_side_QBO = full_match["buy_side_QBO"]
+        sell_side_QBO = full_match["sell_side_QBO"]
+
+        # create orders out of the QBOs
+        buy_side_order = Order(buy_side_QBO.time,
+                               buy_side_QBO.tid,
+                               buy_side_QBO.otype,
+                               buy_side_QBO.qty,
+                               buy_side_QBO.MES)
+        sell_side_order = Order(sell_side_QBO.time,
+                                sell_side_QBO.tid,
+                                sell_side_QBO.otype,
+                                sell_side_QBO.qty,
+                                sell_side_QBO.MES)
+        self.add_order(buy_side_order, False)
+        self.add_order(sell_side_order, False)
+        self.delete_block_indication_match(match_id)
 
     # print the current orders in the orders dictionary
     def print_traders(self):
@@ -904,10 +927,19 @@ def test():
             print(exchange.add_qualifying_block_order(buy_side_qbo, False))
             print(exchange.add_qualifying_block_order(sell_side_qbo, False))
             exchange.update_reputational_scores(match_id)
+            exchange.add_block_indication_match_to_order_book(match_id)
        
     exchange.print_order_book()     
     exchange.print_block_indications()
     exchange.print_matches()
+
+    exchange.uncross(traders, 100.0, 50)
+
+    exchange.print_order_book()
+
+    exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
+
+
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":

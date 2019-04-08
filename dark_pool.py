@@ -38,10 +38,35 @@ class Order:
     def __str__(self):
         if self.params[0] == "Normal":
             return 'Order [T=%5.2f %s %s Q=%s MES=%s OID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid)
-        elif self.params[0] == "BI":
-            return 'BI [T=%5.2f %s %s Q=%s MES=%s OID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid)
-        elif self.params[0] == "QBO":
-            return 'QBO [T=%5.2f %s %s Q=%s MES=%s OID=%d MID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid, self.params[1])
+
+# a block indication created by a trader for the exchange
+class Block_Indication:
+
+    def __init__(self, time, tid, otype, qty, MES):
+        self.time = time
+        self.tid = tid
+        self.otype = otype
+        self.qty = qty
+        self.MES = MES
+        self.oid = -1
+
+    def __str__(self):
+        return 'BI [T=%5.2f %s %s Q=%s MES=%s OID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid)
+
+# a qualifying block order created by a trader for the exchange
+class Qualifying_Block_Order:
+
+    def __init__(self, time, tid, otype, qty, MES, params):
+        self.time = time
+        self.tid = tid
+        self.otype = otype
+        self.qty = qty
+        self.MES = MES
+        self.oid = -1
+        self.params = params
+
+    def __str__(self):
+        return 'QBO [T=%5.2f %s %s Q=%s MES=%s OID=%d MID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid, self.params[1])
 
 
 # Orderbook_half is one side of the book: a list of bids or a list of asks, each sorted best-first
@@ -482,13 +507,22 @@ class Exchange:
 
     # add an order to the exchange
     def add_order(self, order, verbose):
-        return self.order_book.add_order(order, verbose)
+        if(isinstance(order, Order)):
+            return self.order_book.add_order(order, verbose)
+        else:
+            return "Not an Order."
     
     def add_block_indication(self, BI, verbose):
-        return self.block_indications.add_block_indication(BI, verbose)
+        if(isinstance(BI, Block_Indication)):
+            return self.block_indications.add_block_indication(BI, verbose)
+        else:
+            return "Not a Block Indication."
 
     def add_qualifying_block_order(self, QBO, verbose):
-        return self.block_indications.add_qualifying_block_order(QBO, verbose)
+        if(isinstance(QBO, Qualifying_Block_Order)):
+            return self.block_indications.add_qualifying_block_order(QBO, verbose)
+        else:
+            return "Not a Qualifying Block Order."
 
 
     # delete an order from the exchange
@@ -633,8 +667,8 @@ class Trader_Giveaway(Trader):
         elif self.customer_order.qty >= 20:
             MES = 20
             # return a block indication
-            order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, ["BI"])
-            return order
+            block_indication = Block_Indication(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES)
+            return block_indication
         else:
             MES = 2
             order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, ["Normal"])
@@ -645,7 +679,7 @@ class Trader_Giveaway(Trader):
     # Qualifying Block Order (QBO) in order to confirm their block indication
     def order_submission_request(self, time, match_id):
         MES = 20
-        order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, ["QBO", match_id])
+        order = Qualifying_Block_Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, ["QBO", match_id])
         return order
 
 
@@ -1221,8 +1255,8 @@ def test3():
     orders.append(Order(55.0, 'S03', 'Sell', 6, 4, ["Normal"]))
 
     block_indications = []
-    block_indications.append(Order(65.0, 'B04', 'Buy', 50, 29, ["BI"]))
-    block_indications.append(Order(85.0, 'S04', 'Sell', 30, 23, ["BI"]))
+    block_indications.append(Block_Indication(65.0, 'B04', 'Buy', 50, 29))
+    block_indications.append(Block_Indication(85.0, 'S04', 'Sell', 30, 23))
 
     # add the orders to the exchange
     for order in orders:
@@ -1246,10 +1280,18 @@ def test3():
             match_id = match["match_id"]
 
             # create QBOs for matched BIs
-            buy_side_qbo = copy.deepcopy(match["buy_order"])
-            buy_side_qbo.params = ["QBO", match_id]
-            sell_side_qbo = copy.deepcopy(match["sell_order"])
-            sell_side_qbo.params = ["QBO", match_id]
+            buy_side_qbo = Qualifying_Block_Order(match["buy_order"].time, 
+                                                  match["buy_order"].tid, 
+                                                  match["buy_order"].otype, 
+                                                  match["buy_order"].qty, 
+                                                  match["buy_order"].MES, 
+                                                  ["QBO", match_id])
+            sell_side_qbo = Qualifying_Block_Order(match["sell_order"].time, 
+                                                   match["sell_order"].tid, 
+                                                   match["sell_order"].otype, 
+                                                   match["sell_order"].qty, 
+                                                   match["sell_order"].MES, 
+                                                   ["QBO", match_id])
 
             # add the QBOs to the exchange
             exchange.add_qualifying_block_order(buy_side_qbo, False)

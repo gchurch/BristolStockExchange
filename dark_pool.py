@@ -62,9 +62,27 @@ class Block_Indication:
         return 'BI: [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES)
 
 
+#########################-Order Submission Request Class-############################
+
+# a Order Submission Request (OSR) sent to a trader when their block indication is matched
+class Order_Submission_Request:
+
+    def __init__(self, time, tid, otype, qty, MES, match_id):
+        self.id = -1
+        self.time = time
+        self.tid = tid
+        self.otype = otype
+        self.qty = qty
+        self.MES = MES
+        self.match_id = match_id
+
+    def __str__(self):
+        return 'OSR: [ID=%d T=%5.2f %s %s Q=%s MES=%s MID=%d]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES, self.match_id)
+
+
 #########################-Qualifying_Block_Order Class-###############################
 
-# a qualifying block order created by a trader for the exchange
+# a Qualifying Block Order (QBO) created by a trader for the exchange
 class Qualifying_Block_Order:
 
     def __init__(self, time, tid, otype, qty, MES, match_id):
@@ -473,6 +491,25 @@ class Block_Indication_Book:
     def delete_match(self, match_id):
         del(self.matches[match_id])
 
+    def create_order_submission_requests(self, match_id):
+        buy_side_BI = self.get_block_indication_match(match_id)["buy_side_BI"]
+        sell_side_BI = self.get_block_indication_match(match_id)["sell_side_BI"]
+        
+        buy_side_OSR = Order_Submission_Request(buy_side_BI.time,
+                                                buy_side_BI.tid,
+                                                buy_side_BI.otype,
+                                                buy_side_BI.qty,
+                                                buy_side_BI.MES,
+                                                match_id)
+        sell_side_OSR = Order_Submission_Request(sell_side_BI.time,
+                                                 sell_side_BI.tid,
+                                                 sell_side_BI.otype,
+                                                 sell_side_BI.qty,
+                                                 sell_side_BI.MES,
+                                                 match_id)
+
+        return {"buy_side_OSR": buy_side_OSR, "sell_side_OSR": sell_side_OSR}
+
     # print the reputational score of all known traders
     def print_reputational_scores(self):
         print("Reputational scores:")
@@ -601,6 +638,9 @@ class Exchange:
         self.add_order(buy_side_order, False)
         self.add_order(sell_side_order, False)
 
+    def create_order_submission_requests(self, match_id):
+        return self.block_indications.create_order_submission_requests(match_id)
+
     # print the current orders in the orders dictionary
     def print_traders(self):
         self.order_book.print_traders()
@@ -723,9 +763,16 @@ class Trader_Giveaway(Trader):
     # the trader recieves an Order Submission Request (OSR). The trader needs to respond with a
     # Qualifying Block Order (QBO) in order to confirm their block indication
     # Currently we are sending a QBO with the same quantity as in the BI
-    def order_submission_request(self, time, match_id):
+    def order_submission_request(self, time, OSR):
+        # create a QOB from the received OSR
         MES = 20
-        QOB = Qualifying_Block_Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES, match_id)
+        QOB = Qualifying_Block_Order(time, 
+                                     OSR.tid, 
+                                     OSR.otype, 
+                                     OSR.qty, 
+                                     MES, 
+                                     OSR.match_id)
+        # return the created QOB
         return QOB
 
 
@@ -861,8 +908,9 @@ def match_block_indications_and_add_firm_orders_to_the_order_book(exchange, trad
         sell_side_BI = full_match["sell_side_BI"]
 
         # send OSR to the traders and get back QBOs for the matched BIs
-        buy_side_qbo = traders[buy_side_BI.tid].order_submission_request(100.0, match_id)
-        sell_side_qbo = traders[sell_side_BI.tid].order_submission_request(100.0, match_id)
+        OSRs = exchange.create_order_submission_requests(match_id)
+        buy_side_qbo = traders[buy_side_BI.tid].order_submission_request(100.0, OSRs["buy_side_OSR"])
+        sell_side_qbo = traders[sell_side_BI.tid].order_submission_request(100.0, OSRs["sell_side_OSR"])
 
         # add the QBOs to the exchange
         exchange.add_qualifying_block_order(buy_side_qbo, False)

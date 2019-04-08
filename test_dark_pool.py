@@ -7,9 +7,10 @@ import csv
 
 class Test_Order(unittest.TestCase):
 
-    def test_init(self):
+    # test the __init__ function
+    def test__init__(self):
 
-        # create an instance of the Order class
+        # create an Order
         tid = 'B5'
         otype = 'Bid'
         qty = 1
@@ -24,6 +25,138 @@ class Test_Order(unittest.TestCase):
         self.assertEqual(order.MES, MES)
         self.assertEqual(order.time, time)
 
+    # test the __str__ function
+    def test__str__(self):
+
+        # create an Order
+        tid = 'B5'
+        otype = 'Bid'
+        qty = 1
+        MES = 1
+        time = 25.0
+        order = dark_pool.Order(time, tid, otype, qty, MES)
+
+        # test that the string produced is as expected
+        self.assertEqual(order.__str__(), "Order: [ID=-1 T=25.00 B5 Bid Q=1 MES=1]")
+
+#################################################################################
+# tests for the Block_Indication class
+
+class Test_Block_Indication(unittest.TestCase):
+
+    # test the __init__ function
+    def test__init__(self):
+
+        # create a Block Indication
+        time = 25.0
+        tid = 'B5'
+        otype = 'Bid'
+        qty = 1
+        MES = 1
+        BI = dark_pool.Block_Indication(time, tid, otype, qty, MES)
+
+        # test all initialised member variables
+        self.assertEqual(BI.tid, tid)
+        self.assertEqual(BI.otype, otype)
+        self.assertEqual(BI.qty, qty)
+        self.assertEqual(BI.MES, MES)
+        self.assertEqual(BI.time, time)
+
+    # test the __str__ function
+    def test__str__(self):
+
+        # create a Block Indication
+        time = 25.0
+        tid = 'B5'
+        otype = 'Bid'
+        qty = 1
+        MES = 1
+        BI = dark_pool.Block_Indication(time, tid, otype, qty, MES)   
+
+        # test that the string is as expected
+        self.assertEqual(BI.__str__(), "BI: [ID=-1 T=25.00 B5 Bid Q=1 MES=1]")
+
+#################################################################################
+# tests for the Order_Submission_Request class
+
+class Test_Order_Submission_Request(unittest.TestCase):
+
+    # test the __init__ function
+    def test__init__(self):
+
+        # create an Order Submission Request
+        time = 25.0
+        tid = 'B5'
+        otype = 'Bid'
+        qty = 1
+        MES = 1
+        match_id = 0
+        OSR = dark_pool.Order_Submission_Request(time, tid, otype, qty, MES, match_id)
+
+        # test that the intialized values are as expected
+        self.assertEqual(OSR.time, time)
+        self.assertEqual(OSR.tid, tid)
+        self.assertEqual(OSR.otype, otype)
+        self.assertEqual(OSR.qty, qty)
+        self.assertEqual(OSR.MES, MES)
+        self.assertEqual(OSR.match_id, match_id)
+
+    # test the __str__ function
+    def test__str__(self):
+
+        # create a Order Submission Request
+        time = 25.0
+        tid = 'B5'
+        otype = 'Bid'
+        qty = 1
+        MES = 1
+        match_id = 0
+        OSR = dark_pool.Order_Submission_Request(time, tid, otype, qty, MES, match_id)
+
+        # test that the string is as expected
+        self.assertEqual(OSR.__str__(), "OSR: [ID=-1 T=25.00 B5 Bid Q=1 MES=1 MID=0]")
+
+
+#################################################################################
+# tests for the Qualifying_Block_Order class
+
+class Test_Qualifying_Block_Order(unittest.TestCase):
+
+    # test the __init__ function
+    def test__init__(self):
+
+        # create a qualifying block order
+        time = 25.0
+        tid = 'B5'
+        otype = 'Bid'
+        qty = 1
+        MES = 1
+        match_id = 0
+        QBO = dark_pool.Qualifying_Block_Order(time, tid, otype, qty, MES, match_id)
+
+        # test that the initialized values are as expected
+        self.assertEqual(QBO.time, time)
+        self.assertEqual(QBO.tid, tid)
+        self.assertEqual(QBO.otype, otype)
+        self.assertEqual(QBO.qty, qty)
+        self.assertEqual(QBO.MES, MES)
+        self.assertEqual(QBO.match_id, match_id)
+
+    # test the __str__ function
+    def test__str__(self):
+
+        # create a qualifying block order
+        time = 25.0
+        tid = 'B5'
+        otype = 'Bid'
+        qty = 1
+        MES = 1
+        match_id = 0
+        QBO = dark_pool.Qualifying_Block_Order(time, tid, otype, qty, MES, match_id)
+
+        # test that the string is as expected
+        self.assertEqual(QBO.__str__(), "QBO: [ID=-1 T=25.00 B5 Bid Q=1 MES=1 MID=0]")
+
 
 #################################################################################
 # tests for the Orderbook_half class
@@ -31,7 +164,7 @@ class Test_Order(unittest.TestCase):
 class Test_Orderbook_half(unittest.TestCase):
 
     # testing whether the initialised variables are as expected
-    def test__init__simple(self):
+    def test__init__(self):
 
         # create an instance of the Orderbook_half class
         booktype = "Buy"

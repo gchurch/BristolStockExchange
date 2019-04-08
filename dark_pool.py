@@ -27,44 +27,44 @@ class Customer_Order:
 class Order:
 
     def __init__(self, time, tid, otype, qty, MES):
+        self.id = -1       # order i.d. (unique to each order on the Exchange)
         self.time = time    # timestamp
         self.tid = tid      # trader i.d.
         self.otype = otype  # order type
         self.qty = qty      # quantity
         self.MES = MES      # minimum execution size
-        self.oid = -1       # order i.d. (unique to each order on the Exchange)
 
     def __str__(self):
-        return 'Order [T=%5.2f %s %s Q=%s MES=%s OID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid)
+        return 'Order [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES)
 
 # a block indication created by a trader for the exchange
 class Block_Indication:
 
     def __init__(self, time, tid, otype, qty, MES):
+        self.id = -1
         self.time = time
         self.tid = tid
         self.otype = otype
         self.qty = qty
         self.MES = MES
-        self.oid = -1
 
     def __str__(self):
-        return 'BI [T=%5.2f %s %s Q=%s MES=%s OID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid)
+        return 'BI [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES)
 
 # a qualifying block order created by a trader for the exchange
 class Qualifying_Block_Order:
 
     def __init__(self, time, tid, otype, qty, MES, match_id):
+        self.id = -1
         self.time = time
         self.tid = tid
         self.otype = otype
         self.qty = qty
         self.MES = MES
-        self.oid = -1
         self.match_id = match_id
 
     def __str__(self):
-        return 'QBO [T=%5.2f %s %s Q=%s MES=%s OID=%d MID=%d]' % (self.time, self.tid, self.otype, self.qty, self.MES, self.oid, self.match_id)
+        return 'QBO [ID=%d T=%5.2f %s %s Q=%s MES=%s MID=%d]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES, self.match_id)
 
 
 # Orderbook_half is one side of the book: a list of bids or a list of asks, each sorted best-first
@@ -153,14 +153,14 @@ class Orderbook:
     # add an order to the order book
     def add_order(self, order, verbose):
         # add a order to the exchange and update all internal records; return unique i.d.
-        order.oid = self.order_id
-        self.order_id = order.oid + 1
-        # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.oid, self.order_id))
+        order.id = self.order_id
+        self.order_id = order.id + 1
+        # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.id, self.order_id))
         if order.otype == 'Buy':
             response=self.buy_side.book_add(order)
         else:
             response=self.sell_side.book_add(order)
-        return [order.oid, response]
+        return [order.id, response]
 
     # delete an order from the order book
     def del_order(self, time, order, verbose):
@@ -322,8 +322,8 @@ class Block_Indication_Book:
         if BI.qty > self.MIV and self.reputational_scores.get(BI.tid) > self.RST:
 
             # set the orders order id member variable
-            BI.oid = self.BI_id
-            self.BI_id = BI.oid + 1
+            BI.id = self.BI_id
+            self.BI_id = BI.id + 1
 
             # add the block indication to the correct order book
             if BI.otype == 'Buy':
@@ -332,7 +332,7 @@ class Block_Indication_Book:
                 response=self.sell_side.book_add(BI)
 
             # return the order id and the response
-            return [BI.oid, response]
+            return [BI.id, response]
 
         # if the quantity of the order was not greater than the MIV then return a message
         return "Block Indication Rejected"
@@ -358,7 +358,7 @@ class Block_Indication_Book:
     def add_qualifying_block_order(self, QBO, verbose):
 
         # give each qualifying block order its own unique id
-        QBO.oid = self.QBO_id
+        QBO.id = self.QBO_id
         self.QBO_id += 1
 
         # get the match id for the orginally matched block indications
@@ -1300,7 +1300,7 @@ def test3():
 
             print(isinstance(buy_side_qbo, Order))
             
-
+    exchange.print_order_book()
     exchange.print_block_indications()
     exchange.print_qualifying_block_orders()
     exchange.print_reputational_scores()

@@ -88,7 +88,7 @@ class Test_Orderbook_half(unittest.TestCase):
         # test
         self.assertEqual(orderbook_half.traders.keys(), ['B00'])
         self.assertEqual(orderbook_half.traders['B00'], 1)
-        self.assertEqual(orderbook_half.orders[0].__str__(), "Order [T=25.00 B00 Buy Q=5 MES=3 OID=-1]")
+        self.assertEqual(orderbook_half.orders[0].__str__(), "Order [ID=-1 T=25.00 B00 Buy Q=5 MES=3]")
         self.assertEqual(orderbook_half.num_orders, 1)
 
     # testing that when that the order of orders in the order_book list is ordered by quantity then time
@@ -112,9 +112,9 @@ class Test_Orderbook_half(unittest.TestCase):
         self.assertEqual(orderbook_half.traders['B00'], 1)
         self.assertEqual(orderbook_half.traders['B01'], 1)
         self.assertEqual(orderbook_half.traders['B02'], 1)
-        self.assertEqual(orderbook_half.orders[0].__str__(), "Order [T=35.00 B01 Buy Q=10 MES=4 OID=-1]")
-        self.assertEqual(orderbook_half.orders[1].__str__(), "Order [T=45.00 B02 Buy Q=10 MES=4 OID=-1]")
-        self.assertEqual(orderbook_half.orders[2].__str__(), "Order [T=25.00 B00 Buy Q=5 MES=3 OID=-1]")
+        self.assertEqual(orderbook_half.orders[0].__str__(), "Order [ID=-1 T=35.00 B01 Buy Q=10 MES=4]")
+        self.assertEqual(orderbook_half.orders[1].__str__(), "Order [ID=-1 T=45.00 B02 Buy Q=10 MES=4]")
+        self.assertEqual(orderbook_half.orders[2].__str__(), "Order [ID=-1 T=25.00 B00 Buy Q=5 MES=3]")
 
     def test__book_add__overwrite(self):
         # create the order book
@@ -135,8 +135,8 @@ class Test_Orderbook_half(unittest.TestCase):
         # tests
         self.assertEqual(return_values, ['Addition', 'Addition', 'Overwrite'])
         self.assertEqual(orderbook_half.traders.keys(), ['B01', 'B00'])
-        self.assertEqual(orderbook_half.orders[0].__str__(), "Order [T=35.00 B01 Buy Q=10 MES=4 OID=-1]")
-        self.assertEqual(orderbook_half.orders[1].__str__(), "Order [T=45.00 B00 Buy Q=10 MES=4 OID=-1]")
+        self.assertEqual(orderbook_half.orders[0].__str__(), "Order [ID=-1 T=35.00 B01 Buy Q=10 MES=4]")
+        self.assertEqual(orderbook_half.orders[1].__str__(), "Order [ID=-1 T=45.00 B00 Buy Q=10 MES=4]")
         self.assertEqual(orderbook_half.num_orders, 2)
         self.assertEqual(len(orderbook_half.orders), 2)
 
@@ -161,7 +161,7 @@ class Test_Orderbook_half(unittest.TestCase):
         orderbook_half.book_del(orders[0].tid)
 
         self.assertEqual(orderbook_half.num_orders, 1)
-        self.assertEqual(orderbook_half.orders[0].__str__(), "Order [T=35.00 B01 Buy Q=10 MES=4 OID=-1]")
+        self.assertEqual(orderbook_half.orders[0].__str__(), "Order [ID=-1 T=35.00 B01 Buy Q=10 MES=4]")
 
 
 
@@ -197,8 +197,8 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(orderbook.add_order(orders[1], False), [1, 'Addition'])
 
         # check the state of the orderbook is as expected
-        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order [T=25.00 B00 Buy Q=5 MES=3 OID=0]")
-        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order [T=45.00 S00 Sell Q=11 MES=6 OID=1]")
+        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order [ID=0 T=25.00 B00 Buy Q=5 MES=3]")
+        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order [ID=1 T=45.00 S00 Sell Q=11 MES=6]")
         self.assertEqual(orderbook.buy_side.num_orders, 1)
         self.assertEqual(orderbook.sell_side.num_orders, 1)
         self.assertEqual(orderbook.order_id, 2)
@@ -221,9 +221,9 @@ class Test_Orderbook(unittest.TestCase):
         orderbook.del_order(65.0, orders[0], False)
 
         # check that the state of the orderbook is as expected
-        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order [T=55.00 B01 Buy Q=12 MES=3 OID=2]")
+        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order [ID=2 T=55.00 B01 Buy Q=12 MES=3]")
         self.assertEqual(orderbook.buy_side.num_orders, 1)
-        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order [T=45.00 S00 Sell Q=11 MES=6 OID=1]")
+        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order [ID=1 T=45.00 S00 Sell Q=11 MES=6]")
         self.assertEqual(orderbook.sell_side.num_orders, 1)
 
 
@@ -252,8 +252,8 @@ class Test_Orderbook(unittest.TestCase):
 
         # test that the match is as expected
         self.assertEqual(match["trade_size"], 8)
-        self.assertEqual(match["sell_order"].__str__(), "Order [T=45.00 S00 Sell Q=11 MES=6 OID=1]")
-        self.assertEqual(match["buy_order"].__str__(), "Order [T=25.00 B01 Buy Q=8 MES=7 OID=2]")
+        self.assertEqual(match["sell_order"].__str__(), "Order [ID=1 T=45.00 S00 Sell Q=11 MES=6]")
+        self.assertEqual(match["buy_order"].__str__(), "Order [ID=2 T=25.00 B01 Buy Q=8 MES=7]")
 
     def test__perform_trade(self):
         # create the orderbook
@@ -277,9 +277,9 @@ class Test_Orderbook(unittest.TestCase):
 
         self.assertEqual(orderbook.tape, [{'party2': 'S00', 'party1': 'B01', 'price': 50, 'time': 100.0, 'type': 'Trade', 'quantity': 8}])
         self.assertEqual(orderbook.buy_side.num_orders, 1)
-        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order [T=25.00 B00 Buy Q=5 MES=3 OID=0]")
+        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order [ID=0 T=25.00 B00 Buy Q=5 MES=3]")
         self.assertEqual(orderbook.sell_side.num_orders, 1)
-        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order [T=45.00 S00 Sell Q=3 MES=3 OID=1]")
+        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order [ID=1 T=45.00 S00 Sell Q=3 MES=3]")
 
 ###############################################################################
 # tests for Exchange class
@@ -353,7 +353,7 @@ class Test_Exchange(unittest.TestCase):
         for order in orders:
             exchange.add_order(order, False)
 
-        # invoke an uncross event, setting the traders parameters to None to avoid using traders
+        # invoke an uncross event, setting the traders parameters to None to avID using traders
         exchange.uncross(None, 5.0, 25.0)
 
         # test the buy side
@@ -361,9 +361,9 @@ class Test_Exchange(unittest.TestCase):
 
         # test the sell side
         self.assertEqual(len(exchange.order_book.sell_side.orders), 3)
-        self.assertEqual(exchange.order_book.sell_side.orders[0].__str__(), "Order [T=45.00 S00 Sell Q=1 MES=1 OID=5]")
-        self.assertEqual(exchange.order_book.sell_side.orders[1].__str__(), "Order [T=55.00 S03 Sell Q=1 MES=1 OID=8]")
-        self.assertEqual(exchange.order_book.sell_side.orders[2].__str__(), "Order [T=55.00 S01 Sell Q=1 MES=1 OID=6]")
+        self.assertEqual(exchange.order_book.sell_side.orders[0].__str__(), "Order [ID=5 T=45.00 S00 Sell Q=1 MES=1]")
+        self.assertEqual(exchange.order_book.sell_side.orders[1].__str__(), "Order [ID=8 T=55.00 S03 Sell Q=1 MES=1]")
+        self.assertEqual(exchange.order_book.sell_side.orders[2].__str__(), "Order [ID=6 T=55.00 S01 Sell Q=1 MES=1]")
 
         # test the tape
         self.assertEqual(exchange.order_book.tape, [{'party2': 'S00', 'party1': 'B01', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 10}, {'party2': 'S03', 'party1': 'B00', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 5}, {'party2': 'S02', 'party1': 'B02', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}, {'party2': 'S01', 'party1': 'B04', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}, {'party2': 'S02', 'party1': 'B03', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}])

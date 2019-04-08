@@ -343,7 +343,7 @@ class Block_Indication_Book:
         # the quantity of the order must be greater than the MIV
         if BI.qty > self.MIV and self.reputational_scores.get(BI.tid) > self.RST:
 
-            # set the orders order id member variable
+            # set the block indications' id
             BI.id = self.BI_id
             self.BI_id = BI.id + 1
 
@@ -402,6 +402,9 @@ class Block_Indication_Book:
                     return response
         # if no match was found then return None
         return None
+
+    def get_block_indication_match(self, match_id):
+        return self.matches.get(match_id)
 
     # add a Qualifying Block Order (QBO). QBOs are added to the appropriate entry in the matches dictionary.
     def add_qualifying_block_order(self, QBO, verbose):
@@ -463,12 +466,12 @@ class Block_Indication_Book:
         self.update_trader_reputational_score(buy_side_BI.tid, buy_side_event_score)
         self.update_trader_reputational_score(sell_side_BI.tid, sell_side_event_score)
 
-
-
     # update a traders reputational score given an event_score
     def update_trader_reputational_score(self, tid, event_score):
         self.reputational_scores[tid] = self.reputational_scores[tid] * 0.75 + event_score * 0.25
 
+    def delete_match(self, match_id):
+        del(self.matches[match_id])
 
     # print the reputational score of all known traders
     def print_reputational_scores(self):
@@ -508,6 +511,7 @@ class Block_Indication_Book:
 
 
 ####################-Exchange Class-################################
+
 
 # Exchange class
 class Exchange:
@@ -565,12 +569,15 @@ class Exchange:
     def tape_dump(self, fname, fmode, tmode):
         self.order_book.tape_dump(fname, fmode, tmode)
 
-    # get the reputational score of a tid from the block indication book
-    def get_reputational_score(self, tid):
-        return self.block_indications.get_reputational_score(tid)
 
-    def get_QBOs_matching_BI(self, QBO):
-        return self.block_indications.get_QBOs_matching_BI(QBO)
+    def find_matching_block_indications(self):
+        return self.block_indications.find_matching_block_indications()
+
+    def get_block_indication_match(self, match_id):
+        return self.block_indications.get_block_indication_match(match_id)
+
+    def update_reputational_scores(self, match_id):
+        return self.block_indications.update_reputational_scores(match_id)
 
     # print the current orders in the orders dictionary
     def print_traders(self):
@@ -595,7 +602,9 @@ class Exchange:
     def print_matches(self):
         self.block_indications.print_matches()
 
+
 ##################--Traders below here--#############
+
 
 # Trader superclass
 # all Traders have a trader id, bank balance, blotter, and list of orders to execute
@@ -815,401 +824,8 @@ def populate_market(traders_spec, traders, shuffle, verbose):
 
         return {'n_buyers':n_buyers, 'n_sellers':n_sellers}
 
-
-
-# customer_orders(): allocate orders to traders
-# parameter "os" is order schedule
-# os['timemode'] is either 'periodic', 'drip-fixed', 'drip-jitter', or 'drip-poisson'
-# os['interval'] is number of seconds for a full cycle of replenishment
-# drip-poisson sequences will be normalised to ensure time of last replenishment <= interval
-# parameter "pending" is the list of future orders (if this is empty, generates a new one from os)
-# revised "pending" is the returned value
-#
-# also returns a list of "cancellations": trader-ids for those traders who are now working a new order and hence
-# need to kill quotes already on LOB from working previous order
-#
-#
-# if a supply or demand schedule mode is "random" and more than one range is supplied in ranges[],
-# then each time a price is generated one of the ranges is chosen equiprobably and
-# the price is then generated uniform-randomly from that range
-#
-# if len(range)==2, interpreted as min and max values on the schedule, specifying linear supply/demand curve
-# if len(range)==3, first two vals are min & max, third value should be a function that generates a dynamic price offset
-#                   -- the offset value applies equally to the min & max, so gradient of linear sup/dem curve doesn't vary
-# if len(range)==4, the third value is function that gives dynamic offset for schedule min,
-#                   and fourth is a function giving dynamic offset for schedule max, so gradient of sup/dem linear curve can vary
-#
-# the interface on this is a bit of a mess... could do with refactoring
-
-
-def customer_orders(time, last_update, traders, trader_stats, os, pending, verbose):
-
-
-        def sysmin_check(price):
-                if price < bse_sys_minprice:
-                        print('WARNING: price < bse_sys_min -- clipped')
-                        price = bse_sys_minprice
-                return price
-
-
-        def sysmax_check(price):
-                if price > bse_sys_maxprice:
-                        print('WARNING: price > bse_sys_max -- clipped')
-                        price = bse_sys_maxprice
-                return price
-
-        
-        # return the order price for trader i out of n by using the selected mode
-        def getorderprice(i, sched, n, mode, issuetime):
-                # does the first schedule range include optional dynamic offset function(s)?
-                if len(sched[0]) > 2:
-                        offsetfn = sched[0][2]
-                        if callable(offsetfn):
-                                # same offset for min and max
-                                offset_min = offsetfn(issuetime)
-                                offset_max = offset_min
-                        else:
-                                sys.exit('FAIL: 3rd argument of sched in getorderprice() not callable')
-                        if len(sched[0]) > 3:
-                                # if second offset function is specfied, that applies only to the max value
-                                offsetfn = sched[0][3]
-                                if callable(offsetfn):
-                                        # this function applies to max
-                                        offset_max = offsetfn(issuetime)
-                                else:
-                                        sys.exit('FAIL: 4th argument of sched in getorderprice() not callable')
-                else:
-                        offset_min = 0.0
-                        offset_max = 0.0
-
-                pmin = sysmin_check(offset_min + min(sched[0][0], sched[0][1]))
-                pmax = sysmax_check(offset_max + max(sched[0][0], sched[0][1]))
-                prange = pmax - pmin
-                stepsize = prange / (n - 1)
-                halfstep = round(stepsize / 2.0)
-
-                if mode == 'fixed':
-                        orderprice = pmin + int(i * stepsize) 
-                elif mode == 'jittered':
-                        orderprice = pmin + int(i * stepsize) + random.randint(-halfstep, halfstep)
-                elif mode == 'random':
-                        if len(sched) > 1:
-                                # more than one schedule: choose one equiprobably
-                                s = random.randint(0, len(sched) - 1)
-                                pmin = sysmin_check(min(sched[s][0], sched[s][1]))
-                                pmax = sysmax_check(max(sched[s][0], sched[s][1]))
-                        orderprice = random.randint(pmin, pmax)
-                else:
-                        sys.exit('FAIL: Unknown mode in schedule')
-                orderprice = sysmin_check(sysmax_check(orderprice))
-                return orderprice
-
-
-        # return a dictionary containing the issue times of orders according to the selected issuing mode
-        def getissuetimes(n_traders, mode, interval, shuffle, fittointerval):
-                interval = float(interval)
-                if n_traders < 1:
-                        sys.exit('FAIL: n_traders < 1 in getissuetime()')
-                elif n_traders == 1:
-                        tstep = interval
-                else:
-                        tstep = interval / (n_traders - 1)
-                arrtime = 0
-                issuetimes = []
-                for t in range(n_traders):
-                        if mode == 'periodic':
-                                arrtime = interval
-                        elif mode == 'drip-fixed':
-                                arrtime = t * tstep
-                        elif mode == 'drip-jitter':
-                                arrtime = t * tstep + tstep * random.random()
-                        elif mode == 'drip-poisson':
-                                # poisson requires a bit of extra work
-                                interarrivaltime = random.expovariate(n_traders / interval)
-                                arrtime += interarrivaltime
-                        else:
-                                sys.exit('FAIL: unknown time-mode in getissuetimes()')
-                        issuetimes.append(arrtime) 
-                        
-                # at this point, arrtime is the last arrival time
-                if fittointerval and ((arrtime > interval) or (arrtime < interval)):
-                        # generated sum of interarrival times longer than the interval
-                        # squish them back so that last arrival falls at t=interval
-                        for t in range(n_traders):
-                                issuetimes[t] = interval * (issuetimes[t] / arrtime)
-                # optionally randomly shuffle the times
-                if shuffle:
-                        for t in range(n_traders):
-                                i = (n_traders - 1) - t
-                                j = random.randint(0, i)
-                                tmp = issuetimes[i]
-                                issuetimes[i] = issuetimes[j]
-                                issuetimes[j] = tmp
-                return issuetimes
-        
-
-        # return a tuple containing the current ranges and stepmode      
-        def getschedmode(time, os):
-                got_one = False
-                for sched in os:
-                        if (sched['from'] <= time) and (time < sched['to']) :
-                                # within the timezone for this schedule
-                                schedrange = sched['ranges']
-                                mode = sched['stepmode']
-                                got_one = True
-                                exit  # jump out the loop -- so the first matching timezone has priority over any others
-                if not got_one:
-                        sys.exit('Fail: time=%5.2f not within any timezone in os=%s' % (time, os))
-                return (schedrange, mode)
-        
-
-        n_buyers = trader_stats['n_buyers']
-        n_sellers = trader_stats['n_sellers']
-
-        shuffle_times = True
-
-        cancellations = []
-
-        # if there are no pending orders
-        if len(pending) < 1:
-                # list of pending (to-be-issued) customer orders is empty, so generate a new one
-                new_pending = []
-
-                # add the demand side (buyers) customer orders to the list of pending orders
-                issuetimes = getissuetimes(n_buyers, os['timemode'], os['interval'], shuffle_times, True)
-                ordertype = 'Buy'
-                (sched, mode) = getschedmode(time, os['dem'])             
-                for t in range(n_buyers):
-                        issuetime = time + issuetimes[t]
-                        tname = 'B%02d' % t
-                        orderprice = getorderprice(t, sched, n_buyers, mode, issuetime)
-                        # generating a random order quantity
-                        quantity = random.randint(1,10)
-                        customer_order = Customer_Order(issuetime, tname, ordertype, orderprice, quantity)
-                        new_pending.append(customer_order)
-                        
-                # add the supply side (sellers) customer orders to the list of pending orders
-                issuetimes = getissuetimes(n_sellers, os['timemode'], os['interval'], shuffle_times, True)
-                ordertype = 'Sell'
-                (sched, mode) = getschedmode(time, os['sup'])
-                for t in range(n_sellers):
-                        issuetime = time + issuetimes[t]
-                        tname = 'S%02d' % t
-                        orderprice = getorderprice(t, sched, n_sellers, mode, issuetime)
-                        # generating a random order quantity
-                        quantity = random.randint(1,10)
-                        customer_order = Customer_Order(issuetime, tname, ordertype, orderprice, quantity)
-                        new_pending.append(customer_order)
-        # if there are some pending orders
-        else:
-                # there are pending future orders: issue any whose timestamp is in the past
-                new_pending = []
-                for order in pending:
-                        if order.time < time:
-                                # this order should have been issued by now
-                                # issue it to the trader
-                                tname = order.tid
-                                response = traders[tname].add_order(order, verbose)
-                                if verbose: print('Customer order: %s %s' % (response, order) )
-                                # if issuing the order causes the trader to cancel their current order then add
-                                # the traders name to the cancellations list
-                                if response == 'LOB_Cancel' :
-                                    cancellations.append(tname)
-                                    if verbose: print('Cancellations: %s' % (cancellations))
-                                # and then don't add it to new_pending (i.e., delete it)
-                        else:
-                                # this order stays on the pending list
-                                new_pending.append(order)
-        return [new_pending, cancellations]
-
-# one session in the market
-def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dumpfile, dump_each_trade):
-
-        # variables which dictate what information is printed to the output
-        verbose = False
-        traders_verbose = False
-        orders_verbose = False
-        lob_verbose = False
-        process_verbose = False
-        respond_verbose = False
-        bookkeep_verbose = False
-
-
-        # initialise the exchange
-        exchange = Exchange()
-
-
-        # create a bunch of traders
-        traders = {}
-        trader_stats = populate_market(trader_spec, traders, True, traders_verbose)
-
-
-        # timestep set so that can process all traders in one second
-        # NB minimum interarrival time of customer orders may be much less than this!! 
-        timestep = 1.0 / float(trader_stats['n_buyers'] + trader_stats['n_sellers'])
-        
-        duration = float(endtime - starttime)
-
-        last_update = -1.0
-
-        time = starttime
-
-        # this list contains all the pending customer orders that are yet to happen
-        pending_cust_orders = []
-
-        print('\n%s;  ' % (sess_id))
-
-        while time < endtime:
-
-                # how much time left, as a percentage?
-                time_left = (endtime - time) / duration
-
-                if verbose: print('%s; t=%08.2f (%4.1f/100) ' % (sess_id, time, time_left*100))
-
-                trade = None
-
-                # update the pending customer orders list by generating new orders if none remain and issue 
-                # any customer orders that were scheduled in the past. Note these are customer orders being
-                # issued to traders, quotes will not be put onto the exchange yet
-                [pending_cust_orders, kills] = customer_orders(time, last_update, traders, trader_stats,
-                                                 order_schedule, pending_cust_orders, orders_verbose)
-
-                # if any newly-issued customer orders mean quotes on the LOB need to be cancelled, kill them
-                if len(kills) > 0 :
-                        if verbose : print('Kills: %s' % (kills))
-                        for kill in kills :
-                                if verbose : print('lastquote=%s' % traders[kill].lastquote)
-                                if traders[kill].lastquote != None :
-                                        if verbose : print('Killing order %s' % (str(traders[kill].lastquote)))
-                                        exchange.del_order(time, traders[kill].lastquote, verbose)
-
-
-                # get a limit-order quote (or None) from a randomly chosen trader
-                tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
-                order = traders[tid].getorder(time, time_left)
-
-                if verbose: print('Trader Quote: %s' % (order))
-
-                # if the randomly selected trader gives us a quote, then add it to the exchange
-                if order != None:
-                        # send order to exchange
-                        traders[tid].n_quotes = 1
-                        result = exchange.add_order(order, process_verbose)
-
-                exchange.print_order_book()
-
-                time = time + timestep
-
-
-        # end of an experiment -- dump the tape
-        exchange.tape_dump('transactions.csv', 'w', 'keep')
-
-
-        # write trade_stats for this experiment NB end-of-session summary only
-        trade_stats(sess_id, traders, dumpfile, time)
-
-
-
-
-def experiment1():
-
-    start_time = 0.0
-    end_time = 20.0
-    duration = end_time - start_time
-
-    range1 = (75, 125)
-    supply_schedule = [ {'from':start_time, 'to':end_time, 'ranges':[range1], 'stepmode':'fixed'}
-                      ]
-
-    range1 = (75, 125)
-    demand_schedule = [ {'from':start_time, 'to':end_time, 'ranges':[range1], 'stepmode':'fixed'}
-                      ]
-
-    order_sched = {'sup':supply_schedule, 'dem':demand_schedule,
-                   'interval':10, 'timemode':'drip-fixed'}
-
-    buyers_spec = [('GVWY',5)]
-    sellers_spec = buyers_spec
-    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
-
-    n_trials = 1
-    tdump=open('avg_balance.csv','w')
-    trial = 1
-    if n_trials > 1:
-            dump_all = False
-    else:
-            dump_all = True
-            
-    while (trial<(n_trials+1)):
-            trial_id = 'trial%04d' % trial
-            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
-            tdump.flush()
-            trial = trial + 1
-    tdump.close()
-
-    sys.exit('Done Now')
-
-
-def test1():
-
-    # create the trader specs
-    buyers_spec = [('GVWY',5)]
-    sellers_spec = buyers_spec
-    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
-
-    # initialise the exchange
-    exchange = Exchange()
-
-    # create a bunch of traders
-    traders = {}
-    trader_stats = populate_market(traders_spec, traders, True, False)
-
-    # create some customer orders
-    customer_orders = []
-    customer_orders.append(Customer_Order(25.0, 'B00', 'Buy', 100, 5,))
-    customer_orders.append(Customer_Order(35.0, 'B01', 'Buy', 100, 10))
-    customer_orders.append(Customer_Order(55.0, 'B02', 'Buy', 100, 3))
-    customer_orders.append(Customer_Order(75.0, 'B03', 'Buy', 100, 3))
-    customer_orders.append(Customer_Order(65.0, 'B04', 'Buy', 100, 3))
-    customer_orders.append(Customer_Order(45.0, 'S00', 'Sell', 0, 11))
-    customer_orders.append(Customer_Order(55.0, 'S01', 'Sell', 0, 4))
-    customer_orders.append(Customer_Order(65.0, 'S02', 'Sell', 0, 6))
-    customer_orders.append(Customer_Order(55.0, 'S03', 'Sell', 0, 6))
-
-    for customer_order in customer_orders:
-        traders[customer_order.tid].add_order(customer_order, False)
-
-    print(traders)
-
-    for tid in traders:
-        order = traders[tid].getorder(20.0)
-        if order != None:
-            exchange.add_order(order, False)
-
-    # print the order book before the uncross event
-    print("\nStarting order book")
-    exchange.print_traders()
-    exchange.print_order_book()
-
-    # invoke an uncross event
-    exchange.uncross(traders, 5.0, 25.0)
-
-    # print the order book after the uncross event
-    print("\nEnding order book")
-    exchange.print_order_book()
-    exchange.print_traders()
-
-    # print the tape at the end of the uncross event
-    print("\ntape")
-    print(exchange.order_book.tape)
-
-    # end of an experiment -- dump the tape
-    exchange.tape_dump('dark_transactions.csv', 'w', 'keep')
-    # write trade_stats for this experiment NB end-of-session summary only
-    dumpfile = open('dark_avg_balance.csv','w')
-    trade_stats(1, traders, dumpfile, 200)
-
-def test2():
+# perform a test with the dark pool
+def test():
 
     # initialise the exchange
     exchange = Exchange()
@@ -1251,49 +867,24 @@ def test2():
             elif isinstance(order, Block_Indication):
                 print(exchange.add_block_indication(order, False))
 
+    print("Before:")
     exchange.print_order_book()
     exchange.print_block_indications()
-    exchange.print_reputational_scores()
+    exchange.print_matches()
 
-def test3():
 
-    # initialise the exchange
-    exchange = Exchange()
-
-    # create some example orders
-    orders = []
-    orders.append(Order(25.0, 'B00', 'Buy', 5, 3))
-    orders.append(Order(35.0, 'B01', 'Buy', 10, 6))
-    orders.append(Order(55.0, 'B02', 'Buy', 3, 1))
-    orders.append(Order(75.0, 'B03', 'Buy', 3, 2))
-    orders.append(Order(45.0, 'S00', 'Sell', 11, 6))
-    orders.append(Order(55.0, 'S01', 'Sell', 4, 2))
-    orders.append(Order(65.0, 'S02', 'Sell', 6, 3))
-    orders.append(Order(55.0, 'S03', 'Sell', 6, 4))
-
-    block_indications = []
-    block_indications.append(Block_Indication(65.0, 'B04', 'Buy', 50, 29))
-    block_indications.append(Block_Indication(85.0, 'S04', 'Sell', 30, 23))
-
-    # add the orders to the exchange
-    for order in orders:
-
-        # add the order to the exchange
-        exchange.add_order(order, False)
-
-    
-    for block_indication in block_indications:
-
-        # add the block indication to the exchange
-        exchange.add_block_indication(block_indication, False)
+    for i in range(0,1):
 
         # check if there is a match between any two block indications
-        match_id = exchange.block_indications.find_matching_block_indications()
+        match_id = exchange.find_matching_block_indications()
+        print(match_id)
 
         if match_id != None:
 
-            buy_side_BI = exchange.block_indications.matches[match_id]["buy_side_BI"]
-            sell_side_BI = exchange.block_indications.matches[match_id]["sell_side_BI"]
+            full_match = exchange.get_block_indication_match(match_id)
+
+            buy_side_BI = full_match["buy_side_BI"]
+            sell_side_BI = full_match["sell_side_BI"]
 
             # create QBOs for matched BIs
             buy_side_qbo = Qualifying_Block_Order(buy_side_BI.time, 
@@ -1312,15 +903,12 @@ def test3():
             # add the QBOs to the exchange
             print(exchange.add_qualifying_block_order(buy_side_qbo, False))
             print(exchange.add_qualifying_block_order(sell_side_qbo, False))
-            exchange.block_indications.update_reputational_scores(match_id)
-            
+            exchange.update_reputational_scores(match_id)
+       
+    exchange.print_order_book()     
     exchange.print_block_indications()
-    exchange.print_reputational_scores()
     exchange.print_matches()
-
-    # end of an experiment -- dump the tape
-    exchange.tape_dump('dark_transactions.csv', 'w', 'keep')
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    test3()
+    test()

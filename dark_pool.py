@@ -289,42 +289,42 @@ class Block_Indication_Book:
 
     
     # add block indication
-    def add_block_indication(self, order, verbose):
+    def add_block_indication(self, BI, verbose):
 
         # if a new trader, then give it an initial reputational score
-        if self.reputational_scores.get(order.tid) == None:
-            self.reputational_scores[order.tid] = 50
+        if self.reputational_scores.get(BI.tid) == None:
+            self.reputational_scores[BI.tid] = 50
 
         # the quantity of the order must be greater than the MIV
-        if order.qty > self.MIV and self.reputational_scores.get(order.tid) > self.RST:
+        if BI.qty > self.MIV and self.reputational_scores.get(BI.tid) > self.RST:
 
             # set the orders order id member variable
-            order.oid = self.BI_id
-            self.BI_id = order.oid + 1
+            BI.oid = self.BI_id
+            self.BI_id = BI.oid + 1
 
             # add the block indication to the correct order book
-            if order.otype == 'Buy':
-                response=self.buy_side.book_add(order)
+            if BI.otype == 'Buy':
+                response=self.buy_side.book_add(BI)
             else:
-                response=self.sell_side.book_add(order)
+                response=self.sell_side.book_add(BI)
 
             # return the order id and the response
-            return [order.oid, response]
+            return [BI.oid, response]
 
         # if the quantity of the order was not greater than the MIV then return a message
         return "Block Indication Rejected"
 
     # delete block indication
-    def del_block_indication(self, time, order, verbose):
+    def del_block_indication(self, time, BI, verbose):
         # delete a trader's order from the exchange, update all internal records
-        if order.otype == 'Buy':
-            self.buy_side.book_del(order.tid)
-            cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
+        if BI.otype == 'Buy':
+            self.buy_side.book_del(BI.tid)
+            cancel_record = { 'type': 'Cancel', 'time': time, 'BI': BI }
             self.tape.append(cancel_record)
 
-        elif order.otype == 'Sell':
-            self.sell_side.book_del(order.tid)
-            cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
+        elif BI.otype == 'Sell':
+            self.sell_side.book_del(BI.tid)
+            cancel_record = { 'type': 'Cancel', 'time': time, 'BI': BI }
             self.tape.append(cancel_record)
         else:
             # neither bid nor ask?
@@ -332,26 +332,26 @@ class Block_Indication_Book:
     
     # add a qualifying block order. If matching qualifying block orders are recieved then they are
     # both returned. These are the final orders to be used in the exchange
-    def add_qualifying_block_order(self, order, verbose):
+    def add_qualifying_block_order(self, QBO, verbose):
 
         # give each qualifying block order its own unique id
-        order.oid = self.QBO_id
+        QBO.oid = self.QBO_id
         self.QBO_id += 1
 
         # get the match id for the orginally matched block indications
-        match_id = order.params[1]
+        match_id = QBO.params[1]
 
         # and the order to the qualifying_block_orders dictionary with the key as match_id
         if self.qualifying_block_orders.get(match_id) == None:
-            if order.otype == 'Buy':
-                self.qualifying_block_orders[match_id] = {"buy_side": order}
-            elif order.otype == "Sell":
-                self.qualifying_block_orders[match_id] = {"sell_side": order}
+            if QBO.otype == 'Buy':
+                self.qualifying_block_orders[match_id] = {"buy_side": QBO}
+            elif QBO.otype == "Sell":
+                self.qualifying_block_orders[match_id] = {"sell_side": QBO}
         else:
-            if order.otype == 'Buy':
-                self.qualifying_block_orders[match_id]["buy_side"] = order
-            elif order.otype == 'Sell':
-                self.qualifying_block_orders[match_id]["sell_side"] = order
+            if QBO.otype == 'Buy':
+                self.qualifying_block_orders[match_id]["buy_side"] = QBO
+            elif QBO.otype == 'Sell':
+                self.qualifying_block_orders[match_id]["sell_side"] = QBO
         
         # if both QBOs have been received then return appropriate message
         if len(self.qualifying_block_orders.get(match_id)) == 2:

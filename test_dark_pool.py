@@ -275,7 +275,7 @@ class Test_Orderbook(unittest.TestCase):
         match_info = orderbook.find_matching_orders()
         orderbook.perform_trade(None, 100.0, 50, match_info)
 
-        self.assertEqual(orderbook.tape, [{'party2': 'S00', 'party1': 'B01', 'price': 50, 'time': 100.0, 'type': 'Trade', 'quantity': 8}])
+        self.assertEqual(orderbook.tape, [{'price': 50, 'seller': 'S00', 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 8}])
         self.assertEqual(orderbook.buy_side.num_orders, 1)
         self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order: [ID=0 T=25.00 B00 Buy Q=5 MES=3]")
         self.assertEqual(orderbook.sell_side.num_orders, 1)
@@ -366,7 +366,7 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(exchange.order_book.sell_side.orders[2].__str__(), "Order: [ID=6 T=55.00 S01 Sell Q=1 MES=1]")
 
         # test the tape
-        self.assertEqual(exchange.order_book.tape, [{'party2': 'S00', 'party1': 'B01', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 10}, {'party2': 'S03', 'party1': 'B00', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 5}, {'party2': 'S02', 'party1': 'B02', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}, {'party2': 'S01', 'party1': 'B04', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}, {'party2': 'S02', 'party1': 'B03', 'price': 50.0, 'time': 5.0, 'type': 'Trade', 'quantity': 3}])
+        self.assertEqual(exchange.order_book.tape, [{'price': 50.0, 'seller': 'S00', 'time': 5.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 10}, {'price': 50.0, 'seller': 'S03', 'time': 5.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 5}, {'price': 50.0, 'seller': 'S02', 'time': 5.0, 'buyer': 'B02', 'type': 'Trade', 'quantity': 3}, {'price': 50.0, 'seller': 'S01', 'time': 5.0, 'buyer': 'B04', 'type': 'Trade', 'quantity': 3}, {'price': 50.0, 'seller': 'S02', 'time': 5.0, 'buyer': 'B03', 'type': 'Trade', 'quantity': 3}])
 
         def test__tape_dump(self):
             return

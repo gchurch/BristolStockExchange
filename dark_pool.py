@@ -482,12 +482,14 @@ class Exchange:
 
     # add an order to the exchange
     def add_order(self, order, verbose):
-        if order.params[0] == "Normal":
-            return self.order_book.add_order(order, verbose)
-        elif order.params[0] == "BI":
-            return self.block_indications.add_block_indication(order, verbose)
-        elif order.params[0] == "QBO":
-            return self.block_indications.add_qualifying_block_order(order, verbose)
+        return self.order_book.add_order(order, verbose)
+    
+    def add_block_indication(self, BI, verbose):
+        return self.block_indications.add_block_indication(BI, verbose)
+
+    def add_qualifying_block_order(self, QBO, verbose):
+        return self.block_indications.add_qualifying_block_order(QBO, verbose)
+
 
     # delete an order from the exchange
     def del_order(self, time, order, verbose):
@@ -1213,18 +1215,26 @@ def test3():
     orders.append(Order(35.0, 'B01', 'Buy', 10, 6, ["Normal"]))
     orders.append(Order(55.0, 'B02', 'Buy', 3, 1, ["Normal"]))
     orders.append(Order(75.0, 'B03', 'Buy', 3, 2, ["Normal"]))
-    orders.append(Order(65.0, 'B04', 'Buy', 50, 29, ["BI"]))
     orders.append(Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
     orders.append(Order(55.0, 'S01', 'Sell', 4, 2, ["Normal"]))
     orders.append(Order(65.0, 'S02', 'Sell', 6, 3, ["Normal"]))
     orders.append(Order(55.0, 'S03', 'Sell', 6, 4, ["Normal"]))
-    orders.append(Order(85.0, 'S04', 'Sell', 30, 23, ["BI"]))
+
+    block_indications = []
+    block_indications.append(Order(65.0, 'B04', 'Buy', 50, 29, ["BI"]))
+    block_indications.append(Order(85.0, 'S04', 'Sell', 30, 23, ["BI"]))
 
     # add the orders to the exchange
     for order in orders:
 
         # add the order to the exchange
         exchange.add_order(order, False)
+
+    
+    for block_indication in block_indications:
+
+        # add the block indication to the exchange
+        exchange.add_block_indication(block_indication, False)
 
         # check if there is a match between any two block indications
         match = exchange.block_indications.find_matching_block_indications()
@@ -1242,8 +1252,10 @@ def test3():
             sell_side_qbo.params = ["QBO", match_id]
 
             # add the QBOs to the exchange
-            exchange.add_order(buy_side_qbo, False)
-            print(exchange.add_order(sell_side_qbo, False))
+            exchange.add_qualifying_block_order(buy_side_qbo, False)
+            print(exchange.add_qualifying_block_order(sell_side_qbo, False))
+
+            print(isinstance(buy_side_qbo, Order))
             
 
     exchange.print_block_indications()

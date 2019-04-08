@@ -356,10 +356,10 @@ class Block_Indication_Book:
         # if both QBOs have been received then return appropriate message
         if len(self.qualifying_block_orders.get(match_id)) == 2:
             QBOs = self.qualifying_block_orders.get(match_id)
-            # del(self.qualifying_block_orders[match_id])
-            return QBOs
+            self.update_reputational_scores(QBOs)
+            return "second QBO received"
         else:
-            return None
+            return "first QBO received"
 
     # attempt to find two matching block indications
     def find_matching_block_indications(self):
@@ -394,17 +394,42 @@ class Block_Indication_Book:
 
         # calculate the score for this event
         score = 100
-        
         MES_percent_diff = 100 * (BI.MES - QBO.MES) / BI.MES
-
         quantity_percent_diff = 100 * (BI.qty - QBO.qty) / BI.qty
-
         score = 100 - MES_percent_diff - quantity_percent_diff
-
         if score > 100: score = 100
         if score < 50: score = 50
 
         return score
+
+    # get the original block indication for the qualifying block order
+    def get_QBOs_matching_BI(self, QBO):
+        for order in self.buy_side.orders:
+            if QBO.tid == order.tid:
+                return order
+        for order in self.sell_side.orders:
+            if QBO.tid == order.tid:
+                return order
+        return None
+
+    def update_reputational_scores(self, QBOs):
+
+        # the QBO and BI for the buy side
+        QBO_buy_side = QBOs["buy_side"]
+        BI_buy_side = self.get_QBOs_matching_BI(QBO_buy_side)
+
+        # the QBO and BI for the sell side
+        QBO_sell_side = QBOs["sell_side"]
+        BI_sell_side = self.get_QBOs_matching_BI(QBO_sell_side)
+
+        # get the event reputation scores
+        buy_side_event_score = self.calculate_event_reputational_score(QBO_buy_side, BI_buy_side)
+        sell_side_event_score = self.calculate_event_reputational_score(QBO_sell_side, BI_sell_side)
+
+        # update the traders' reputational score
+        self.update_trader_reputational_score(QBO_buy_side.tid, buy_side_event_score)
+        self.update_trader_reputational_score(QBO_sell_side.tid, sell_side_event_score)
+
 
 
     # update a traders reputational score given an event_score
@@ -495,6 +520,9 @@ class Exchange:
     # get the reputational score of a tid from the block indication book
     def get_reputational_score(self, tid):
         return self.block_indications.get_reputational_score(tid)
+
+    def get_QBOs_matching_BI(self, QBO):
+        return self.block_indications.get_QBOs_matching_BI(QBO)
 
     # print the current orders in the orders dictionary
     def print_traders(self):
@@ -1186,13 +1214,11 @@ def test3():
     orders.append(Order(55.0, 'B02', 'Buy', 3, 1, ["Normal"]))
     orders.append(Order(75.0, 'B03', 'Buy', 3, 2, ["Normal"]))
     orders.append(Order(65.0, 'B04', 'Buy', 50, 29, ["BI"]))
-    orders.append(Order(65.0, 'B05', 'Buy', 25, 15, ["BI"]))
     orders.append(Order(45.0, 'S00', 'Sell', 11, 6, ["Normal"]))
     orders.append(Order(55.0, 'S01', 'Sell', 4, 2, ["Normal"]))
     orders.append(Order(65.0, 'S02', 'Sell', 6, 3, ["Normal"]))
     orders.append(Order(55.0, 'S03', 'Sell', 6, 4, ["Normal"]))
     orders.append(Order(85.0, 'S04', 'Sell', 30, 23, ["BI"]))
-    orders.append(Order(95.0, 'S05', 'Sell', 34, 21, ["BI"]))
 
     # add the orders to the exchange
     for order in orders:
@@ -1217,25 +1243,12 @@ def test3():
 
             # add the QBOs to the exchange
             exchange.add_order(buy_side_qbo, False)
-            QBOs = exchange.add_order(sell_side_qbo, False)
-
-            # create normal orders out of these QBOs
-            buy_side_order = copy.deepcopy(QBOs["buy_side"])
-            buy_side_order.params = ["Normal"]
-            sell_side_order = copy.deepcopy(QBOs["sell_side"])
-            sell_side_order.params = ["Normal"]
-
-            # add these orders to the exchange
-            exchange.add_order(buy_side_order, False)
-            exchange.add_order(sell_side_order, False)
-
-            exchange.uncross(None, 0, 50)
-
+            print(exchange.add_order(sell_side_qbo, False))
+            
 
     exchange.print_block_indications()
-    exchange.print_reputational_scores()
     exchange.print_qualifying_block_orders()
-    exchange.print_order_book()
+    exchange.print_reputational_scores()
 
     # end of an experiment -- dump the tape
     exchange.tape_dump('dark_transactions.csv', 'w', 'keep')

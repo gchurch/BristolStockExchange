@@ -9,6 +9,9 @@ bse_sys_maxprice = 1000  # maximum price in the system, in cents/pennies
 ticksize = 1  # minimum change in price, in cents/pennies
 
 
+#######################-Customer_Order Class-########################
+
+
 # a customer order which is given to a trader to complete
 class Customer_Order:
 
@@ -21,6 +24,9 @@ class Customer_Order:
 
     def __str__(self):
         return 'Customer Order [T=%5.2f %s %s P=%s Q=%s]' % (self.time, self.tid, self.otype, self.price, self.qty)
+
+
+#######################-Order Class-################################
 
 
 # an order created by a trader for the exchange
@@ -37,6 +43,10 @@ class Order:
     def __str__(self):
         return 'Order: [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES)
 
+
+######################-Block_Indication Class-#######################################
+
+
 # a block indication created by a trader for the exchange
 class Block_Indication:
 
@@ -50,6 +60,9 @@ class Block_Indication:
 
     def __str__(self):
         return 'BI: [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES)
+
+
+#########################-Qualifying_Block_Order Class-###############################
 
 # a qualifying block order created by a trader for the exchange
 class Qualifying_Block_Order:
@@ -65,6 +78,9 @@ class Qualifying_Block_Order:
 
     def __str__(self):
         return 'QBO: [ID=%d T=%5.2f %s %s Q=%s MES=%s MID=%d]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES, self.match_id)
+
+
+########################-Orderbook_half Class-#################
 
 
 # Orderbook_half is one side of the book: a list of bids or a list of asks, each sorted best-first
@@ -141,6 +157,9 @@ class Orderbook_half:
             print(order)
 
 
+###################-Orderbook Class-#############################
+
+
 # Orderbook for a single instrument: list of bids and list of asks
 class Orderbook:
 
@@ -180,7 +199,7 @@ class Orderbook:
 
 
     # match two orders and perform the trade
-    def find_order_match(self):
+    def find_matching_orders(self):
 
         # matching is buy-side friendly, so start with buys first
         for buy_order in self.buy_side.orders:
@@ -267,9 +286,9 @@ class Orderbook:
     # print the current orders in the order_book list
     def print_order_book(self):
         print("Order Book:")
-        print("Buy side order book:")
+        print("Buy side:")
         self.buy_side.print_orders()
-        print("Sell side order book:")
+        print("Sell side:")
         self.sell_side.print_orders()
         print("")
 
@@ -278,6 +297,9 @@ class Orderbook:
         for trade in self.tape:
             print(trade)
         print("")
+
+
+#####################-Block_Indication_Book Class-########################
 
 
 # Block Indication Book class for a single instrument. The class holds and performs operations with 
@@ -356,25 +378,25 @@ class Block_Indication_Book:
     # attempt to find two matching block indications
     def find_matching_block_indications(self):
         # starting with the buy side first
-        for buy_order in self.buy_side.orders:
-            for sell_order in self.sell_side.orders:
+        for buy_side_BI in self.buy_side.orders:
+            for sell_side_BI in self.sell_side.orders:
                 # check if the two block indications match
-                if buy_order.qty >= sell_order.MES and buy_order.MES <= sell_order.qty:
+                if buy_side_BI.qty >= sell_side_BI.MES and buy_side_BI.MES <= sell_side_BI.qty:
                     
-                    # Add the match to the matches dictionary
-                    self.matches[self.match_id] = {"buy_side_BI": buy_order, 
-                                                   "sell_side_BI": sell_order,
+                    # Add the BIs in the match to the matches dictionary
+                    self.matches[self.match_id] = {"buy_side_BI": buy_side_BI, 
+                                                   "sell_side_BI": sell_side_BI,
                                                    "buy_side_QBO": None,
                                                    "sell_side_QBO": None}
-                    # get the current the match id
+                    # get the current match id
                     response = self.match_id
 
-                    # increment the book's match id counter
+                    # increment the book's match_id counter
                     self.match_id += 1
 
-                    # delete these block indications
-                    self.del_block_indication(100.0, buy_order, False)
-                    self.del_block_indication(100.0, sell_order, False)
+                    # delete these block indications from the book
+                    self.del_block_indication(100.0, buy_side_BI, False)
+                    self.del_block_indication(100.0, sell_side_BI, False)
 
                     # return the match id
                     return response
@@ -402,15 +424,9 @@ class Block_Indication_Book:
         
         # check if both QBOs have been received
         if self.matches[match_id]["buy_side_QBO"] and self.matches[match_id]["sell_side_QBO"]:
-            # update each traders's reputational scores using this event
-            self.update_reputational_scores(match_id)
             return "Both QBOs have been received."
         else:
             return "First QBO received."
-
-    # return the reputational score for the given TID, if the TID is not known then return None
-    def get_reputational_score(self, tid):
-        return self.reputational_scores.get(tid)
 
     # calculate the reputational score of a trader for a single event
     def calculate_event_reputational_score(self, QBO, BI):
@@ -427,18 +443,10 @@ class Block_Indication_Book:
         if score > 100: score = 100
         if score < 50: score = 50
 
+        # return the score
         return score
 
-    # get the original block indication for the qualifying block order
-    def get_QBOs_matching_BI(self, QBO):
-        for order in self.buy_side.orders:
-            if QBO.tid == order.tid:
-                return order
-        for order in self.sell_side.orders:
-            if QBO.tid == order.tid:
-                return order
-        return None
-
+    # update both traders' reputation score given this matching event
     def update_reputational_scores(self, match_id):
 
         # the QBO and BI for the buy side
@@ -479,9 +487,9 @@ class Block_Indication_Book:
     # print the current block indications
     def print_block_indications(self):
         print("Block Indications:")
-        print("Buy side order book:")
+        print("Buy side:")
         self.buy_side.print_orders()
-        print("Sell side order book:")
+        print("Sell side:")
         self.sell_side.print_orders()
         print("")
 
@@ -498,8 +506,10 @@ class Block_Indication_Book:
                 print(self.matches[key]["sell_side_QBO"])
         print("")
 
-# Exchange
 
+####################-Exchange Class-################################
+
+# Exchange class
 class Exchange:
 
     # constructor method
@@ -536,7 +546,7 @@ class Exchange:
     def uncross(self, traders, time, price):
 
         # find a match between a buy order a sell order
-        match_info = self.order_book.find_order_match()
+        match_info = self.order_book.find_matching_orders()
 
         # keep on going until no more matches can be found
         while match_info != None:
@@ -545,7 +555,7 @@ class Exchange:
             self.order_book.perform_trade(traders, time, 50.0, match_info)
 
             # find another match
-            match_info = self.order_book.find_order_match()
+            match_info = self.order_book.find_matching_orders()
 
     def del_block_indication(self, time, order, verbose):
         response = self.block_indications.del_block_indication(time, order, verbose)
@@ -586,7 +596,6 @@ class Exchange:
         self.block_indications.print_matches()
 
 ##################--Traders below here--#############
-
 
 # Trader superclass
 # all Traders have a trader id, bank balance, blotter, and list of orders to execute
@@ -1303,6 +1312,7 @@ def test3():
             # add the QBOs to the exchange
             print(exchange.add_qualifying_block_order(buy_side_qbo, False))
             print(exchange.add_qualifying_block_order(sell_side_qbo, False))
+            exchange.block_indications.update_reputational_scores(match_id)
             
     exchange.print_block_indications()
     exchange.print_reputational_scores()

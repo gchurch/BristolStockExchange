@@ -343,12 +343,14 @@ class Block_Indication_Book:
         self.MIV = 20
         # A dictionary to hold matched BIs and the corresponding QBOs
         self.matches = {}
-        # ID to be given to next qualifying block order
+        # ID to be given to next Qualifying Block Order received
         self.QBO_id = 0
         # ID to be given to the matching of two block indications
         self.match_id = 0
         # The tape contains the history of block indications sent to the exchange
         self.tape = []
+        # ID to be given to the next OSR created
+        self.OSR_id = 0
 
     
     # add block indication
@@ -495,19 +497,25 @@ class Block_Indication_Book:
         buy_side_BI = self.get_block_indication_match(match_id)["buy_side_BI"]
         sell_side_BI = self.get_block_indication_match(match_id)["sell_side_BI"]
         
+        # create the OSRs
         buy_side_OSR = Order_Submission_Request(buy_side_BI.time,
                                                 buy_side_BI.tid,
                                                 buy_side_BI.otype,
                                                 buy_side_BI.qty,
                                                 buy_side_BI.MES,
                                                 match_id)
+        buy_side_OSR.id = self.OSR_id
+        self.OSR_id += 1
         sell_side_OSR = Order_Submission_Request(sell_side_BI.time,
                                                  sell_side_BI.tid,
                                                  sell_side_BI.otype,
                                                  sell_side_BI.qty,
                                                  sell_side_BI.MES,
                                                  match_id)
+        sell_side_OSR.id = self.OSR_id
+        self.OSR_id += 1
 
+        # return both OSRs
         return {"buy_side_OSR": buy_side_OSR, "sell_side_OSR": sell_side_OSR}
 
     # print the reputational score of all known traders
@@ -765,6 +773,7 @@ class Trader_Giveaway(Trader):
     # Currently we are sending a QBO with the same quantity as in the BI
     def order_submission_request(self, time, OSR):
         # create a QOB from the received OSR
+        print(OSR)
         MES = 20
         QOB = Qualifying_Block_Order(time, 
                                      OSR.tid, 

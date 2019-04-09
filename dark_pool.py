@@ -17,13 +17,13 @@ class Customer_Order:
 
     def __init__(self, time, tid, otype, price, qty):
         self.time = time      # the time the customer order was issued
-        self.tid = tid        # the trader i.d. that this order is for
+        self.trader_id = tid        # the trader i.d. that this order is for
         self.otype = otype    # the order type of the customer order i.e. buy/sell
         self.price = price    # the limit price of the customer order
-        self.qty = qty        # the quantity to buy/sell
+        self.quantity = qty        # the quantity to buy/sell
 
     def __str__(self):
-        return 'Customer Order [T=%5.2f %s %s P=%s Q=%s]' % (self.time, self.tid, self.otype, self.price, self.qty)
+        return 'Customer Order [T=%5.2f %s %s P=%s Q=%s]' % (self.time, self.trader_id, self.otype, self.price, self.quantity)
 
 
 #######################-Order Class-################################
@@ -32,16 +32,16 @@ class Customer_Order:
 # an order created by a trader for the exchange
 class Order:
 
-    def __init__(self, time, tid, otype, qty, MES):
+    def __init__(self, time, trader_id, otype, quantity, MES):
         self.id = -1       # order i.d. (unique to each order on the Exchange)
         self.time = time    # timestamp
-        self.tid = tid      # trader i.d.
+        self.trader_id = trader_id      # trader i.d.
         self.otype = otype  # order type
-        self.qty = qty      # quantity
+        self.quantity = quantity      # quantity
         self.MES = MES      # minimum execution size
 
     def __str__(self):
-        return 'Order: [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES)
+        return 'Order: [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.MES)
 
 
 ######################-Block_Indication Class-#######################################
@@ -50,16 +50,16 @@ class Order:
 # a block indication created by a trader for the exchange
 class Block_Indication:
 
-    def __init__(self, time, tid, otype, qty, MES):
+    def __init__(self, time, trader_id, otype, quantity, MES):
         self.id = -1
         self.time = time
-        self.tid = tid
+        self.trader_id = trader_id
         self.otype = otype
-        self.qty = qty
+        self.quantity = quantity
         self.MES = MES
 
     def __str__(self):
-        return 'BI: [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES)
+        return 'BI: [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.MES)
 
 
 #########################-Order Submission Request Class-############################
@@ -67,17 +67,17 @@ class Block_Indication:
 # a Order Submission Request (OSR) sent to a trader when their block indication is matched
 class Order_Submission_Request:
 
-    def __init__(self, time, tid, otype, qty, MES, match_id):
+    def __init__(self, time, trader_id, otype, quantity, MES, match_id):
         self.id = -1
         self.time = time
-        self.tid = tid
+        self.trader_id = trader_id
         self.otype = otype
-        self.qty = qty
+        self.quantity = quantity
         self.MES = MES
         self.match_id = match_id
 
     def __str__(self):
-        return 'OSR: [ID=%d T=%5.2f %s %s Q=%s MES=%s MID=%d]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES, self.match_id)
+        return 'OSR: [ID=%d T=%5.2f %s %s Q=%s MES=%s MID=%d]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.MES, self.match_id)
 
 
 #########################-Qualifying_Block_Order Class-###############################
@@ -85,17 +85,17 @@ class Order_Submission_Request:
 # a Qualifying Block Order (QBO) created by a trader for the exchange
 class Qualifying_Block_Order:
 
-    def __init__(self, time, tid, otype, qty, MES, match_id):
+    def __init__(self, time, trader_id, otype, quantity, MES, match_id):
         self.id = -1
         self.time = time
-        self.tid = tid
+        self.trader_id = trader_id
         self.otype = otype
-        self.qty = qty
+        self.quantity = quantity
         self.MES = MES
         self.match_id = match_id
 
     def __str__(self):
-        return 'QBO: [ID=%d T=%5.2f %s %s Q=%s MES=%s MID=%d]' % (self.id, self.time, self.tid, self.otype, self.qty, self.MES, self.match_id)
+        return 'QBO: [ID=%d T=%5.2f %s %s Q=%s MES=%s MID=%d]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.MES, self.match_id)
 
 
 ########################-Orderbook_half Class-#################
@@ -117,11 +117,11 @@ class Orderbook_half:
     # find the position to insert the order into the order_book list such that the order_book list maintains
     # it's ordering of (size,time)
     def find_order_position(self, order):
-        quantity = order.qty
+        quantity = order.quantity
         time = order.time
         position = 0
         for i in range(0,len(self.orders)):
-            if quantity > self.orders[i].qty or (quantity == self.orders[i].qty and time < self.orders[i].time):
+            if quantity > self.orders[i].quantity or (quantity == self.orders[i].quantity and time < self.orders[i].time):
                 break
             else:
                 position += 1
@@ -132,8 +132,8 @@ class Orderbook_half:
 
         # if the trader with this tid already has an order in the order_book, then remove it
         # also set the write reponse to return
-        if self.traders.get(order.tid) != None:
-            self.book_del(order.tid)
+        if self.traders.get(order.trader_id) != None:
+            self.book_del(order.trader_id)
             response = 'Overwrite'
         else:
             response = 'Addition'
@@ -142,7 +142,7 @@ class Orderbook_half:
         
         # add the trader to the traders dictionary
         num_orders = self.num_orders
-        self.traders[order.tid] = 1
+        self.traders[order.trader_id] = 1
         self.num_orders = len(self.traders)
 
         # add the order to order_book list
@@ -158,7 +158,7 @@ class Orderbook_half:
         
         # calling pop changes the length of order_book so we have to break afterwards
         for i in range(0, len(self.orders)):
-            if self.orders[i].tid == tid:
+            if self.orders[i].trader_id == tid:
                 self.orders.pop(i)
                 break
 
@@ -203,12 +203,12 @@ class Orderbook:
     def del_order(self, time, order, verbose):
         # delete a trader's order from the exchange, update all internal records
         if order.otype == 'Buy':
-            self.buy_side.book_del(order.tid)
+            self.buy_side.book_del(order.trader_id)
             cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
             self.tape.append(cancel_record)
 
         elif order.otype == 'Sell':
-            self.sell_side.book_del(order.tid)
+            self.sell_side.book_del(order.trader_id)
             cancel_record = { 'type': 'Cancel', 'time': time, 'order': order }
             self.tape.append(cancel_record)
         else:
@@ -223,12 +223,12 @@ class Orderbook:
         for buy_order in self.buy_side.orders:
             for sell_order in self.sell_side.orders:
                 # find two matching orders in the order_book list
-                if buy_order.qty >= sell_order.MES and buy_order.MES <= sell_order.qty:
+                if buy_order.quantity >= sell_order.MES and buy_order.MES <= sell_order.quantity:
                     # work out how large the trade size will be
-                    if buy_order.qty >= sell_order.qty:
-                        trade_size = sell_order.qty
+                    if buy_order.quantity >= sell_order.quantity:
+                        trade_size = sell_order.quantity
                     else:
-                        trade_size = buy_order.qty
+                        trade_size = buy_order.quantity
                     # return a dictionary containing the trade info
                     # Note. Here we are returning references to the orders, so changing the returned orders will
                     # change the orders in the order_book
@@ -241,26 +241,26 @@ class Orderbook:
     def perform_trade(self, traders, time, price, trade_info):
 
         # subtract the trade quantity from the orders' quantity
-        trade_info["buy_order"].qty -= trade_info["trade_size"]
-        trade_info["sell_order"].qty -= trade_info["trade_size"]
+        trade_info["buy_order"].quantity -= trade_info["trade_size"]
+        trade_info["sell_order"].quantity -= trade_info["trade_size"]
 
         # remove orders from the order_book
-        self.buy_side.book_del(trade_info["buy_order"].tid)
-        self.sell_side.book_del(trade_info["sell_order"].tid)
+        self.buy_side.book_del(trade_info["buy_order"].trader_id)
+        self.sell_side.book_del(trade_info["sell_order"].trader_id)
 
         # re-add the the residual
-        if trade_info["buy_order"].qty > 0:
+        if trade_info["buy_order"].quantity > 0:
             # update the MES if necessary
-            if trade_info["buy_order"].MES > trade_info["buy_order"].qty:
-                trade_info["buy_order"].MES = trade_info["buy_order"].qty
+            if trade_info["buy_order"].MES > trade_info["buy_order"].quantity:
+                trade_info["buy_order"].MES = trade_info["buy_order"].quantity
             # add the order to the order_book list
             self.buy_side.book_add(trade_info["buy_order"])
 
         # re-add the residual
-        if trade_info["sell_order"].qty > 0:
+        if trade_info["sell_order"].quantity > 0:
             # update the MES if necessary
-            if trade_info["sell_order"].MES > trade_info["sell_order"].qty:
-                trade_info["sell_order"].MES = trade_info["sell_order"].qty
+            if trade_info["sell_order"].MES > trade_info["sell_order"].quantity:
+                trade_info["sell_order"].MES = trade_info["sell_order"].quantity
             # add the order to the order_book list
             self.sell_side.book_add(trade_info["sell_order"])
 
@@ -269,14 +269,14 @@ class Orderbook:
                     'time': time,
                     'price': price,
                     'quantity': trade_info["trade_size"],
-                    'buyer': trade_info["buy_order"].tid,
-                    'seller': trade_info["sell_order"].tid}
+                    'buyer': trade_info["buy_order"].trader_id,
+                    'seller': trade_info["sell_order"].trader_id}
 
         # the traders parameter may be set to none when we are just trying to test the uncross function
         if traders != None:
             # inform the traders of the trade
-            traders[trade_info["buy_order"].tid].bookkeep(trade, False)
-            traders[trade_info["sell_order"].tid].bookkeep(trade, False)
+            traders[trade_info["buy_order"].trader_id].bookkeep(trade, False)
+            traders[trade_info["sell_order"].trader_id].bookkeep(trade, False)
 
         # add a record to the tape
         self.tape.append(trade)
@@ -357,11 +357,11 @@ class Block_Indication_Book:
     def add_block_indication(self, BI, verbose):
 
         # if a new trader, then give it an initial reputational score
-        if self.reputational_scores.get(BI.tid) == None:
-            self.reputational_scores[BI.tid] = 50
+        if self.reputational_scores.get(BI.trader_id) == None:
+            self.reputational_scores[BI.trader_id] = 50
 
         # the quantity of the order must be greater than the MIV
-        if BI.qty > self.MIV and self.reputational_scores.get(BI.tid) > self.RST:
+        if BI.quantity > self.MIV and self.reputational_scores.get(BI.trader_id) > self.RST:
 
             # set the block indications' id
             BI.id = self.BI_id
@@ -383,12 +383,12 @@ class Block_Indication_Book:
     def del_block_indication(self, time, BI, verbose):
         # delete a trader's order from the exchange, update all internal records
         if BI.otype == 'Buy':
-            self.buy_side.book_del(BI.tid)
+            self.buy_side.book_del(BI.trader_id)
             cancel_record = { 'type': 'Cancel', 'time': time, 'BI': BI }
             self.tape.append(cancel_record)
 
         elif BI.otype == 'Sell':
-            self.sell_side.book_del(BI.tid)
+            self.sell_side.book_del(BI.trader_id)
             cancel_record = { 'type': 'Cancel', 'time': time, 'BI': BI }
             self.tape.append(cancel_record)
         else:
@@ -401,7 +401,7 @@ class Block_Indication_Book:
         for buy_side_BI in self.buy_side.orders:
             for sell_side_BI in self.sell_side.orders:
                 # check if the two block indications match
-                if buy_side_BI.qty >= sell_side_BI.MES and buy_side_BI.MES <= sell_side_BI.qty:
+                if buy_side_BI.quantity >= sell_side_BI.MES and buy_side_BI.MES <= sell_side_BI.quantity:
                     
                     # Add the BIs in the match to the matches dictionary
                     self.matches[self.match_id] = {"buy_side_BI": buy_side_BI, 
@@ -461,7 +461,7 @@ class Block_Indication_Book:
         # calculate the score for this event
         score = 100
         MES_percent_diff = 100 * (BI.MES - QBO.MES) / BI.MES
-        quantity_percent_diff = 100 * (BI.qty - QBO.qty) / BI.qty
+        quantity_percent_diff = 100 * (BI.quantity - QBO.quantity) / BI.quantity
         score = 100 - MES_percent_diff - quantity_percent_diff
         if score > 100: score = 100
         if score < 50: score = 50
@@ -483,8 +483,8 @@ class Block_Indication_Book:
         sell_side_event_score = self.calculate_event_reputational_score(sell_side_QBO, sell_side_QBO)
 
         # update the traders' reputational score
-        self.update_trader_reputational_score(buy_side_BI.tid, buy_side_event_score)
-        self.update_trader_reputational_score(sell_side_BI.tid, sell_side_event_score)
+        self.update_trader_reputational_score(buy_side_BI.trader_id, buy_side_event_score)
+        self.update_trader_reputational_score(sell_side_BI.trader_id, sell_side_event_score)
 
     # update a traders reputational score given an event_score
     def update_trader_reputational_score(self, tid, event_score):
@@ -499,17 +499,17 @@ class Block_Indication_Book:
         
         # create the OSRs
         buy_side_OSR = Order_Submission_Request(buy_side_BI.time,
-                                                buy_side_BI.tid,
+                                                buy_side_BI.trader_id,
                                                 buy_side_BI.otype,
-                                                buy_side_BI.qty,
+                                                buy_side_BI.quantity,
                                                 buy_side_BI.MES,
                                                 match_id)
         buy_side_OSR.id = self.OSR_id
         self.OSR_id += 1
         sell_side_OSR = Order_Submission_Request(sell_side_BI.time,
-                                                 sell_side_BI.tid,
+                                                 sell_side_BI.trader_id,
                                                  sell_side_BI.otype,
-                                                 sell_side_BI.qty,
+                                                 sell_side_BI.quantity,
                                                  sell_side_BI.MES,
                                                  match_id)
         sell_side_OSR.id = self.OSR_id
@@ -634,14 +634,14 @@ class Exchange:
 
         # create orders out of the QBOs
         buy_side_order = Order(buy_side_QBO.time,
-                               buy_side_QBO.tid,
+                               buy_side_QBO.trader_id,
                                buy_side_QBO.otype,
-                               buy_side_QBO.qty,
+                               buy_side_QBO.quantity,
                                buy_side_QBO.MES)
         sell_side_order = Order(sell_side_QBO.time,
-                                sell_side_QBO.tid,
+                                sell_side_QBO.trader_id,
                                 sell_side_QBO.otype,
-                                sell_side_QBO.qty,
+                                sell_side_QBO.quantity,
                                 sell_side_QBO.MES)
         self.add_order(buy_side_order, False)
         self.add_order(sell_side_order, False)
@@ -682,7 +682,7 @@ class Trader:
 
     def __init__(self, ttype, tid, balance, time):
         self.ttype = ttype             # what type / strategy this trader is
-        self.tid = tid                 # trader unique ID code
+        self.trader_id = tid                 # trader unique ID code
         self.balance = balance         # money in the bank
         self.blotter = []              # record of trades executed
         self.customer_order = None     # customer orders currently being worked (fixed at 1)
@@ -697,7 +697,7 @@ class Trader:
 
     def __str__(self):
         return '[TID %s type %s balance %s blotter %s customer order %s n_trades %s profitpertime %s]' \
-            % (self.tid, self.ttype, self.balance, self.blotter, self.customer_order, self.n_trades, self.profitpertime)
+            % (self.trader_id, self.ttype, self.balance, self.blotter, self.customer_order, self.n_trades, self.profitpertime)
 
 
     def add_order(self, customer_order, verbose):
@@ -757,14 +757,14 @@ class Trader_Giveaway(Trader):
     def getorder(self, time):
         if self.customer_order == None:
             order = None
-        elif self.customer_order.qty >= 20:
+        elif self.customer_order.quantity >= 20:
             MES = 20
             # return a block indication
-            block_indication = Block_Indication(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES)
+            block_indication = Block_Indication(time, self.trader_id, self.customer_order.otype, self.customer_order.quantity, MES)
             return block_indication
         else:
             MES = 2
-            order = Order(time, self.tid, self.customer_order.otype, self.customer_order.qty, MES)
+            order = Order(time, self.trader_id, self.customer_order.otype, self.customer_order.quantity, MES)
             self.lastquote=order
             return order
 
@@ -773,12 +773,11 @@ class Trader_Giveaway(Trader):
     # Currently we are sending a QBO with the same quantity as in the BI
     def order_submission_request(self, time, OSR):
         # create a QOB from the received OSR
-        print(OSR)
         MES = 20
         QOB = Qualifying_Block_Order(time, 
-                                     OSR.tid, 
+                                     OSR.trader_id, 
                                      OSR.otype, 
-                                     OSR.qty, 
+                                     OSR.quantity, 
                                      MES, 
                                      OSR.match_id)
         # return the created QOB
@@ -857,8 +856,8 @@ def populate_market(traders_spec, traders, shuffle, verbose):
                         t2 = random.randint(0, t1)
                         t1name = '%c%02d' % (ttype_char, t1)
                         t2name = '%c%02d' % (ttype_char, t2)
-                        traders[t1name].tid = t2name
-                        traders[t2name].tid = t1name
+                        traders[t1name].trader_id = t2name
+                        traders[t2name].trader_id = t1name
                         temp = traders[t1name]
                         traders[t1name] = traders[t2name]
                         traders[t2name] = temp
@@ -918,8 +917,8 @@ def match_block_indications_and_add_firm_orders_to_the_order_book(exchange, trad
 
         # send OSR to the traders and get back QBOs for the matched BIs
         OSRs = exchange.create_order_submission_requests(match_id)
-        buy_side_qbo = traders[buy_side_BI.tid].order_submission_request(100.0, OSRs["buy_side_OSR"])
-        sell_side_qbo = traders[sell_side_BI.tid].order_submission_request(100.0, OSRs["sell_side_OSR"])
+        buy_side_qbo = traders[buy_side_BI.trader_id].order_submission_request(100.0, OSRs["buy_side_OSR"])
+        sell_side_qbo = traders[sell_side_BI.trader_id].order_submission_request(100.0, OSRs["sell_side_OSR"])
 
         # add the QBOs to the exchange
         exchange.add_qualifying_block_order(buy_side_qbo, False)
@@ -979,7 +978,7 @@ def test():
 
     # assign customer orders to traders
     for customer_order in customer_orders:
-        traders[customer_order.tid].add_order(customer_order, False)
+        traders[customer_order.trader_id].add_order(customer_order, False)
 
     for tid in sorted(traders.keys()):
         print(tid)

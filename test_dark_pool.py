@@ -19,9 +19,9 @@ class Test_Order(unittest.TestCase):
         order = dark_pool.Order(time, tid, otype, qty, MES)
 
         # test all initialised member variables
-        self.assertEqual(order.tid, tid)
+        self.assertEqual(order.trader_id, tid)
         self.assertEqual(order.otype, otype)
-        self.assertEqual(order.qty, qty)
+        self.assertEqual(order.quantity, qty)
         self.assertEqual(order.MES, MES)
         self.assertEqual(order.time, time)
 
@@ -56,9 +56,9 @@ class Test_Block_Indication(unittest.TestCase):
         BI = dark_pool.Block_Indication(time, tid, otype, qty, MES)
 
         # test all initialised member variables
-        self.assertEqual(BI.tid, tid)
+        self.assertEqual(BI.trader_id, tid)
         self.assertEqual(BI.otype, otype)
-        self.assertEqual(BI.qty, qty)
+        self.assertEqual(BI.quantity, qty)
         self.assertEqual(BI.MES, MES)
         self.assertEqual(BI.time, time)
 
@@ -95,9 +95,9 @@ class Test_Order_Submission_Request(unittest.TestCase):
 
         # test that the intialized values are as expected
         self.assertEqual(OSR.time, time)
-        self.assertEqual(OSR.tid, tid)
+        self.assertEqual(OSR.trader_id, tid)
         self.assertEqual(OSR.otype, otype)
-        self.assertEqual(OSR.qty, qty)
+        self.assertEqual(OSR.quantity, qty)
         self.assertEqual(OSR.MES, MES)
         self.assertEqual(OSR.match_id, match_id)
 
@@ -136,9 +136,9 @@ class Test_Qualifying_Block_Order(unittest.TestCase):
 
         # test that the initialized values are as expected
         self.assertEqual(QBO.time, time)
-        self.assertEqual(QBO.tid, tid)
+        self.assertEqual(QBO.trader_id, tid)
         self.assertEqual(QBO.otype, otype)
-        self.assertEqual(QBO.qty, qty)
+        self.assertEqual(QBO.quantity, qty)
         self.assertEqual(QBO.MES, MES)
         self.assertEqual(QBO.match_id, match_id)
 
@@ -291,7 +291,7 @@ class Test_Orderbook_half(unittest.TestCase):
             return_values.append(orderbook_half.book_add(order))
 
         # delete an order
-        orderbook_half.book_del(orders[0].tid)
+        orderbook_half.book_del(orders[0].trader_id)
 
         self.assertEqual(orderbook_half.num_orders, 1)
         self.assertEqual(orderbook_half.orders[0].__str__(), "Order: [ID=-1 T=35.00 B01 Buy Q=10 MES=4]")
@@ -541,7 +541,7 @@ class Test_Functions(unittest.TestCase):
 
 #        # test that the initialisation performs as expected
 #        self.assertEqual(trader.ttype, ttype)
-#        self.assertEqual(trader.tid, tid)
+#        self.assertEqual(trader.trader_id, tid)
 #        self.assertEqual(trader.balance, balance)
 #        self.assertEqual(trader.blotter, [])
 #        self.assertEqual(trader.orders, [])

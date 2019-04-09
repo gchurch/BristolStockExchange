@@ -226,14 +226,14 @@ class Orderbook:
             sys.exit('bad order type in del_quote()')
 
 
-    # match two orders and perform the trade (Note that anything > None and >= None equals True)
+    # match two orders and perform the trade
     def find_matching_orders(self, price):
 
         # matching is buy-side friendly, so start with buys first
         for buy_order in self.buy_side.orders:
             for sell_order in self.sell_side.orders:
                 # find two matching orders in the order_book list
-                if buy_order.quantity >= sell_order.MES and buy_order.MES <= sell_order.quantity:
+                if buy_order.quantity >= sell_order.MES and buy_order.MES <= sell_order.quantity and buy_order.limit_price >= price and sell_order.limit_price <= price:
                     if buy_order.quantity >= sell_order.quantity:
                         trade_size = sell_order.quantity
                     else:
@@ -1034,11 +1034,11 @@ def test1():
     # create some example orders
     orders = []
     orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
-    orders.append(Order(35.0, 'B01', 'Buy', 10, None, 6))
+    orders.append(Order(35.0, 'B01', 'Buy', 10, 50, 6))
     orders.append(Order(55.0, 'B02', 'Buy', 3, 53, 1))
     orders.append(Order(75.0, 'B03', 'Buy', 3, 59, 2))
     orders.append(Order(65.0, 'B04', 'Buy', 3, 61, 2))
-    orders.append(Order(45.0, 'S00', 'Sell', 11, None, 6))
+    orders.append(Order(45.0, 'S00', 'Sell', 11, 51, 6))
     orders.append(Order(55.0, 'S01', 'Sell', 4, 43, 2))
     orders.append(Order(65.0, 'S02', 'Sell', 6, 48, 3))
     orders.append(Order(55.0, 'S03', 'Sell', 6, 49, 4))
@@ -1049,14 +1049,15 @@ def test1():
 
     exchange.print_order_book()
 
-    match = exchange.order_book.find_matching_orders(50)
+    exchange.uncross(None, 100.0, 50)
 
-    if match != None:
-        print(match["trade_size"])
-        print(match["sell_order"])
-        print(match["buy_order"])
+    exchange.print_order_book()
 
-    print(3 < None)
+    
+    print(exchange.order_book.tape)
+
+    # dump the trading data
+    exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
 
 
 # the main function is called if BSE.py is run as the main program

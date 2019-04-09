@@ -32,16 +32,17 @@ class Customer_Order:
 # an order created by a trader for the exchange
 class Order:
 
-    def __init__(self, time, trader_id, otype, quantity, MES):
-        self.id = -1       # order i.d. (unique to each order on the Exchange)
-        self.time = time    # timestamp
+    def __init__(self, time, trader_id, otype, quantity, limit_price, MES):
+        self.id = -1                    # order i.d. (unique to each order on the Exchange)
+        self.time = time                # timestamp
         self.trader_id = trader_id      # trader i.d.
-        self.otype = otype  # order type
-        self.quantity = quantity      # quantity
-        self.MES = MES      # minimum execution size
+        self.otype = otype              # order type
+        self.quantity = quantity        # quantity
+        self.limit_price = limit_price  # limit price, None means no limit price
+        self.MES = MES                  # minimum execution size, None means no MES
 
     def __str__(self):
-        return 'Order: [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.MES)
+        return 'Order: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.limit_price, self.MES)
 
 
 ######################-Block_Indication Class-#######################################
@@ -637,11 +638,13 @@ class Exchange:
                                buy_side_QBO.trader_id,
                                buy_side_QBO.otype,
                                buy_side_QBO.quantity,
+                               None,
                                buy_side_QBO.MES)
         sell_side_order = Order(sell_side_QBO.time,
                                 sell_side_QBO.trader_id,
                                 sell_side_QBO.otype,
                                 sell_side_QBO.quantity,
+                                None,
                                 sell_side_QBO.MES)
         self.add_order(buy_side_order, False)
         self.add_order(sell_side_order, False)
@@ -760,11 +763,20 @@ class Trader_Giveaway(Trader):
         elif self.customer_order.quantity >= 20:
             MES = 20
             # return a block indication
-            block_indication = Block_Indication(time, self.trader_id, self.customer_order.otype, self.customer_order.quantity, MES)
+            block_indication = Block_Indication(time, 
+                                                self.trader_id, 
+                                                self.customer_order.otype, 
+                                                self.customer_order.quantity, 
+                                                MES)
             return block_indication
         else:
             MES = 2
-            order = Order(time, self.trader_id, self.customer_order.otype, self.customer_order.quantity, MES)
+            order = Order(time, 
+                          self.trader_id, 
+                          self.customer_order.otype, 
+                          self.customer_order.quantity,
+                          None,
+                          MES)
             self.lastquote=order
             return order
 

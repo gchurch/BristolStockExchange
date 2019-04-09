@@ -217,14 +217,14 @@ class Orderbook:
             sys.exit('bad order type in del_quote()')
 
 
-    # match two orders and perform the trade
-    def find_matching_orders(self):
+    # match two orders and perform the trade (Note that anything > None and >= None equals True)
+    def find_matching_orders(self, price):
 
         # matching is buy-side friendly, so start with buys first
         for buy_order in self.buy_side.orders:
             for sell_order in self.sell_side.orders:
                 # find two matching orders in the order_book list
-                if buy_order.quantity >= sell_order.MES and buy_order.MES <= sell_order.quantity:
+                if buy_order.quantity >= sell_order.MES and buy_order.MES <= sell_order.quantity and buy_order.limit_price >= price and sell_order.limit_price <= price:
                     # work out how large the trade size will be
                     if buy_order.quantity >= sell_order.quantity:
                         trade_size = sell_order.quantity
@@ -596,16 +596,16 @@ class Exchange:
     def uncross(self, traders, time, price):
 
         # find a match between a buy order a sell order
-        match_info = self.order_book.find_matching_orders()
+        match_info = self.order_book.find_matching_orders(price)
 
         # keep on going until no more matches can be found
         while match_info != None:
 
             # execute the trade with the matched orders
-            self.order_book.perform_trade(traders, time, 50.0, match_info)
+            self.order_book.perform_trade(traders, time, price, match_info)
 
             # find another match
-            match_info = self.order_book.find_matching_orders()
+            match_info = self.order_book.find_matching_orders(price)
 
     def del_block_indication(self, time, order, verbose):
         response = self.block_indications.del_block_indication(time, order, verbose)
@@ -1015,12 +1015,42 @@ def test():
 
     exchange.print_matches() 
 
-
     # dump the trading data
     exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
 
+def test1():
+
+    # initialise the exchange
+    exchange = Exchange()
+
+    # create some example orders
+    orders = []
+    orders.append(Order(25.0, 'B00', 'Buy', 5, 57, 3))
+    orders.append(Order(35.0, 'B01', 'Buy', 10, 55, 6))
+    orders.append(Order(55.0, 'B02', 'Buy', 3, 53, 1))
+    orders.append(Order(75.0, 'B03', 'Buy', 3, 59, 2))
+    orders.append(Order(65.0, 'B04', 'Buy', 3, 61, 2))
+    orders.append(Order(45.0, 'S00', 'Sell', 11, 45, 6))
+    orders.append(Order(55.0, 'S01', 'Sell', 4, 43, 2))
+    orders.append(Order(65.0, 'S02', 'Sell', 6, 48, 3))
+    orders.append(Order(55.0, 'S03', 'Sell', 6, 49, 4))
+
+    # add the orders to the exchange
+    for order in orders:
+        exchange.add_order(order, False)
+
+    exchange.print_order_book()
+
+    match = exchange.order_book.find_matching_orders(50)
+
+    if match != None:
+        print(match["trade_size"])
+        print(match["sell_order"])
+        print(match["buy_order"])
+
+    print(3 < None)
 
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    test()
+    test1()

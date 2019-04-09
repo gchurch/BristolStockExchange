@@ -193,6 +193,15 @@ class Orderbook:
         # add a order to the exchange and update all internal records; return unique i.d.
         order.id = self.order_id
         self.order_id = order.id + 1
+        # if the MES is set to None, then change it to 1. If the limit_price is set to None, set it to
+        # bse_max_price if it is a bid and bse_min_price if it is an ask
+        if order.MES == None:
+            order.MES = 1
+        if order.otype == 'Buy' and order.limit_price == None:
+            order.limit_price = bse_sys_maxprice
+        if order.otype == 'Sell' and order.limit_price == None:
+            order.limit_price = bse_sys_minprice
+
         # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.id, self.order_id))
         if order.otype == 'Buy':
             response=self.buy_side.book_add(order)
@@ -224,8 +233,7 @@ class Orderbook:
         for buy_order in self.buy_side.orders:
             for sell_order in self.sell_side.orders:
                 # find two matching orders in the order_book list
-                if buy_order.quantity >= sell_order.MES and buy_order.MES <= sell_order.quantity and buy_order.limit_price >= price and sell_order.limit_price <= price:
-                    # work out how large the trade size will be
+                if buy_order.quantity >= sell_order.MES and buy_order.MES <= sell_order.quantity:
                     if buy_order.quantity >= sell_order.quantity:
                         trade_size = sell_order.quantity
                     else:
@@ -1025,12 +1033,12 @@ def test1():
 
     # create some example orders
     orders = []
-    orders.append(Order(25.0, 'B00', 'Buy', 5, 57, 3))
-    orders.append(Order(35.0, 'B01', 'Buy', 10, 55, 6))
+    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
+    orders.append(Order(35.0, 'B01', 'Buy', 10, None, 6))
     orders.append(Order(55.0, 'B02', 'Buy', 3, 53, 1))
     orders.append(Order(75.0, 'B03', 'Buy', 3, 59, 2))
     orders.append(Order(65.0, 'B04', 'Buy', 3, 61, 2))
-    orders.append(Order(45.0, 'S00', 'Sell', 11, 45, 6))
+    orders.append(Order(45.0, 'S00', 'Sell', 11, None, 6))
     orders.append(Order(55.0, 'S01', 'Sell', 4, 43, 2))
     orders.append(Order(65.0, 'S02', 'Sell', 6, 48, 3))
     orders.append(Order(55.0, 'S03', 'Sell', 6, 49, 4))

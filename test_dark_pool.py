@@ -370,26 +370,26 @@ class Test_Orderbook(unittest.TestCase):
 
         # create some orders
         orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 121, 3))
-        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 221, 6))
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, None, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, None, 6))
 
         # add the orders to the orderbook
         for order in orders:
             orderbook.add_order(order, False)
 
         # attempt to find a match, none should be found
-        self.assertEqual(orderbook.find_matching_orders(),None)
+        self.assertEqual(orderbook.find_matching_orders(50), None)
 
         # add add another order to the order book
-        orderbook.add_order(dark_pool.Order(25.0, 'B01', 'Buy', 8, 111, 7), False)
+        orderbook.add_order(dark_pool.Order(25.0, 'B01', 'Buy', 8, None, 7), False)
 
         # find a match
-        match = orderbook.find_matching_orders()
+        match = orderbook.find_matching_orders(50)
 
         # test that the match is as expected
         self.assertEqual(match["trade_size"], 8)
-        self.assertEqual(match["sell_order"].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 P=221 MES=6]")
-        self.assertEqual(match["buy_order"].__str__(), "Order: [ID=2 T=25.00 B01 Buy Q=8 P=111 MES=7]")
+        self.assertEqual(match["sell_order"].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 P=None MES=6]")
+        self.assertEqual(match["buy_order"].__str__(), "Order: [ID=2 T=25.00 B01 Buy Q=8 P=None MES=7]")
 
     def test__perform_trade(self):
         # create the orderbook

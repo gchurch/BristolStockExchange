@@ -474,14 +474,52 @@ class Block_Indication_Book:
             return "First QBO received."
 
 
+    # compare a QBO with its BI to see whether it is marketable
     def marketable(self, BI, QBO):
-        return
+
+        # marketable in relation to price
+
+        price_marketable = False
+
+        if BI.limit_price == None and QBO.limit_price == None:
+            price_marketable = True
+
+        elif BI.limit_price != None and QBO.limit_price == None:
+            price_marketable = True
+
+        elif BI.limit_price != None and QBO.limit_price != None:
+            if BI.otype == 'Buy':
+                if QBO.limit_price >= BI.limit_price:
+                    price_marketable = True
+            if BI.otype == 'Sell':
+                if QBO.limit_price <= BI.limit_price:
+                    price_marketable = True
+
+        # marketable in relation to the MES
+
+        MES_marketable = False
+
+        if BI.MES == None and QBO.MES == None:
+            MES_marketable = True
+
+        elif BI.MES != None and QBO.MES == None:
+            MES_marketable = True
+
+        elif BI.MES != None and QBO.MES != None:
+            if QBO.MES <= BI.MES:
+                MES_marketable = True
+
+        # check if the QBO is marketable in relation to both the price and the MES
+        marketable = price_marketable and MES_marketable
+
+        # return the result
+        return marketable
 
     # calculate the reputational score of a trader for a single event
     def calculate_event_score(self, BI, QBO):
 
         # if the QBO's MES is greater than the BI's MES then it is not "marketable" so give score zero
-        if QBO.MES > BI.MES:
+        if not self.marketable(BI, QBO):
             return 0
 
         # calculate the score for this event

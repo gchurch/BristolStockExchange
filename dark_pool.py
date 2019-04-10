@@ -203,15 +203,6 @@ class Orderbook:
         order.id = self.order_id
         self.order_id = order.id + 1
 
-        # if the MES is set to None, then change it to 1. If the limit_price is set to None, set it to
-        # bse_max_price if it is a bid and bse_min_price if it is an ask
-        if order.MES == None:
-            order.MES = 1
-        if order.otype == 'Buy' and order.limit_price == None:
-            order.limit_price = bse_sys_maxprice
-        if order.otype == 'Sell' and order.limit_price == None:
-            order.limit_price = bse_sys_minprice
-
         # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.id, self.order_id))
         if order.otype == 'Buy':
             response=self.buy_side.book_add(order)
@@ -247,7 +238,8 @@ class Orderbook:
         for buy_order in buy_orders:
             for sell_order in sell_orders:
                 # find two matching orders in the order_book list
-                if buy_order.quantity >= sell_order.MES and buy_order.MES <= sell_order.quantity and buy_order.limit_price >= price and sell_order.limit_price <= price:
+                if check_match(buy_order, sell_order, price):
+                    # calculate the trade size
                     if buy_order.quantity >= sell_order.quantity:
                         trade_size = sell_order.quantity
                     else:
@@ -381,15 +373,6 @@ class Block_Indication_Book:
     # add block indication
     def add_block_indication(self, BI, verbose):
 
-        # if the MES is set to None, then change it to 1. If the limit_price is set to None, set it to
-        # bse_max_price if it is a bid and bse_min_price if it is an ask
-        if BI.MES == None:
-            BI.MES = 1
-        if BI.otype == 'Buy' and BI.limit_price == None:
-            BI.limit_price = bse_sys_maxprice
-        if BI.otype == 'Sell' and BI.limit_price == None:
-            BI.limit_price = bse_sys_minprice
-
         # if a new trader, then give it an initial reputational score
         if self.reputational_scores.get(BI.trader_id) == None:
             self.reputational_scores[BI.trader_id] = self.initial_reputational_scores_value
@@ -440,9 +423,9 @@ class Block_Indication_Book:
         for buy_side_BI in buy_side_BIs:
             for sell_side_BI in sell_side_BIs:
                 # check if the two block indications match
-                if buy_side_BI.quantity >= sell_side_BI.MES and buy_side_BI.MES <= sell_side_BI.quantity and buy_side_BI.limit_price >= price and sell_side_BI.limit_price <= price:
+                if check_match(buy_side_BI, sell_side_BI, price):
                     
-                    # Add the BIs in the match to the matches dictionary
+                    # Add the matched BIs to the matches dictionary
                     self.matches[self.match_id] = {"buy_side_BI": buy_side_BI, 
                                                    "sell_side_BI": sell_side_BI,
                                                    "buy_side_QBO": None,
@@ -475,7 +458,7 @@ class Block_Indication_Book:
         # get the match id for the orginally matched block indications
         match_id = QBO.match_id
 
-        # and the order to the qualifying_block_orders dictionary with the key as match_id
+        # add the qualifying block order to the match in the matches dictionary
         if self.matches.get(match_id) != None:
             if QBO.otype == 'Buy':
                 self.matches[match_id]["buy_side_QBO"] = QBO
@@ -490,8 +473,12 @@ class Block_Indication_Book:
         else:
             return "First QBO received."
 
+
+    def marketable(self, BI, QBO):
+        return
+
     # calculate the reputational score of a trader for a single event
-    def calculate_event_reputational_score(self, QBO, BI):
+    def calculate_event_score(self, BI, QBO):
 
         # if the QBO's MES is greater than the BI's MES then it is not "marketable" so give score zero
         if QBO.MES > BI.MES:
@@ -508,6 +495,10 @@ class Block_Indication_Book:
         # return the score
         return score
 
+    # update a traders reputational score given an event_score
+    def update_trader_reputational_score_with_event_score(self, tid, event_score):
+        self.reputational_scores[tid] = self.reputational_scores[tid] * 0.75 + event_score * 0.25
+
     # update both traders' reputation score given this matching event
     def update_reputational_scores(self, match_id):
 
@@ -518,16 +509,12 @@ class Block_Indication_Book:
         sell_side_QBO = self.matches[match_id]["sell_side_QBO"]
 
         # get the event reputation scores
-        buy_side_event_score = self.calculate_event_reputational_score(buy_side_QBO, buy_side_BI)
-        sell_side_event_score = self.calculate_event_reputational_score(sell_side_QBO, sell_side_QBO)
+        buy_side_event_score = self.calculate_event_score(buy_side_BI, buy_side_QBO)
+        sell_side_event_score = self.calculate_event_score(sell_side_BI, sell_side_QBO)
 
         # update the traders' reputational score
-        self.update_trader_reputational_score(buy_side_BI.trader_id, buy_side_event_score)
-        self.update_trader_reputational_score(sell_side_BI.trader_id, sell_side_event_score)
-
-    # update a traders reputational score given an event_score
-    def update_trader_reputational_score(self, tid, event_score):
-        self.reputational_scores[tid] = self.reputational_scores[tid] * 0.75 + event_score * 0.25
+        self.update_trader_reputational_score_with_event_score(buy_side_BI.trader_id, buy_side_event_score)
+        self.update_trader_reputational_score_with_event_score(sell_side_BI.trader_id, sell_side_event_score)
 
     def delete_match(self, match_id):
         del(self.matches[match_id])
@@ -882,6 +869,51 @@ def trade_stats(expid, traders, dumpfile, time):
         dumpfile.write('\n');
 
 
+def check_price_match(buy_side, sell_side, price):
+
+    if buy_side.limit_price == None and sell_side.limit_price == None:
+        return True
+
+    elif buy_side.limit_price != None and sell_side.limit_price == None:
+        if buy_side.limit_price >= price:
+            return True
+
+    elif buy_side.limit_price == None and sell_side.limit_price != None:
+        if sell_side.limit_price <= price:
+            return True
+
+    elif buy_side.limit_price != None and sell_side.limit_price != None:
+        if buy_side.limit_price >= price and sell_side.limit_price <= price:
+            return True
+
+    return False
+
+def check_size_match(buy_side, sell_side):
+
+    if buy_side.MES == None and sell_side.MES == None:
+        return True
+
+    elif buy_side.MES != None and sell_side.MES == None:
+        if sell_side.quantity >= buy_side.MES:
+            return True
+
+    elif buy_side.MES == None and sell_side.MES != None:
+        if buy_side.quantity >= sell_side.MES:
+            return True
+
+    elif buy_side.MES != None and sell_side.MES != None:
+        if buy_side.quantity >= sell_side.MES and sell_side.quantity >= buy_side.MES:
+            return True
+
+    return False
+
+def check_match(buy_side, sell_side, price):
+    # check that both the order size and the price match
+    if check_price_match(buy_side, sell_side, price) and check_size_match(buy_side, sell_side):
+        return True
+    else:
+        return False
+
 
 # create a bunch of traders from traders_spec
 # returns tuple (n_buyers, n_sellers)
@@ -1069,14 +1101,14 @@ def test1():
     # create some example orders
     orders = []
     orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
-    orders.append(Order(35.0, 'B01', 'Buy', 10, 50, 6))
+    orders.append(Order(35.0, 'B01', 'Buy', 10, None, 6))
     orders.append(Order(55.0, 'B02', 'Buy', 3, 53, 1))
-    orders.append(Order(75.0, 'B03', 'Buy', 3, 59, 2))
+    orders.append(Order(75.0, 'B03', 'Buy', 3, 59, None))
     orders.append(Order(65.0, 'B04', 'Buy', 3, 61, 2))
-    orders.append(Order(45.0, 'S00', 'Sell', 11, 51, 6))
+    orders.append(Order(45.0, 'S00', 'Sell', 11, None, 6))
     orders.append(Order(55.0, 'S01', 'Sell', 4, 43, 2))
-    orders.append(Order(65.0, 'S02', 'Sell', 6, 48, 3))
-    orders.append(Order(55.0, 'S03', 'Sell', 6, 49, 4))
+    orders.append(Order(65.0, 'S02', 'Sell', 6, 48, None))
+    orders.append(Order(55.0, 'S03', 'Sell', 6, None, 4))
 
     # add the orders to the exchange
     for order in orders:

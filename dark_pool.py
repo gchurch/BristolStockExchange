@@ -168,6 +168,10 @@ class Orderbook_half:
 
         self.num_orders = len(self.orders)
 
+    # return the list of orders
+    def get_orders(self):
+        return self.orders
+
     # print the current traders
     def print_traders(self):
         for key in self.traders:
@@ -232,9 +236,13 @@ class Orderbook:
     # match two orders and perform the trade
     def find_matching_orders(self, price):
 
+        #get the buy orders and sell orders
+        buy_orders = self.buy_side.get_orders()
+        sell_orders = self.sell_side.get_orders()
+
         # matching is buy-side friendly, so start with buys first
-        for buy_order in self.buy_side.orders:
-            for sell_order in self.sell_side.orders:
+        for buy_order in buy_orders:
+            for sell_order in sell_orders:
                 # find two matching orders in the order_book list
                 if buy_order.quantity >= sell_order.MES and buy_order.MES <= sell_order.quantity and buy_order.limit_price >= price and sell_order.limit_price <= price:
                     if buy_order.quantity >= sell_order.quantity:
@@ -409,9 +417,14 @@ class Block_Indication_Book:
 
     # attempt to find two matching block indications
     def find_matching_block_indications(self):
+        
+        # get the buy side orders and sell side orders
+        buy_side_orders = self.buy_side.get_orders()
+        sell_side_orders = self.sell_side.get_orders()
+
         # starting with the buy side first
-        for buy_side_BI in self.buy_side.orders:
-            for sell_side_BI in self.sell_side.orders:
+        for buy_side_BI in buy_side_orders:
+            for sell_side_BI in sell_side_orders:
                 # check if the two block indications match
                 if buy_side_BI.quantity >= sell_side_BI.MES and buy_side_BI.MES <= sell_side_BI.quantity:
                     

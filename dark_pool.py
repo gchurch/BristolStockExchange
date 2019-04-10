@@ -799,6 +799,7 @@ class Trader_Giveaway(Trader):
         if self.customer_order == None:
             order = None
         elif self.customer_order.quantity >= 20:
+            # the Minimum Execution Size (MES) of the block indication
             MES = 20
             # return a block indication
             block_indication = Block_Indication(time, 
@@ -814,7 +815,7 @@ class Trader_Giveaway(Trader):
                           self.trader_id, 
                           self.customer_order.otype, 
                           self.customer_order.quantity,
-                          None,
+                          self.customer_order.price,
                           MES)
             self.lastquote=order
             return order
@@ -824,13 +825,12 @@ class Trader_Giveaway(Trader):
     # Currently we are sending a QBO with the same quantity as in the BI
     def order_submission_request(self, time, OSR):
         # create a QOB from the received OSR
-        MES = 20
         QOB = Qualifying_Block_Order(time, 
                                      OSR.trader_id, 
                                      OSR.otype, 
                                      OSR.quantity,
                                      OSR.limit_price,
-                                     MES, 
+                                     OSR.MES, 
                                      OSR.match_id)
         # return the created QOB
         return QOB
@@ -1032,12 +1032,8 @@ def test():
     for customer_order in customer_orders:
         traders[customer_order.trader_id].add_order(customer_order, False)
 
-    for tid in sorted(traders.keys()):
-        print(tid)
-
-
+    # The price for all traders. In the future this will be equal to the PMP
     price = 50.0
-
 
     # add each trader's order to the exchange
     for tid in sorted(traders.keys()):

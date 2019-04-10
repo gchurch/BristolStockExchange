@@ -375,6 +375,8 @@ class Block_Indication_Book:
         # ID to be given to the next OSR created
         self.OSR_id = 0
 
+        self.initial_reputational_scores_value = 50
+
     
     # add block indication
     def add_block_indication(self, BI, verbose):
@@ -390,7 +392,7 @@ class Block_Indication_Book:
 
         # if a new trader, then give it an initial reputational score
         if self.reputational_scores.get(BI.trader_id) == None:
-            self.reputational_scores[BI.trader_id] = 50
+            self.reputational_scores[BI.trader_id] = self.initial_reputational_scores_value
 
         # the quantity of the order must be greater than the MIV
         if BI.quantity > self.MIV and self.reputational_scores.get(BI.trader_id) > self.RST:
@@ -1052,7 +1054,9 @@ def test():
                     print("after:")
                     exchange.print_order_book()
 
-    exchange.print_matches() 
+    exchange.print_matches()
+
+    exchange.print_reputational_scores()
 
     # dump the trading data
     exchange.tape_dump('transactions_dark.csv', 'w', 'keep')

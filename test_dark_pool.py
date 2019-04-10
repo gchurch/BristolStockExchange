@@ -427,6 +427,45 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=3 P=46 MES=3]")
 
 ###############################################################################
+# tests for the Block_Indication_Book class
+
+class Test_Block_Indication_Book(unittest.TestCase):
+
+    def test__init__(self):
+
+        block_indication_book = dark_pool.Block_Indication_Book()
+
+        self.assertEqual(block_indication_book.BI_id, 0)
+        self.assertEqual(block_indication_book.reputational_scores, {})
+        self.assertEqual(block_indication_book.matches, {})
+        self.assertEqual(block_indication_book.QBO_id, 0)
+        self.assertEqual(block_indication_book.match_id, 0)
+        self.assertEqual(block_indication_book.tape, [])
+        self.assertEqual(block_indication_book.OSR_id, 0)
+
+    def test__add_block_indication(self):
+
+        # create a block indication book
+        block_indication_book = dark_pool.Block_Indication_Book()
+
+        # create some block indications
+        block_indications = []
+        block_indications.append(dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 125, 500))
+        block_indications.append(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 999, None, None))
+
+        # add the block indications
+        self.assertEqual(block_indication_book.add_block_indication(block_indications[0], False), [0, 'Addition'])
+        self.assertEqual(block_indication_book.add_block_indication(block_indications[1], False), [1, 'Addition'])
+
+        # check that the block indications were added correctly
+        self.assertEqual(block_indication_book.buy_side.orders[0].__str__(), "BI: [ID=0 T=100.00 B00 Buy Q=1024 P=125 MES=500]")
+        self.assertEqual(block_indication_book.sell_side.orders[0].__str__(), "BI: [ID=1 T=100.00 S00 Sell Q=999 P=1 MES=1]")
+
+        # check that reputational scores are correctly assigned
+        self.assertEqual(block_indication_book.reputational_scores['B00'], block_indication_book.initial_reputational_scores_value)
+        self.assertEqual(block_indication_book.reputational_scores['S00'], block_indication_book.initial_reputational_scores_value)
+
+###############################################################################
 # tests for Exchange class
 
 class Test_Exchange(unittest.TestCase):

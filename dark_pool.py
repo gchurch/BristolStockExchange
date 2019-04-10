@@ -111,7 +111,8 @@ class Orderbook_half:
     def __init__(self, booktype):
         # booktype: bids or asks?
         self.booktype = booktype
-        # a dictionary containing all traders and the number of orders they have in this order book
+        # a dictionary containing all traders that currently have orders in this side of the order book and the 
+        # amount of orders they have
         self.traders = {}
         # list of orders received, sorted by size and then time
         self.orders = []
@@ -197,9 +198,11 @@ class Orderbook:
 
     # add an order to the order book
     def add_order(self, order, verbose):
+
         # add a order to the exchange and update all internal records; return unique i.d.
         order.id = self.order_id
         self.order_id = order.id + 1
+
         # if the MES is set to None, then change it to 1. If the limit_price is set to None, set it to
         # bse_max_price if it is a bid and bse_min_price if it is an ask
         if order.MES == None:
@@ -376,6 +379,15 @@ class Block_Indication_Book:
     # add block indication
     def add_block_indication(self, BI, verbose):
 
+        # if the MES is set to None, then change it to 1. If the limit_price is set to None, set it to
+        # bse_max_price if it is a bid and bse_min_price if it is an ask
+        if BI.MES == None:
+            BI.MES = 1
+        if BI.otype == 'Buy' and BI.limit_price == None:
+            BI.limit_price = bse_sys_maxprice
+        if BI.otype == 'Sell' and BI.limit_price == None:
+            BI.limit_price = bse_sys_minprice
+
         # if a new trader, then give it an initial reputational score
         if self.reputational_scores.get(BI.trader_id) == None:
             self.reputational_scores[BI.trader_id] = 50
@@ -416,17 +428,17 @@ class Block_Indication_Book:
             sys.exit('bad order type in del_quote()')
 
     # attempt to find two matching block indications
-    def find_matching_block_indications(self):
+    def find_matching_block_indications(self, price):
         
         # get the buy side orders and sell side orders
-        buy_side_orders = self.buy_side.get_orders()
-        sell_side_orders = self.sell_side.get_orders()
+        buy_side_BIs = self.buy_side.get_orders()
+        sell_side_BIs = self.sell_side.get_orders()
 
         # starting with the buy side first
-        for buy_side_BI in buy_side_orders:
-            for sell_side_BI in sell_side_orders:
+        for buy_side_BI in buy_side_BIs:
+            for sell_side_BI in sell_side_BIs:
                 # check if the two block indications match
-                if buy_side_BI.quantity >= sell_side_BI.MES and buy_side_BI.MES <= sell_side_BI.quantity:
+                if buy_side_BI.quantity >= sell_side_BI.MES and buy_side_BI.MES <= sell_side_BI.quantity and buy_side_BI.limit_price >= price and sell_side_BI.limit_price <= price:
                     
                     # Add the BIs in the match to the matches dictionary
                     self.matches[self.match_id] = {"buy_side_BI": buy_side_BI, 
@@ -642,8 +654,8 @@ class Exchange:
         self.order_book.tape_dump(fname, fmode, tmode)
 
 
-    def find_matching_block_indications(self):
-        return self.block_indications.find_matching_block_indications()
+    def find_matching_block_indications(self, price):
+        return self.block_indications.find_matching_block_indications(price)
 
     def get_block_indication_match(self, match_id):
         return self.block_indications.get_block_indication_match(match_id)
@@ -943,9 +955,9 @@ def populate_market(traders_spec, traders, shuffle, verbose):
         return {'n_buyers':n_buyers, 'n_sellers':n_sellers}
 
 
-def match_block_indications_and_add_firm_orders_to_the_order_book(exchange, traders):
+def match_block_indications_and_add_firm_orders_to_the_order_book(exchange, price, traders):
     # check if there is a match between any two block indications
-    match_id = exchange.find_matching_block_indications()
+    match_id = exchange.find_matching_block_indications(price)
 
     # if there is a match then go through all of the necessary steps
     if match_id != None:
@@ -1024,6 +1036,9 @@ def test():
         print(tid)
 
 
+    price = 50.0
+
+
     # add each trader's order to the exchange
     for tid in sorted(traders.keys()):
         order = traders[tid].getorder(20.0)
@@ -1033,11 +1048,11 @@ def test():
             elif isinstance(order, Block_Indication):
                 exchange.add_block_indication(order, False)
                 # check if there is a match between block indications
-                if match_block_indications_and_add_firm_orders_to_the_order_book(exchange, traders) == "Match found.":
+                if match_block_indications_and_add_firm_orders_to_the_order_book(exchange, price, traders) == "Match found.":
                     print("before:")
                     exchange.print_order_book()
                     # if there is a match then start trading
-                    exchange.uncross(traders, 100.0, 50)
+                    exchange.uncross(traders, 100.0, price)
                     print("after:")
                     exchange.print_order_book()
 

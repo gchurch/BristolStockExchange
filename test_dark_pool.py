@@ -55,13 +55,15 @@ class Test_Block_Indication(unittest.TestCase):
         tid = 'B5'
         otype = 'Bid'
         qty = 1
+        limit_price = 100
         MES = 1
-        BI = dark_pool.Block_Indication(time, tid, otype, qty, MES)
+        BI = dark_pool.Block_Indication(time, tid, otype, qty, limit_price, MES)
 
         # test all initialised member variables
         self.assertEqual(BI.trader_id, tid)
         self.assertEqual(BI.otype, otype)
         self.assertEqual(BI.quantity, qty)
+        self.assertEqual(BI.limit_price, limit_price)
         self.assertEqual(BI.MES, MES)
         self.assertEqual(BI.time, time)
 
@@ -73,11 +75,12 @@ class Test_Block_Indication(unittest.TestCase):
         tid = 'B5'
         otype = 'Bid'
         qty = 1
+        limit_price = 100
         MES = 1
-        BI = dark_pool.Block_Indication(time, tid, otype, qty, MES)   
+        BI = dark_pool.Block_Indication(time, tid, otype, qty, limit_price, MES)   
 
         # test that the string is as expected
-        self.assertEqual(BI.__str__(), "BI: [ID=-1 T=25.00 B5 Bid Q=1 MES=1]")
+        self.assertEqual(BI.__str__(), "BI: [ID=-1 T=25.00 B5 Bid Q=1 P=100 MES=1]")
 
 #################################################################################
 # tests for the Order_Submission_Request class
@@ -92,15 +95,17 @@ class Test_Order_Submission_Request(unittest.TestCase):
         tid = 'B5'
         otype = 'Bid'
         qty = 1
+        limit_price = 100
         MES = 1
         match_id = 0
-        OSR = dark_pool.Order_Submission_Request(time, tid, otype, qty, MES, match_id)
+        OSR = dark_pool.Order_Submission_Request(time, tid, otype, qty, limit_price, MES, match_id)
 
         # test that the intialized values are as expected
         self.assertEqual(OSR.time, time)
         self.assertEqual(OSR.trader_id, tid)
         self.assertEqual(OSR.otype, otype)
         self.assertEqual(OSR.quantity, qty)
+        self.assertEqual(OSR.limit_price, limit_price)
         self.assertEqual(OSR.MES, MES)
         self.assertEqual(OSR.match_id, match_id)
 
@@ -112,12 +117,13 @@ class Test_Order_Submission_Request(unittest.TestCase):
         tid = 'B5'
         otype = 'Bid'
         qty = 1
+        limit_price = 100
         MES = 1
         match_id = 0
-        OSR = dark_pool.Order_Submission_Request(time, tid, otype, qty, MES, match_id)
+        OSR = dark_pool.Order_Submission_Request(time, tid, otype, qty, limit_price, MES, match_id)
 
         # test that the string is as expected
-        self.assertEqual(OSR.__str__(), "OSR: [ID=-1 T=25.00 B5 Bid Q=1 MES=1 MID=0]")
+        self.assertEqual(OSR.__str__(), "OSR: [ID=-1 T=25.00 B5 Bid Q=1 P=100 MES=1 MID=0]")
 
 
 #################################################################################
@@ -133,15 +139,17 @@ class Test_Qualifying_Block_Order(unittest.TestCase):
         tid = 'B5'
         otype = 'Bid'
         qty = 1
+        limit_price = 100
         MES = 1
         match_id = 0
-        QBO = dark_pool.Qualifying_Block_Order(time, tid, otype, qty, MES, match_id)
+        QBO = dark_pool.Qualifying_Block_Order(time, tid, otype, qty, limit_price, MES, match_id)
 
         # test that the initialized values are as expected
         self.assertEqual(QBO.time, time)
         self.assertEqual(QBO.trader_id, tid)
         self.assertEqual(QBO.otype, otype)
         self.assertEqual(QBO.quantity, qty)
+        self.assertEqual(QBO.limit_price, limit_price)
         self.assertEqual(QBO.MES, MES)
         self.assertEqual(QBO.match_id, match_id)
 
@@ -153,12 +161,13 @@ class Test_Qualifying_Block_Order(unittest.TestCase):
         tid = 'B5'
         otype = 'Bid'
         qty = 1
+        limit_price = 100
         MES = 1
         match_id = 0
-        QBO = dark_pool.Qualifying_Block_Order(time, tid, otype, qty, MES, match_id)
+        QBO = dark_pool.Qualifying_Block_Order(time, tid, otype, qty, limit_price, MES, match_id)
 
         # test that the string is as expected
-        self.assertEqual(QBO.__str__(), "QBO: [ID=-1 T=25.00 B5 Bid Q=1 MES=1 MID=0]")
+        self.assertEqual(QBO.__str__(), "QBO: [ID=-1 T=25.00 B5 Bid Q=1 P=100 MES=1 MID=0]")
 
 
 #################################################################################

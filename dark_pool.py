@@ -51,16 +51,17 @@ class Order:
 # a block indication created by a trader for the exchange
 class Block_Indication:
 
-    def __init__(self, time, trader_id, otype, quantity, MES):
+    def __init__(self, time, trader_id, otype, quantity, limit_price, MES):
         self.id = -1
         self.time = time
         self.trader_id = trader_id
         self.otype = otype
         self.quantity = quantity
+        self.limit_price = limit_price
         self.MES = MES
 
     def __str__(self):
-        return 'BI: [ID=%d T=%5.2f %s %s Q=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.MES)
+        return 'BI: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.limit_price, self.MES)
 
 
 #########################-Order Submission Request Class-############################
@@ -68,17 +69,18 @@ class Block_Indication:
 # a Order Submission Request (OSR) sent to a trader when their block indication is matched
 class Order_Submission_Request:
 
-    def __init__(self, time, trader_id, otype, quantity, MES, match_id):
+    def __init__(self, time, trader_id, otype, quantity, limit_price, MES, match_id):
         self.id = -1
         self.time = time
         self.trader_id = trader_id
         self.otype = otype
         self.quantity = quantity
+        self.limit_price = limit_price
         self.MES = MES
         self.match_id = match_id
 
     def __str__(self):
-        return 'OSR: [ID=%d T=%5.2f %s %s Q=%s MES=%s MID=%d]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.MES, self.match_id)
+        return 'OSR: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s MID=%d]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.limit_price, self.MES, self.match_id)
 
 
 #########################-Qualifying_Block_Order Class-###############################
@@ -86,17 +88,18 @@ class Order_Submission_Request:
 # a Qualifying Block Order (QBO) created by a trader for the exchange
 class Qualifying_Block_Order:
 
-    def __init__(self, time, trader_id, otype, quantity, MES, match_id):
+    def __init__(self, time, trader_id, otype, quantity, limit_price, MES, match_id):
         self.id = -1
         self.time = time
         self.trader_id = trader_id
         self.otype = otype
         self.quantity = quantity
+        self.limit_price = limit_price
         self.MES = MES
         self.match_id = match_id
 
     def __str__(self):
-        return 'QBO: [ID=%d T=%5.2f %s %s Q=%s MES=%s MID=%d]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.MES, self.match_id)
+        return 'QBO: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s MID=%d]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.limit_price, self.MES, self.match_id)
 
 
 ########################-Orderbook_half Class-#################
@@ -511,6 +514,7 @@ class Block_Indication_Book:
                                                 buy_side_BI.trader_id,
                                                 buy_side_BI.otype,
                                                 buy_side_BI.quantity,
+                                                buy_side_BI.limit_price,
                                                 buy_side_BI.MES,
                                                 match_id)
         buy_side_OSR.id = self.OSR_id
@@ -519,6 +523,7 @@ class Block_Indication_Book:
                                                  sell_side_BI.trader_id,
                                                  sell_side_BI.otype,
                                                  sell_side_BI.quantity,
+                                                 sell_side_BI.limit_price,
                                                  sell_side_BI.MES,
                                                  match_id)
         sell_side_OSR.id = self.OSR_id
@@ -774,7 +779,8 @@ class Trader_Giveaway(Trader):
             block_indication = Block_Indication(time, 
                                                 self.trader_id, 
                                                 self.customer_order.otype, 
-                                                self.customer_order.quantity, 
+                                                self.customer_order.quantity,
+                                                self.customer_order.price,
                                                 MES)
             return block_indication
         else:
@@ -797,7 +803,8 @@ class Trader_Giveaway(Trader):
         QOB = Qualifying_Block_Order(time, 
                                      OSR.trader_id, 
                                      OSR.otype, 
-                                     OSR.quantity, 
+                                     OSR.quantity,
+                                     OSR.limit_price,
                                      MES, 
                                      OSR.match_id)
         # return the created QOB
@@ -1062,4 +1069,4 @@ def test1():
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    test1()
+    test()

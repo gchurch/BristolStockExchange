@@ -647,6 +647,34 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(block_indication_book.matches[0]["buy_side_QBO"].__str__(), "QBO: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500 MID=0]")
         self.assertEqual(block_indication_book.matches[0]["sell_side_QBO"].__str__(), "QBO: [ID=1 T=100.00 S00 Sell Q=500 P=None MES=500 MID=0]")
 
+    def test__marketable(self):
+
+        block_indication_book = dark_pool.Block_Indication_Book()
+
+        BI1 = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 75, 500)
+        QBO1 = dark_pool.Qualifying_Block_Order(100.0, 'B00', 'Buy', 800, 75, 500, 0)
+        self.assertEqual(block_indication_book.marketable(BI1, QBO1), True)
+
+        BI2 = dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, 25, 500)
+        QBO2 = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 500, None, 500, 0)
+        self.assertEqual(block_indication_book.marketable(BI2, QBO2), True)
+
+        BI3 = dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, None, 500)
+        QBO3 = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 500, 25, 500, 0)
+        self.assertEqual(block_indication_book.marketable(BI3, QBO3), False)
+
+        BI4 = dark_pool.Block_Indication(100.0, 'S00', 'Sell', 800, None, 500)
+        QBO4 = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 501, None, 499, 0)
+        self.assertEqual(block_indication_book.marketable(BI4, QBO4), True)
+
+        BI5 = dark_pool.Block_Indication(100.0, 'S00', 'Sell', 800, None, None)
+        QBO5 = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 501, None, 499, 0)
+        self.assertEqual(block_indication_book.marketable(BI5, QBO5), False)
+
+        BI6 = dark_pool.Block_Indication(100.0, 'S00', 'Sell', 800, None, 499)
+        QBO6 = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 501, None, 500, 0)
+        self.assertEqual(block_indication_book.marketable(BI6, QBO6), False)
+
 ####################################################################################
 # testing general functions
 

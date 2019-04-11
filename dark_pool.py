@@ -368,7 +368,7 @@ class Block_Indication_Book:
         # ID to be given to the next OSR created
         self.OSR_id = 0
         # the initial composite reputational score given to each trader
-        self.initial_composite_reputational_score = 75
+        self.initial_composite_reputational_score = 100
 
     
     # add block indication
@@ -524,8 +524,8 @@ class Block_Indication_Book:
 
             # Calculate the event reputatioanl score based on the percentage difference in the quantity 
             # size of the BI and the QBO
-            quantity_percent_diff = 100 * (BI.quantity - QBO.quantity) / BI.quantity
-            event_reputational_score = 75 + quantity_percent_diff
+            quantity_percent_diff = 100 * (QBO.quantity - BI.quantity) / BI.quantity
+            event_reputational_score = 100 + 3 * quantity_percent_diff
 
             # Make sure that the score is between 50 and 100
             if event_reputational_score > 100: event_reputational_score = 100
@@ -538,31 +538,29 @@ class Block_Indication_Book:
 
         # Add this event reputational score to the dictionary containing the last 50 event reputational scores
         # for each trader
-        self.event_reputational_scores[BI.trader_id].append(event_reputational_score)
+        self.event_reputational_scores[BI.trader_id].insert(0,event_reputational_score)
 
         # return the score
         return event_reputational_score
 
     # Calculate a trader's composite reputational score.
     # The most recent event has a weighting of 50, the next most recent 49, and so on
-    # 50 + 49 + ... + 1 = 1275
     def calculate_composite_reputational_score(self, tid):
 
         # The current weighting
         w = 50
-        # The number of event reputational scores we have for this trader
-        l = len(self.event_reputational_scores[tid])
-        # The running sum
+        # The running sum of the event reputational scores multiplied by the weights
         total = 0.0
+        # The running sum of the weights
+        w_total = 0
 
-        for i in range(0, 50):
-            if i < l:
-                total += w * self.event_reputational_scores[tid][i]
-            else:
-                total += w * 75
+        for i in range(0, len(self.event_reputational_scores[tid])):
+            total += w * self.event_reputational_scores[tid][i]
+            w_total += w
             w -= 1
 
-        return total / 1275.0
+        # return the composite reputational score (int() rounds down)
+        return int(total / w_total)
         
 
     # update both traders' reputation score given this matching event
@@ -894,7 +892,7 @@ class Trader_Giveaway(Trader):
         QOB = Qualifying_Block_Order(time, 
                                      OSR.trader_id, 
                                      OSR.otype, 
-                                     OSR.quantity,
+                                     OSR.quantity - 10,
                                      OSR.limit_price,
                                      OSR.MES, 
                                      OSR.match_id)
@@ -1117,27 +1115,27 @@ def test():
     customer_orders.append(Customer_Order(25.0, 'B00', 'Buy', 100, 5,))
     customer_orders.append(Customer_Order(35.0, 'B01', 'Buy', 100, 10))
     customer_orders.append(Customer_Order(55.0, 'B02', 'Buy', 100, 3))
-    customer_orders.append(Customer_Order(75.0, 'B03', 'Buy', 100, 32))
+    customer_orders.append(Customer_Order(75.0, 'B03', 'Buy', 100, 352))
     customer_orders.append(Customer_Order(25.0, 'B04', 'Buy', 100, 5,))
     customer_orders.append(Customer_Order(35.0, 'B05', 'Buy', 100, 10))
     customer_orders.append(Customer_Order(55.0, 'B06', 'Buy', 100, 3))
-    customer_orders.append(Customer_Order(65.0, 'B07', 'Buy', 100, 52))
+    customer_orders.append(Customer_Order(65.0, 'B07', 'Buy', 100, 515))
     customer_orders.append(Customer_Order(25.0, 'B08', 'Buy', 100, 5,))
     customer_orders.append(Customer_Order(35.0, 'B09', 'Buy', 100, 10))
     customer_orders.append(Customer_Order(55.0, 'B10', 'Buy', 100, 3))
-    customer_orders.append(Customer_Order(45.0, 'B11', 'Buy', 100, 25))
+    customer_orders.append(Customer_Order(45.0, 'B11', 'Buy', 100, 284))
     customer_orders.append(Customer_Order(45.0, 'S00', 'Sell', 0, 11))
     customer_orders.append(Customer_Order(55.0, 'S01', 'Sell', 0, 4))
     customer_orders.append(Customer_Order(60.0, 'S02', 'Sell', 0, 12))
-    customer_orders.append(Customer_Order(65.0, 'S03', 'Sell', 0, 46))
+    customer_orders.append(Customer_Order(65.0, 'S03', 'Sell', 0, 445))
     customer_orders.append(Customer_Order(45.0, 'S04', 'Sell', 0, 11))
     customer_orders.append(Customer_Order(55.0, 'S05', 'Sell', 0, 4))
     customer_orders.append(Customer_Order(60.0, 'S06', 'Sell', 0, 12))
-    customer_orders.append(Customer_Order(55.0, 'S07', 'Sell', 0, 52))
+    customer_orders.append(Customer_Order(55.0, 'S07', 'Sell', 0, 533))
     customer_orders.append(Customer_Order(45.0, 'S08', 'Sell', 0, 11))
     customer_orders.append(Customer_Order(55.0, 'S09', 'Sell', 0, 4))
     customer_orders.append(Customer_Order(60.0, 'S10', 'Sell', 0, 12))
-    customer_orders.append(Customer_Order(75.0, 'S11', 'Sell', 0, 31))
+    customer_orders.append(Customer_Order(75.0, 'S11', 'Sell', 0, 311))
 
     # assign customer orders to traders
     for customer_order in customer_orders:

@@ -675,6 +675,41 @@ class Test_Exchange(unittest.TestCase):
         QBO6 = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 501, None, 500, 0)
         self.assertEqual(block_indication_book.marketable(BI6, QBO6), False)
 
+    def test__calculate_event_reputational_score(self):
+        
+        block_indication_book = dark_pool.Block_Indication_Book()
+        block_indication_book.event_reputational_scores['B00'] = []
+
+        BI1 = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 75, 500)
+        QBO1 = dark_pool.Qualifying_Block_Order(100.0, 'B00', 'Buy', 900, 75, 500, 0)
+
+        BI2 = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 500, 25, 500)
+        QBO2 = dark_pool.Qualifying_Block_Order(100.0, 'B00', 'Buy', 500, None, 500, 0)
+
+        BI3 = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 500, 25, 300)
+        QBO3 = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 490, 25, 300)
+
+        self.assertEqual(block_indication_book.calculate_event_reputational_score(BI1, QBO1), 61)
+        self.assertEqual(block_indication_book.calculate_event_reputational_score(BI2, QBO2), 100)
+        self.assertEqual(block_indication_book.calculate_event_reputational_score(BI3, QBO3), 94)
+
+    def test__calculate_composite_reputational_score(self):
+        
+        block_indication_book = dark_pool.Block_Indication_Book()
+        block_indication_book.event_reputational_scores['B00'] = [100,90,80,70,60,50,0]
+        self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 65)
+        block_indication_book.event_reputational_scores['B00'] = [0,50,60,70,80,90,100]
+        self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 63)
+
+    def test__update_composite_reputational_scores(self):
+        return
+
+    def test__delete_match(self):
+        return
+
+    def test__create_order_submission_requests(self):
+        return
+
 ####################################################################################
 # testing general functions
 

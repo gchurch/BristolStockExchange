@@ -98,7 +98,8 @@ class Test_Order_Submission_Request(unittest.TestCase):
         limit_price = 100
         MES = 1
         match_id = 0
-        OSR = dark_pool.Order_Submission_Request(time, tid, otype, qty, limit_price, MES, match_id)
+        CRP = 80
+        OSR = dark_pool.Order_Submission_Request(time, tid, otype, qty, limit_price, MES, match_id, CRP)
 
         # test that the intialized values are as expected
         self.assertEqual(OSR.time, time)
@@ -108,6 +109,7 @@ class Test_Order_Submission_Request(unittest.TestCase):
         self.assertEqual(OSR.limit_price, limit_price)
         self.assertEqual(OSR.MES, MES)
         self.assertEqual(OSR.match_id, match_id)
+        self.assertEqual(OSR.CRP, CRP)
 
     # test the __str__ function
     def test__str__(self):
@@ -120,10 +122,11 @@ class Test_Order_Submission_Request(unittest.TestCase):
         limit_price = 100
         MES = 1
         match_id = 0
-        OSR = dark_pool.Order_Submission_Request(time, tid, otype, qty, limit_price, MES, match_id)
+        CRP = 80
+        OSR = dark_pool.Order_Submission_Request(time, tid, otype, qty, limit_price, MES, match_id, CRP)
 
         # test that the string is as expected
-        self.assertEqual(OSR.__str__(), "OSR: [ID=-1 T=25.00 B5 Bid Q=1 P=100 MES=1 MID=0]")
+        self.assertEqual(OSR.__str__(), "OSR: [ID=-1 T=25.00 B5 Bid Q=1 P=100 MES=1 MID=0 CRP=80]")
 
 
 #################################################################################

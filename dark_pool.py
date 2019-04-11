@@ -69,7 +69,7 @@ class Block_Indication:
 # a Order Submission Request (OSR) sent to a trader when their block indication is matched
 class Order_Submission_Request:
 
-    def __init__(self, time, trader_id, otype, quantity, limit_price, MES, match_id):
+    def __init__(self, time, trader_id, otype, quantity, limit_price, MES, match_id, CRP):
         self.id = -1
         self.time = time
         self.trader_id = trader_id
@@ -78,9 +78,10 @@ class Order_Submission_Request:
         self.limit_price = limit_price
         self.MES = MES
         self.match_id = match_id
+        self.CRP = CRP
 
     def __str__(self):
-        return 'OSR: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s MID=%d]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.limit_price, self.MES, self.match_id)
+        return 'OSR: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s MID=%d CRP=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.limit_price, self.MES, self.match_id, self.CRP)
 
 
 #########################-Qualifying_Block_Order Class-###############################
@@ -584,8 +585,13 @@ class Block_Indication_Book:
         del(self.matches[match_id])
 
     def create_order_submission_requests(self, match_id):
+        # Get the block indications.
         buy_side_BI = self.matches[match_id]["buy_side_BI"]
         sell_side_BI = self.matches[match_id]["sell_side_BI"]
+
+        # Get the composite reputational scores.
+        buy_side_CRP = self.composite_reputational_scores[buy_side_BI.trader_id]
+        sell_side_CRP = self.composite_reputational_scores[sell_side_BI.trader_id]
         
         # create the OSRs
         buy_side_OSR = Order_Submission_Request(buy_side_BI.time,
@@ -594,7 +600,8 @@ class Block_Indication_Book:
                                                 buy_side_BI.quantity,
                                                 buy_side_BI.limit_price,
                                                 buy_side_BI.MES,
-                                                match_id)
+                                                match_id,
+                                                buy_side_CRP)
         buy_side_OSR.id = self.OSR_id
         self.OSR_id += 1
         sell_side_OSR = Order_Submission_Request(sell_side_BI.time,
@@ -603,7 +610,8 @@ class Block_Indication_Book:
                                                  sell_side_BI.quantity,
                                                  sell_side_BI.limit_price,
                                                  sell_side_BI.MES,
-                                                 match_id)
+                                                 match_id,
+                                                 sell_side_CRP)
         sell_side_OSR.id = self.OSR_id
         self.OSR_id += 1
 
@@ -888,6 +896,10 @@ class Trader_Giveaway(Trader):
     # Qualifying Block Order (QBO) in order to confirm their block indication
     # Currently we are sending a QBO with the same quantity as in the BI
     def order_submission_request(self, time, OSR):
+
+        # The composite reputational score for this trader
+        CRP = OSR.CRP
+
         # create a QOB from the received OSR
         QOB = Qualifying_Block_Order(time, 
                                      OSR.trader_id, 

@@ -501,8 +501,10 @@ class Test_Exchange(unittest.TestCase):
 
     def test__init__simple(self):
 
+        # create an exchange
         exchange = dark_pool.Exchange()
 
+        # check the initialisation
         self.assertEqual(exchange.order_book.tape, [])
         self.assertEqual(exchange.order_book.order_id, 0)
         self.assertEqual(exchange.order_book.buy_side.traders, {})
@@ -584,25 +586,66 @@ class Test_Exchange(unittest.TestCase):
 
     def test__find_matching_block_indications(self):
 
+        # create the block indication book
         block_indication_book = dark_pool.Block_Indication_Book()
 
+        # create some block indications
         block_indications = []
         block_indications.append(dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 75, 500))
         block_indications.append(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 499, 25, 450))
 
+        # add the block indications
         for block_indication in block_indications:
             block_indication_book.add_block_indication(block_indication, False)
 
+        # check that there is no match
         self.assertEqual(block_indication_book.find_matching_block_indications(50.0), None)
 
+        # add another block indication
         block_indication_book.add_block_indication(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, None, None), False)
 
+        # check that there is a match
         self.assertEqual(block_indication_book.find_matching_block_indications(50.0), 0)
 
+        # check that the match is as expected
         self.assertEqual(block_indication_book.matches[0]["buy_side_BI"].__str__(), "BI: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500]")
         self.assertEqual(block_indication_book.matches[0]["sell_side_BI"].__str__(), "BI: [ID=2 T=100.00 S00 Sell Q=500 P=None MES=None]")
         self.assertEqual(block_indication_book.matches[0]["buy_side_QBO"], None)
         self.assertEqual(block_indication_book.matches[0]["sell_side_QBO"], None)
+
+
+    def test__block_indication_match(self):
+        return
+
+    def test__add_qualifying_block_order(self):
+
+        # create the block indication book
+        block_indication_book = dark_pool.Block_Indication_Book()
+
+        # create some block indications
+        block_indications = []
+        block_indications.append(dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 75, 500))
+        block_indications.append(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, None, 500))
+
+        # add the block indications
+        for block_indication in block_indications:
+            block_indication_book.add_block_indication(block_indication, False)
+
+        # find a match between the block indications
+        block_indication_book.find_matching_block_indications(50.0)
+
+        # create some qualifying block orders
+        QBO1 = dark_pool.Qualifying_Block_Order(100.0, 'B00', 'Buy', 1024, 75, 500, 0)
+        QBO2 = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 500, None, 500, 0)
+
+        
+        self.assertEqual(block_indication_book.add_qualifying_block_order(QBO1, False), "First QBO received.")
+        self.assertEqual(block_indication_book.add_qualifying_block_order(QBO2, False), "Both QBOs have been received.")
+
+        self.assertEqual(block_indication_book.matches[0]["buy_side_BI"].__str__(), "BI: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500]")
+        self.assertEqual(block_indication_book.matches[0]["sell_side_BI"].__str__(), "BI: [ID=1 T=100.00 S00 Sell Q=500 P=None MES=500]")
+        self.assertEqual(block_indication_book.matches[0]["buy_side_QBO"].__str__(), "QBO: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500 MID=0]")
+        self.assertEqual(block_indication_book.matches[0]["sell_side_QBO"].__str__(), "QBO: [ID=1 T=100.00 S00 Sell Q=500 P=None MES=500 MID=0]")
 
 ####################################################################################
 # testing general functions
@@ -625,73 +668,6 @@ class Test_Functions(unittest.TestCase):
         # test the results of the function call are as expected
         self.assertEqual(trader_stats, {'n_sellers': 8, 'n_buyers': 8})
         self.assertEqual(len(traders), 16)
-
-#####################################################################################
-# testing Trader class
-
-#class Test_Trader(unittest.TestCase):
-#
-#    def test_init(self):
-
-#        # define argument values
-#    	ttype = 'GVWY'
-#        tid = 5
-#        balance = 0.5
-#        time = 5.0
-
-#        # create instance of the Trader class
-#        trader = dark_pool.Trader(ttype, tid, balance, time)
-
-#        # test that the initialisation performs as expected
-#        self.assertEqual(trader.ttype, ttype)
-#        self.assertEqual(trader.trader_id, tid)
-#        self.assertEqual(trader.balance, balance)
-#        self.assertEqual(trader.blotter, [])
-#        self.assertEqual(trader.orders, [])
-#        self.assertEqual(trader.n_quotes, 0)
-#        self.assertEqual(trader.willing, 1)
-#        self.assertEqual(trader.able, 1)
-#        self.assertEqual(trader.birthtime, time)
-#        self.assertEqual(trader.profitpertime, 0)
-#        self.assertEqual(trader.n_trades, 0)
-#        self.assertEqual(trader.lastquote, None)
-
-
-#    def test_add_order(self):
-
-#    	# create instance of the Trader class
-#        trader = dark_pool.Trader('GVWY', 5, 0.5, 5.0)
-
-#        # create instance of the Order class
-#        order1 = dark_pool.Order('B1', 'Bid', 1, 25.0, 10)
-
-#        # call the add_order function
-#        response = trader.add_order(order1, False)
-
-#        # test the results are as expected
-#        self.assertEqual(len(trader.orders), 1)
-#        self.assertEqual(response, "Proceed")
-
-#    def test_del_order(self):
-        
-#        # create trader
-#        trader = dark_pool.Trader('GVWY', 5, 0.5, 5.0)
-
-#        # create order
-#        order = dark_pool.Order('B1', 'Bid', 1, 25.0, 10)
-
-#        # call the add_order function
-#        trader.add_order(order, False)
-
-#        # test that the length of the traders order member variable is 1
-#        self.assertEqual(len(trader.orders), 1)
-
-#        # call the del_order function
-#        trader.del_order(order)
-
-#        # test that the length of the traders order member variable is 0
-#        self.assertEqual(len(trader.orders), 0)
-
 
 ###########################################################################
 # the code to be executed if this is the main program

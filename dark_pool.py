@@ -586,8 +586,8 @@ class Block_Indication_Book:
         del(self.matches[match_id])
 
     def create_order_submission_requests(self, match_id):
-        buy_side_BI = self.get_block_indication_match(match_id)["buy_side_BI"]
-        sell_side_BI = self.get_block_indication_match(match_id)["sell_side_BI"]
+        buy_side_BI = self.matches[match_id]["buy_side_BI"]
+        sell_side_BI = self.matches[match_id]["sell_side_BI"]
         
         # create the OSRs
         buy_side_OSR = Order_Submission_Request(buy_side_BI.time,

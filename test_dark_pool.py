@@ -491,6 +491,9 @@ class Test_Block_Indication_Book(unittest.TestCase):
         self.assertEqual(block_indication_book.buy_side.orders[0].__str__(), "BI: [ID=1 T=100.00 B01 Buy Q=900 P=112 MES=450]")
         self.assertEqual(block_indication_book.sell_side.orders[0].__str__(), "BI: [ID=2 T=100.00 S00 Sell Q=999 P=None MES=None]")
 
+    def test__tape_dump(self):
+        return
+
 ###############################################################################
 # tests for Exchange class
 
@@ -578,8 +581,31 @@ class Test_Exchange(unittest.TestCase):
         # test the tape
         self.assertEqual(exchange.order_book.tape, [{'price': 50, 'seller': 'S03', 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 6}, {'price': 50, 'seller': 'S02', 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 5}, {'price': 50, 'seller': 'S01', 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 4}, {'price': 50, 'seller': 'S02', 'time': 100.0, 'buyer': 'B02', 'type': 'Trade', 'quantity': 1}])
 
-        def test__tape_dump(self):
-            return
+
+    def test__find_matching_block_indications(self):
+
+        block_indication_book = dark_pool.Block_Indication_Book()
+
+        block_indications = []
+        block_indications.append(dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 75, 500))
+        block_indications.append(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 499, 25, 450))
+
+        for block_indication in block_indications:
+            block_indication_book.add_block_indication(block_indication, False)
+
+        self.assertEqual(block_indication_book.find_matching_block_indications(50.0), None)
+
+        block_indication_book.add_block_indication(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, None, None), False)
+
+        self.assertEqual(block_indication_book.find_matching_block_indications(50.0), 0)
+
+        self.assertEqual(block_indication_book.matches[0]["buy_side_BI"].__str__(), "BI: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500]")
+        self.assertEqual(block_indication_book.matches[0]["sell_side_BI"].__str__(), "BI: [ID=2 T=100.00 S00 Sell Q=500 P=None MES=None]")
+        self.assertEqual(block_indication_book.matches[0]["buy_side_QBO"], None)
+        self.assertEqual(block_indication_book.matches[0]["sell_side_QBO"], None)
+
+####################################################################################
+# testing general functions
 
 class Test_Functions(unittest.TestCase):
 

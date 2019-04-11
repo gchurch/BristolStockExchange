@@ -459,7 +459,7 @@ class Test_Block_Indication_Book(unittest.TestCase):
 
         # check that the block indications were added correctly
         self.assertEqual(block_indication_book.buy_side.orders[0].__str__(), "BI: [ID=0 T=100.00 B00 Buy Q=1024 P=125 MES=500]")
-        self.assertEqual(block_indication_book.sell_side.orders[0].__str__(), "BI: [ID=1 T=100.00 S00 Sell Q=999 P=1 MES=1]")
+        self.assertEqual(block_indication_book.sell_side.orders[0].__str__(), "BI: [ID=1 T=100.00 S00 Sell Q=999 P=None MES=None]")
 
         # check that reputational scores are correctly assigned
         self.assertEqual(block_indication_book.reputational_scores['B00'], block_indication_book.initial_reputational_scores_value)

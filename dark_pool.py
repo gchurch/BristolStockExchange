@@ -341,18 +341,19 @@ class Block_Indication_Book:
 
     # constructer function for the Block_Indication_Book class
     def __init__(self):
-        # the buy side contains all of the block indications to buy
+        # The buy side contains all of the block indications to buy
         self.buy_side = Orderbook_half('Buy')
-        # the sell side contains all of the block indications to sell
+        # The sell side contains all of the block indications to sell
         self.sell_side = Orderbook_half('Sell')
         # ID to be given to next block indication
         self.BI_id = 0
-        # the reputational_scores dictionary contains the reputation score for each trader TID. The score will be
-        # between 0 and 100
-        self.reputational_scores = {}
+        # The composite_reputational_scores dictionary contains the composite reputational score for each trader. 
+        self.composite_reputational_scores = {}
+        # The event_reputation_scores dictionary contains the last 50 event reputational scores for each trader.
+        self.event_reputational_scores = {}
         # the reputational score threshold (RST). All traders with a reputational score below this threshold
         # are no longer able to use the block discovery service
-        self.RST = 20
+        self.RST = 55
         # The minimum indication value (MIV) is the quantity that a block indication must be greater
         # than in order to be accepted
         self.MIV = 20
@@ -366,19 +367,20 @@ class Block_Indication_Book:
         self.tape = []
         # ID to be given to the next OSR created
         self.OSR_id = 0
-
-        self.initial_reputational_scores_value = 50
+        # the initial composite reputational score given to each trader
+        self.initial_composite_reputational_score = 75
 
     
     # add block indication
     def add_block_indication(self, BI, verbose):
 
         # if a new trader, then give it an initial reputational score
-        if self.reputational_scores.get(BI.trader_id) == None:
-            self.reputational_scores[BI.trader_id] = self.initial_reputational_scores_value
+        if self.composite_reputational_scores.get(BI.trader_id) == None:
+            self.composite_reputational_scores[BI.trader_id] = self.initial_composite_reputational_score
+            self.event_reputational_scores[BI.trader_id] = []
 
         # the quantity of the order must be greater than the MIV
-        if BI.quantity > self.MIV and self.reputational_scores.get(BI.trader_id) > self.RST:
+        if BI.quantity > self.MIV and self.composite_reputational_scores.get(BI.trader_id) > self.RST:
 
             # set the block indications' id
             BI.id = self.BI_id
@@ -477,8 +479,7 @@ class Block_Indication_Book:
     # compare a QBO with its BI to see whether it is marketable
     def marketable(self, BI, QBO):
 
-        # marketable in relation to price
-
+        # check if the QBO is marketable in relation to price
         price_marketable = False
 
         if BI.limit_price == None and QBO.limit_price == None:
@@ -495,8 +496,7 @@ class Block_Indication_Book:
                 if QBO.limit_price <= BI.limit_price:
                     price_marketable = True
 
-        # marketable in relation to the MES
-
+        # check if the QBO is marketable in relation to the MES
         MES_marketable = False
 
         if BI.MES == None and QBO.MES == None:
@@ -515,30 +515,58 @@ class Block_Indication_Book:
         # return the result
         return marketable
 
-    # calculate the reputational score of a trader for a single event
-    def calculate_event_score(self, BI, QBO):
+    # calculate the reputational score of a trader for a single event. If the QBO is not marketable, then the
+    # event reputation score is 0. If the QBO is marketable then score will be between 50 and 100
+    def calculate_event_reputational_score(self, BI, QBO):
 
-        # if the QBO's MES is greater than the BI's MES then it is not "marketable" so give score zero
-        if not self.marketable(BI, QBO):
-            return 0
+        # Check that the QBO is marketable
+        if self.marketable(BI, QBO):
 
-        # calculate the score for this event
-        score = 100
-        MES_percent_diff = 100 * (BI.MES - QBO.MES) / BI.MES
-        quantity_percent_diff = 100 * (BI.quantity - QBO.quantity) / BI.quantity
-        score = 100 - MES_percent_diff - quantity_percent_diff
-        if score > 100: score = 100
-        if score < 50: score = 50
+            # Calculate the event reputatioanl score based on the percentage difference in the quantity 
+            # size of the BI and the QBO
+            quantity_percent_diff = 100 * (BI.quantity - QBO.quantity) / BI.quantity
+            event_reputational_score = 75 + quantity_percent_diff
+
+            # Make sure that the score is between 50 and 100
+            if event_reputational_score > 100: event_reputational_score = 100
+            if event_reputational_score < 50: event_reputational_score = 50
+
+        # If the QBO is not marketable then the event reputational score is 0
+        else:
+
+            event_reputational_score = 0
+
+        # Add this event reputational score to the dictionary containing the last 50 event reputational scores
+        # for each trader
+        self.event_reputational_scores[BI.trader_id].append(event_reputational_score)
 
         # return the score
-        return score
+        return event_reputational_score
 
-    # update a traders reputational score given an event_score
-    def update_trader_reputational_score_with_event_score(self, tid, event_score):
-        self.reputational_scores[tid] = self.reputational_scores[tid] * 0.75 + event_score * 0.25
+    # Calculate a trader's composite reputational score.
+    # The most recent event has a weighting of 50, the next most recent 49, and so on
+    # 50 + 49 + ... + 1 = 1275
+    def calculate_composite_reputational_score(self, tid):
+
+        # The current weighting
+        w = 50
+        # The number of event reputational scores we have for this trader
+        l = len(self.event_reputational_scores[tid])
+        # The running sum
+        total = 0.0
+
+        for i in range(0, 50):
+            if i < l:
+                total += w * self.event_reputational_scores[tid][i]
+            else:
+                total += w * 75
+            w -= 1
+
+        return total / 1275.0
+        
 
     # update both traders' reputation score given this matching event
-    def update_reputational_scores(self, match_id):
+    def update_composite_reputational_scores(self, match_id):
 
         # the QBO and BI for the buy side
         buy_side_BI = self.matches[match_id]["buy_side_BI"]
@@ -547,12 +575,12 @@ class Block_Indication_Book:
         sell_side_QBO = self.matches[match_id]["sell_side_QBO"]
 
         # get the event reputation scores
-        buy_side_event_score = self.calculate_event_score(buy_side_BI, buy_side_QBO)
-        sell_side_event_score = self.calculate_event_score(sell_side_BI, sell_side_QBO)
+        buy_side_event_score = self.calculate_event_reputational_score(buy_side_BI, buy_side_QBO)
+        sell_side_event_score = self.calculate_event_reputational_score(sell_side_BI, sell_side_QBO)
 
         # update the traders' reputational score
-        self.update_trader_reputational_score_with_event_score(buy_side_BI.trader_id, buy_side_event_score)
-        self.update_trader_reputational_score_with_event_score(sell_side_BI.trader_id, sell_side_event_score)
+        self.composite_reputational_scores[buy_side_BI.trader_id] = self.calculate_composite_reputational_score(buy_side_BI.trader_id)
+        self.composite_reputational_scores[sell_side_BI.trader_id] = self.calculate_composite_reputational_score(sell_side_BI.trader_id)
 
     def delete_match(self, match_id):
         del(self.matches[match_id])
@@ -585,11 +613,19 @@ class Block_Indication_Book:
         return {"buy_side_OSR": buy_side_OSR, "sell_side_OSR": sell_side_OSR}
 
     # print the reputational score of all known traders
-    def print_reputational_scores(self):
+    def print_composite_reputational_scores(self):
         print("Reputational scores:")
-        for key in self.reputational_scores:
-            print("%s : %d" % (key, self.reputational_scores[key]))
+        for key in self.composite_reputational_scores:
+            print("%s : %d" % (key, self.composite_reputational_scores[key]))
         print("")
+
+    def print_event_reputational_scores(self):
+        print("Event reputational scores:")
+        for key in self.event_reputational_scores:
+            print "%s:" % key,
+            for score in self.event_reputational_scores[key]:
+                print "%d" % score,
+            print("")
 
     # print the current traders with block indications
     def print_traders(self):
@@ -690,8 +726,8 @@ class Exchange:
     def delete_block_indication_match(self, match_id):
         return self.block_indications.delete_match(match_id)
 
-    def update_reputational_scores(self, match_id):
-        return self.block_indications.update_reputational_scores(match_id)
+    def update_composite_reputational_scores(self, match_id):
+        return self.block_indications.update_composite_reputational_scores(match_id)
 
     def add_firm_orders_to_order_book(self, match_id):
         full_match = self.get_block_indication_match(match_id)
@@ -731,8 +767,11 @@ class Exchange:
     def print_block_indications(self):
         self.block_indications.print_block_indications()
 
-    def print_reputational_scores(self):
-        self.block_indications.print_reputational_scores()
+    def print_composite_reputational_scores(self):
+        self.block_indications.print_composite_reputational_scores()
+
+    def print_event_reputational_scores(self):
+        self.block_indications.print_event_reputational_scores()
 
     def print_qualifying_block_orders(self):
         self.block_indications.print_qualifying_block_orders()
@@ -1049,7 +1088,7 @@ def match_block_indications_and_add_firm_orders_to_the_order_book(exchange, pric
         exchange.add_qualifying_block_order(sell_side_qbo, False)
 
         # update the reputational scores of the traders in the match
-        exchange.update_reputational_scores(match_id)
+        exchange.update_composite_reputational_scores(match_id)
         # add the firm orders to the order book.
         exchange.add_firm_orders_to_order_book(match_id)
         # delete the block indication match
@@ -1126,7 +1165,8 @@ def test():
 
     exchange.print_matches()
 
-    exchange.print_reputational_scores()
+    exchange.print_composite_reputational_scores()
+    exchange.print_event_reputational_scores()
 
     # dump the trading data
     exchange.tape_dump('transactions_dark.csv', 'w', 'keep')

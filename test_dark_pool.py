@@ -436,7 +436,7 @@ class Test_Block_Indication_Book(unittest.TestCase):
         block_indication_book = dark_pool.Block_Indication_Book()
 
         self.assertEqual(block_indication_book.BI_id, 0)
-        self.assertEqual(block_indication_book.reputational_scores, {})
+        self.assertEqual(block_indication_book.composite_reputational_scores, {})
         self.assertEqual(block_indication_book.matches, {})
         self.assertEqual(block_indication_book.QBO_id, 0)
         self.assertEqual(block_indication_book.match_id, 0)
@@ -462,8 +462,34 @@ class Test_Block_Indication_Book(unittest.TestCase):
         self.assertEqual(block_indication_book.sell_side.orders[0].__str__(), "BI: [ID=1 T=100.00 S00 Sell Q=999 P=None MES=None]")
 
         # check that reputational scores are correctly assigned
-        self.assertEqual(block_indication_book.reputational_scores['B00'], block_indication_book.initial_reputational_scores_value)
-        self.assertEqual(block_indication_book.reputational_scores['S00'], block_indication_book.initial_reputational_scores_value)
+        self.assertEqual(block_indication_book.composite_reputational_scores['B00'], block_indication_book.initial_composite_reputational_score)
+        self.assertEqual(block_indication_book.composite_reputational_scores['S00'], block_indication_book.initial_composite_reputational_score)
+
+        # check that an entry was created in the events_reputational_scores dictionary for the traders
+        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [])
+        self.assertEqual(block_indication_book.event_reputational_scores['S00'], [])
+
+    def test__del_block_indication(self):
+
+        # create the block indication book
+        block_indication_book = dark_pool.Block_Indication_Book()
+
+        # create some block indications
+        block_indications = []
+        block_indications.append(dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 125, 500))
+        block_indications.append(dark_pool.Block_Indication(100.0, 'B01', 'Buy', 900, 112, 450))
+        block_indications.append(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 999, None, None))
+
+        # add the block indications
+        for block_indication in block_indications:
+            block_indication_book.add_block_indication(block_indication, False)
+
+        # delete a block indication
+        block_indication_book.del_block_indication(100.0, block_indications[0], False)
+
+        # check that the remaining block indications are as expected
+        self.assertEqual(block_indication_book.buy_side.orders[0].__str__(), "BI: [ID=1 T=100.00 B01 Buy Q=900 P=112 MES=450]")
+        self.assertEqual(block_indication_book.sell_side.orders[0].__str__(), "BI: [ID=2 T=100.00 S00 Sell Q=999 P=None MES=None]")
 
 ###############################################################################
 # tests for Exchange class

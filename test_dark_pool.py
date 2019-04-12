@@ -705,7 +705,29 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 63)
 
     def test__update_composite_reputational_scores(self):
-        return
+        
+        # create the block indication book
+        block_indication_book = dark_pool.Block_Indication_Book()
+
+        # create a match
+        block_indication_book.matches[0] = {}
+        block_indication_book.matches[0]["buy_side_BI"] = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 75, 500)
+        block_indication_book.matches[0]["sell_side_BI"] = dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, None, 500)
+        block_indication_book.matches[0]["buy_side_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'B00', 'Buy', 1000, 75, 500, 0)
+        block_indication_book.matches[0]["sell_side_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 495, None, 500, 0)
+
+        # create event reputational scores to traders
+        block_indication_book.event_reputational_scores['B00'] = []
+        block_indication_book.event_reputational_scores['S00'] = []
+
+        # update the composite reputational scores for the traders based on this match
+        block_indication_book.update_composite_reputational_scores(0)
+
+        # perform the tests
+        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [91])
+        self.assertEqual(block_indication_book.event_reputational_scores['S00'], [97])
+        self.assertEqual(block_indication_book.composite_reputational_scores['B00'], 91)
+        self.assertEqual(block_indication_book.composite_reputational_scores['S00'], 97)
 
     def test__delete_match(self):
         return

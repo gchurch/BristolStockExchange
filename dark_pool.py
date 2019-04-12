@@ -573,9 +573,9 @@ class Block_Indication_Book:
         buy_side_QBO = self.matches[match_id]["buy_side_QBO"]
         sell_side_QBO = self.matches[match_id]["sell_side_QBO"]
 
-        # get the event reputation scores
-        buy_side_event_score = self.calculate_event_reputational_score(buy_side_BI, buy_side_QBO)
-        sell_side_event_score = self.calculate_event_reputational_score(sell_side_BI, sell_side_QBO)
+        # calculate the event reputation scores (they will be added to list of event reputational scores for each trader)
+        self.calculate_event_reputational_score(buy_side_BI, buy_side_QBO)
+        self.calculate_event_reputational_score(sell_side_BI, sell_side_QBO)
 
         # update the traders' reputational score
         self.composite_reputational_scores[buy_side_BI.trader_id] = self.calculate_composite_reputational_score(buy_side_BI.trader_id)

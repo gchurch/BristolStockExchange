@@ -416,11 +416,13 @@ class Block_Indication_Book:
             # add the block indication to the correct order book
             if BI.otype == 'Buy':
                 response=self.buy_side.book_add(BI)
+                # If the trader already has a block indication on the sell side, then delete it
                 if self.sell_side.trader_has_order(BI.trader_id):
                     self.sell_side.book_del(BI.trader_id)
                     response = 'Overwrite'
             elif BI.otype == 'Sell':
                 response=self.sell_side.book_add(BI)
+                # If the trader already has a block indication on the buy side, then delete it
                 if self.buy_side.trader_has_order(BI.trader_id):
                     self.buy_side.book_del(BI.trader_id)
                     response = 'Overwrite'
@@ -720,21 +722,29 @@ class Exchange:
 
     # add an order to the exchange
     def add_order(self, order, verbose):
+        # Make sure that what is being added is actually an order
         if(isinstance(order, Order)):
+            # Add the order to the exchange
             [order_id, response] = self.order_book.add_order(order, verbose)
+            # If the trader already has a block indication on the exchange, then delete it
             if self.block_indication_book.trader_has_block_indication(order.trader_id):
                 self.block_indication_book.book_del(order.trader_id)
                 response = 'Overwrite'
+            # Return the order id and the response
             return [order_id, response]
         else:
             return "Not an Order."
     
     def add_block_indication(self, BI, verbose):
+        # Make sure that what is being added is actually a block indication
         if(isinstance(BI, Block_Indication)):
+            # Add the block indication to the exchange
             [BI_id, response] = self.block_indication_book.add_block_indication(BI, verbose)
+            # If the trader already has an order on the exchange, then delete it
             if self.order_book.trader_has_order(BI.trader_id):
                 self.order_book.book_del(BI.trader_id)
                 response = 'Overwrite'
+            # Return the block indication ID and the response
             return [BI_id, response]
         else:
             return "Not a Block Indication."

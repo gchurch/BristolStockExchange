@@ -1137,6 +1137,7 @@ def populate_market(traders_spec, traders, shuffle, verbose):
 
         return {'n_buyers':n_buyers, 'n_sellers':n_sellers}
 
+
 # customer_orders(): allocate orders to traders
 # parameter "os" is order schedule
 # os['timemode'] is either 'periodic', 'drip-fixed', 'drip-jitter', or 'drip-poisson'
@@ -1297,25 +1298,29 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
 
                 # add the demand side (buyers) customer orders to the list of pending orders
                 issuetimes = getissuetimes(n_buyers, os['timemode'], os['interval'], shuffle_times, True)
-                ordertype = 'Bid'
+                ordertype = 'Buy'
                 (sched, mode) = getschedmode(time, os['dem'])             
                 for t in range(n_buyers):
                         issuetime = time + issuetimes[t]
                         tname = 'B%02d' % t
                         orderprice = getorderprice(t, sched, n_buyers, mode, issuetime)
-                        order = Order(tname, ordertype, orderprice, 1, issuetime, -3.14)
-                        new_pending.append(order)
+                        # generating a random order quantity
+                        quantity = random.randint(1,10)
+                        customer_order = Customer_Order(issuetime, tname, ordertype, orderprice, quantity)
+                        new_pending.append(customer_order)
                         
                 # add the supply side (sellers) customer orders to the list of pending orders
                 issuetimes = getissuetimes(n_sellers, os['timemode'], os['interval'], shuffle_times, True)
-                ordertype = 'Ask'
+                ordertype = 'Sell'
                 (sched, mode) = getschedmode(time, os['sup'])
                 for t in range(n_sellers):
                         issuetime = time + issuetimes[t]
                         tname = 'S%02d' % t
                         orderprice = getorderprice(t, sched, n_sellers, mode, issuetime)
-                        order = Order(tname, ordertype, orderprice, 1, issuetime, -3.14)
-                        new_pending.append(order)
+                        # generating a random order quantity
+                        quantity = random.randint(1,10)
+                        customer_order = Customer_Order(issuetime, tname, ordertype, orderprice, quantity)
+                        new_pending.append(customer_order)
         # if there are some pending orders
         else:
                 # there are pending future orders: issue any whose timestamp is in the past
@@ -1337,7 +1342,6 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                                 # this order stays on the pending list
                                 new_pending.append(order)
         return [new_pending, cancellations]
-
 
 # one session in the market
 def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dumpfile, dump_each_trade):
@@ -1403,31 +1407,17 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
                 # get a limit-order quote (or None) from a randomly chosen trader
                 tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
-                order = traders[tid].getorder(time, time_left, exchange.publish_lob(time, lob_verbose))
+                order = traders[tid].getorder(time, time_left)
 
                 if verbose: print('Trader Quote: %s' % (order))
 
                 # if the randomly selected trader gives us a quote, then add it to the exchange
                 if order != None:
-                        if order.otype == 'Ask' and order.price < traders[tid].orders[0].price: sys.exit('Bad ask')
-                        if order.otype == 'Bid' and order.price > traders[tid].orders[0].price: sys.exit('Bad bid')
                         # send order to exchange
                         traders[tid].n_quotes = 1
-                        trade = exchange.process_order2(time, order, process_verbose)
-                        if trade != None:
-                                # trade occurred,
-                                # so the counterparties update order lists and blotters
-                                traders[trade['party1']].bookkeep(trade, order, bookkeep_verbose, time)
-                                traders[trade['party2']].bookkeep(trade, order, bookkeep_verbose, time)
-                                if dump_each_trade: trade_stats(sess_id, traders, dumpfile, time, exchange.publish_lob(time, lob_verbose))
+                        result = exchange.add_order(order, process_verbose)
 
-                        # traders respond to whatever happened
-                        lob = exchange.publish_lob(time, lob_verbose)
-                        for t in traders:
-                                # NB respond just updates trader's internal variables
-                                # doesn't alter the LOB, so processing each trader in
-                                # sequence (rather than random/shuffle) isn't a problem
-                                traders[t].respond(time, lob, trade, respond_verbose)
+                exchange.print_order_book()
 
                 time = time + timestep
 
@@ -1437,47 +1427,31 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
 
         # write trade_stats for this experiment NB end-of-session summary only
-        trade_stats(sess_id, traders, dumpfile, time, exchange.publish_lob(time, lob_verbose))
+        trade_stats(sess_id, traders, dumpfile, time)
 
 
-
-#############################
-
-# # Below here is where we set up and run a series of experiments
-
-# schedule_offsetfn returns time-dependent offset on schedule prices
-def schedule_offsetfn(t):
-        pi2 = math.pi * 2
-        c = math.pi * 3000
-        wavelength = t / c
-        gradient = 100 * t / (c / pi2)
-        amplitude = 100 * t / (c / pi2)
-        offset = gradient + amplitude * math.sin(wavelength * t)
-        return int(round(offset, 0))
 
 
 def experiment1():
 
     start_time = 0.0
-    end_time = 600.0
+    end_time = 20.0
     duration = end_time - start_time
 
-    range1 = (95, 95, schedule_offsetfn)
+    range1 = (75, 125)
     supply_schedule = [ {'from':start_time, 'to':end_time, 'ranges':[range1], 'stepmode':'fixed'}
                       ]
 
-    range1 = (105, 105, schedule_offsetfn)
+    range1 = (75, 125)
     demand_schedule = [ {'from':start_time, 'to':end_time, 'ranges':[range1], 'stepmode':'fixed'}
                       ]
 
     order_sched = {'sup':supply_schedule, 'dem':demand_schedule,
-                   'interval':30, 'timemode':'drip-poisson'}
+                   'interval':10, 'timemode':'drip-fixed'}
 
-    buyers_spec = [('GVWY',10),('SHVR',10),('ZIC',10),('ZIP',10)]
+    buyers_spec = [('GVWY',5)]
     sellers_spec = buyers_spec
     traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
-
-    # run a sequence of trials, one session per trial
 
     n_trials = 1
     tdump=open('avg_balance.csv','w')
@@ -1495,7 +1469,6 @@ def experiment1():
     tdump.close()
 
     sys.exit('Done Now')
-
 
 
 def match_block_indications_and_add_firm_orders_to_the_order_book(exchange, price, traders):

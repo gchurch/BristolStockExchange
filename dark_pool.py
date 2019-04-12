@@ -166,9 +166,18 @@ class Orderbook_half:
                 i -= 1
             i += 1
 
+    def trader_has_order(self, trader_id):
+        if self.traders.get(trader_id) != None:
+            return True
+        else:
+            return False
+
     # return the list of orders
     def get_orders(self):
         return self.orders
+
+    def get_traders(self):
+        return self.traders
 
     # print the current traders
     def print_traders(self):
@@ -192,6 +201,7 @@ class Orderbook:
         self.sell_side = Orderbook_half('Sell')
         self.tape = []
         self.order_id = 0  #unique ID code for each quote accepted onto the book
+        self.traders = {}
 
     # add an order to the order book
     def add_order(self, order, verbose):
@@ -203,9 +213,23 @@ class Orderbook:
         # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.id, self.order_id))
         if order.otype == 'Buy':
             response=self.buy_side.book_add(order)
+            # If the trader already has an order on the sell side then delete it
+            if self.sell_side.trader_has_order(order.trader_id):
+                self.sell_side.book_del(order.trader_id)
+                response='Overwrite'
         else:
             response=self.sell_side.book_add(order)
+            # If the trader already has an order on the buy side then delete it
+            if self.buy_side.trader_has_order(order.trader_id):
+                self.buy_side.book_del(order.trader_id)
+                response = 'Overwrite'
         return [order.id, response]
+
+    def trader_has_order(self, trader_id):
+        if self.buy_side.trader_has_order(trader_id) or self.sell_side.trader_has_order(trader_id):
+            return True
+        else:
+            return False
 
     # delete an order from the order book
     def del_order(self, time, order, verbose):
@@ -667,8 +691,12 @@ class Exchange:
 
     # constructor method
     def __init__(self):
+        # order_book will hold all of the orders made by traders
         self.order_book = Orderbook()
-        self.block_indications = Block_Indication_Book()
+        # block_indication_book will hold all of the block indications made by traders 
+        self.block_indication_book = Block_Indication_Book()
+        # the traders dictionary will contain how many orders are currently placed by each trader
+        self.traders = {}
 
     # add an order to the exchange
     def add_order(self, order, verbose):
@@ -679,13 +707,13 @@ class Exchange:
     
     def add_block_indication(self, BI, verbose):
         if(isinstance(BI, Block_Indication)):
-            return self.block_indications.add_block_indication(BI, verbose)
+            return self.block_indication_book.add_block_indication(BI, verbose)
         else:
             return "Not a Block Indication."
 
     def add_qualifying_block_order(self, QBO, verbose):
         if(isinstance(QBO, Qualifying_Block_Order)):
-            return self.block_indications.add_qualifying_block_order(QBO, verbose)
+            return self.block_indication_book.add_qualifying_block_order(QBO, verbose)
         else:
             return "Not a Qualifying Block Order."
 
@@ -711,7 +739,7 @@ class Exchange:
             match_info = self.order_book.find_matching_orders(price)
 
     def del_block_indication(self, time, order, verbose):
-        response = self.block_indications.del_block_indication(time, order, verbose)
+        response = self.block_indication_book.del_block_indication(time, order, verbose)
         return response
 
     # write the order_book's tape to the output file
@@ -720,16 +748,16 @@ class Exchange:
 
 
     def find_matching_block_indications(self, price):
-        return self.block_indications.find_matching_block_indications(price)
+        return self.block_indication_book.find_matching_block_indications(price)
 
     def get_block_indication_match(self, match_id):
-        return self.block_indications.get_block_indication_match(match_id)
+        return self.block_indication_book.get_block_indication_match(match_id)
 
     def delete_block_indication_match(self, match_id):
-        return self.block_indications.delete_match(match_id)
+        return self.block_indication_book.delete_match(match_id)
 
     def update_composite_reputational_scores(self, match_id):
-        return self.block_indications.update_composite_reputational_scores(match_id)
+        return self.block_indication_book.update_composite_reputational_scores(match_id)
 
     def add_firm_orders_to_order_book(self, match_id):
         full_match = self.get_block_indication_match(match_id)
@@ -753,7 +781,7 @@ class Exchange:
         self.add_order(sell_side_order, False)
 
     def create_order_submission_requests(self, match_id):
-        return self.block_indications.create_order_submission_requests(match_id)
+        return self.block_indication_book.create_order_submission_requests(match_id)
 
     # print the current orders in the orders dictionary
     def print_traders(self):
@@ -764,22 +792,22 @@ class Exchange:
         self.order_book.print_order_book()
 
     def print_block_indication_traders(self):
-        self.block_indications.print_block_indication_traders()
+        self.block_indication_book.print_block_indication_traders()
 
     def print_block_indications(self):
-        self.block_indications.print_block_indications()
+        self.block_indication_book.print_block_indications()
 
     def print_composite_reputational_scores(self):
-        self.block_indications.print_composite_reputational_scores()
+        self.block_indication_book.print_composite_reputational_scores()
 
     def print_event_reputational_scores(self):
-        self.block_indications.print_event_reputational_scores()
+        self.block_indication_book.print_event_reputational_scores()
 
     def print_qualifying_block_orders(self):
-        self.block_indications.print_qualifying_block_orders()
+        self.block_indication_book.print_qualifying_block_orders()
 
     def print_matches(self):
-        self.block_indications.print_matches()
+        self.block_indication_book.print_matches()
 
 
 ##################--Traders below here--#############
@@ -1193,24 +1221,23 @@ def test1():
     orders.append(Order(55.0, 'S01', 'Sell', 4, 43, 2))
     orders.append(Order(65.0, 'S02', 'Sell', 6, 48, None))
     orders.append(Order(55.0, 'S03', 'Sell', 6, None, 4))
+    orders.append(Order(75.0, 'B00', 'Sell', 8, None, None))
+    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
 
     # add the orders to the exchange
     for order in orders:
-        exchange.add_order(order, False)
+        print(exchange.add_order(order, False))
 
     exchange.print_order_book()
 
-    exchange.uncross(None, 100.0, 50)
 
-    exchange.print_order_book()
+    #exchange.uncross(None, 100.0, 50)
 
-    
-    print(exchange.order_book.tape)
 
     # dump the trading data
-    exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
+    #exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
 
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    test()
+    test1()

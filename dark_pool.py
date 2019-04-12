@@ -117,8 +117,6 @@ class Orderbook_half:
         self.traders = {}
         # list of orders received, sorted by size and then time
         self.orders = []
-        # number of current orders
-        self.num_orders = 0
 
     # find the position to insert the order into the order_book list such that the order_book list maintains
     # it's ordering of (size,time)
@@ -147,9 +145,7 @@ class Orderbook_half:
         # Note. changing the order in the order_book list will also change the order in the orders dictonary
         
         # add the trader to the traders dictionary
-        num_orders = self.num_orders
         self.traders[order.trader_id] = 1
-        self.num_orders = len(self.traders)
 
         # add the order to order_book list
         position = self.find_order_position(order)
@@ -158,17 +154,17 @@ class Orderbook_half:
         # return whether this was an addition or an overwrite
         return response
 
-    # delete the order by the trader with the given tid
+    # delete all orders made by the trader with the given tid
     def book_del(self, tid):
         del(self.traders[tid])
         
         # calling pop changes the length of order_book so we have to break afterwards
-        for i in range(0, len(self.orders)):
+        i = 0
+        while i < len(self.orders):
             if self.orders[i].trader_id == tid:
                 self.orders.pop(i)
-                break
-
-        self.num_orders = len(self.orders)
+                i -= 1
+            i += 1
 
     # return the list of orders
     def get_orders(self):
@@ -357,7 +353,7 @@ class Block_Indication_Book:
         self.RST = 55
         # The minimum indication value (MIV) is the quantity that a block indication must be greater
         # than in order to be accepted
-        self.MIV = 20
+        self.MIV = 100
         # A dictionary to hold matched BIs and the corresponding QBOs
         self.matches = {}
         # ID to be given to next Qualifying Block Order received

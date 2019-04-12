@@ -156,15 +156,16 @@ class Orderbook_half:
 
     # delete all orders made by the trader with the given tid
     def book_del(self, tid):
-        del(self.traders[tid])
+        if self.traders.get(tid) != None:
+            del(self.traders[tid])
         
-        # calling pop changes the length of order_book so we have to break afterwards
-        i = 0
-        while i < len(self.orders):
-            if self.orders[i].trader_id == tid:
-                self.orders.pop(i)
-                i -= 1
-            i += 1
+            # calling pop changes the length of order_book so we have to break afterwards
+            i = 0
+            while i < len(self.orders):
+                if self.orders[i].trader_id == tid:
+                    self.orders.pop(i)
+                    i -= 1
+                i += 1
 
     def trader_has_order(self, trader_id):
         if self.traders.get(trader_id) != None:
@@ -230,6 +231,10 @@ class Orderbook:
             return True
         else:
             return False
+
+    def book_del(self, trader_id):
+        self.buy_side.book_del(trader_id)
+        self.sell_side.book_del(trader_id)
 
     # delete an order from the order book
     def del_order(self, time, order, verbose):
@@ -429,6 +434,10 @@ class Block_Indication_Book:
     def trader_has_block_indication(self, trader_id):
         if self.buy_side.trader_has_order(trader_id) or self.sell_side.trader_has_order(trader_id):
             return True
+
+    def book_del(self, trader_id):
+        self.buy_side.book_del(trader_id)
+        self.sell_side.book_del(trader_id)
 
     # delete block indication
     def del_block_indication(self, time, BI, verbose):
@@ -712,13 +721,21 @@ class Exchange:
     # add an order to the exchange
     def add_order(self, order, verbose):
         if(isinstance(order, Order)):
-            return self.order_book.add_order(order, verbose)
+            [order_id, response] = self.order_book.add_order(order, verbose)
+            if self.block_indication_book.trader_has_block_indication(order.trader_id):
+                self.block_indication_book.book_del(order.trader_id)
+                response = 'Overwrite'
+            return [order_id, response]
         else:
             return "Not an Order."
     
     def add_block_indication(self, BI, verbose):
         if(isinstance(BI, Block_Indication)):
-            return self.block_indication_book.add_block_indication(BI, verbose)
+            [BI_id, response] = self.block_indication_book.add_block_indication(BI, verbose)
+            if self.order_book.trader_has_order(BI.trader_id):
+                self.order_book.book_del(BI.trader_id)
+                response = 'Overwrite'
+            return [BI_id, response]
         else:
             return "Not a Block Indication."
 
@@ -1236,8 +1253,8 @@ def test1():
     orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
 
     # add the orders to the exchange
-    #for order in orders:
-    #    print(exchange.add_order(order, False))
+    for order in orders:
+        print(exchange.add_order(order, False))
 
     block_indications = []
     block_indications.append(Block_Indication(35.0, 'B00', 'Buy', 500, None, None))
@@ -1254,13 +1271,7 @@ def test1():
         print(exchange.add_block_indication(block_indication, False))
 
     exchange.print_block_indications()
-
-
-    #exchange.uncross(None, 100.0, 50)
-
-
-    # dump the trading data
-    #exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
+    exchange.print_order_book()
 
 
 # the main function is called if BSE.py is run as the main program

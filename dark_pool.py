@@ -217,7 +217,7 @@ class Orderbook:
             if self.sell_side.trader_has_order(order.trader_id):
                 self.sell_side.book_del(order.trader_id)
                 response='Overwrite'
-        else:
+        elif order.otype == 'Sell':
             response=self.sell_side.book_add(order)
             # If the trader already has an order on the buy side then delete it
             if self.buy_side.trader_has_order(order.trader_id):
@@ -390,6 +390,7 @@ class Block_Indication_Book:
         self.OSR_id = 0
         # the initial composite reputational score given to each trader
         self.initial_composite_reputational_score = 100
+        # the number of block indications placed per trader
 
     
     # add block indication
@@ -410,14 +411,24 @@ class Block_Indication_Book:
             # add the block indication to the correct order book
             if BI.otype == 'Buy':
                 response=self.buy_side.book_add(BI)
-            else:
+                if self.sell_side.trader_has_order(BI.trader_id):
+                    self.sell_side.book_del(BI.trader_id)
+                    response = 'Overwrite'
+            elif BI.otype == 'Sell':
                 response=self.sell_side.book_add(BI)
+                if self.buy_side.trader_has_order(BI.trader_id):
+                    self.buy_side.book_del(BI.trader_id)
+                    response = 'Overwrite'
 
             # return the order id and the response
             return [BI.id, response]
 
         # if the quantity of the order was not greater than the MIV then return a message
         return "Block Indication Rejected"
+
+    def trader_has_block_indication(self, trader_id):
+        if self.buy_side.trader_has_order(trader_id) or self.sell_side.trader_has_order(trader_id):
+            return True
 
     # delete block indication
     def del_block_indication(self, time, BI, verbose):
@@ -866,7 +877,7 @@ class Trader:
         transactionprice = trade['price']
         if self.customer_order.otype == 'Buy':
             profit = (self.customer_order.price - transactionprice) * trade['quantity']
-        else:
+        elif self.customer_order.otype == 'Sell':
             profit = (transactionprice - self.customer_order.price) * trade['quantity']
         self.balance += profit
         self.n_trades += 1
@@ -1225,10 +1236,24 @@ def test1():
     orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
 
     # add the orders to the exchange
-    for order in orders:
-        print(exchange.add_order(order, False))
+    #for order in orders:
+    #    print(exchange.add_order(order, False))
 
-    exchange.print_order_book()
+    block_indications = []
+    block_indications.append(Block_Indication(35.0, 'B00', 'Buy', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'B01', 'Buy', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'B02', 'Buy', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'S00', 'Sell', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'S01', 'Sell', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'S02', 'Sell', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'B00', 'Sell', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'B00', 'Buy', 500, None, None))
+
+
+    for block_indication in block_indications:
+        print(exchange.add_block_indication(block_indication, False))
+
+    exchange.print_block_indications()
 
 
     #exchange.uncross(None, 100.0, 50)

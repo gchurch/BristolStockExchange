@@ -932,7 +932,7 @@ class Trader_Giveaway(Trader):
     def getorder(self, time):
         if self.customer_order == None:
             order = None
-        elif self.customer_order.quantity >= 20:
+        elif self.customer_order.quantity >= 10000:
             # the Minimum Execution Size (MES) of the block indication
             MES = 20
             # return a block indication
@@ -1305,7 +1305,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         tname = 'B%02d' % t
                         orderprice = getorderprice(t, sched, n_buyers, mode, issuetime)
                         # generating a random order quantity
-                        quantity = random.randint(1,10)
+                        quantity = random.randint(1,1000)
                         customer_order = Customer_Order(issuetime, tname, ordertype, orderprice, quantity)
                         new_pending.append(customer_order)
                         
@@ -1318,7 +1318,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         tname = 'S%02d' % t
                         orderprice = getorderprice(t, sched, n_sellers, mode, issuetime)
                         # generating a random order quantity
-                        quantity = random.randint(1,10)
+                        quantity = random.randint(1,1000)
                         customer_order = Customer_Order(issuetime, tname, ordertype, orderprice, quantity)
                         new_pending.append(customer_order)
         # if there are some pending orders
@@ -1329,7 +1329,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         if order.time < time:
                                 # this order should have been issued by now
                                 # issue it to the trader
-                                tname = order.tid
+                                tname = order.trader_id
                                 response = traders[tname].add_order(order, verbose)
                                 if verbose: print('Customer order: %s %s' % (response, order) )
                                 # if issuing the order causes the trader to cancel their current order then add
@@ -1407,7 +1407,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
                 # get a limit-order quote (or None) from a randomly chosen trader
                 tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
-                order = traders[tid].getorder(time, time_left)
+                order = traders[tid].getorder(time)
 
                 if verbose: print('Trader Quote: %s' % (order))
 
@@ -1416,14 +1416,16 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
                         # send order to exchange
                         traders[tid].n_quotes = 1
                         result = exchange.add_order(order, process_verbose)
+                        exchange.uncross(traders, time, 50)
 
                 exchange.print_order_book()
 
                 time = time + timestep
 
 
+        #exchange.order_book.print_tape()
         # end of an experiment -- dump the tape
-        exchange.tape_dump('transactions.csv', 'w', 'keep')
+        exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
 
 
         # write trade_stats for this experiment NB end-of-session summary only
@@ -1438,11 +1440,11 @@ def experiment1():
     end_time = 20.0
     duration = end_time - start_time
 
-    range1 = (75, 125)
+    range1 = (40, 70)
     supply_schedule = [ {'from':start_time, 'to':end_time, 'ranges':[range1], 'stepmode':'fixed'}
                       ]
 
-    range1 = (75, 125)
+    range1 = (30, 60)
     demand_schedule = [ {'from':start_time, 'to':end_time, 'ranges':[range1], 'stepmode':'fixed'}
                       ]
 
@@ -1619,4 +1621,4 @@ def test1():
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    test()
+    experiment1()

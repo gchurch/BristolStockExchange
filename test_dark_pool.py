@@ -733,7 +733,22 @@ class Test_Exchange(unittest.TestCase):
         return
 
     def test__create_order_submission_requests(self):
-        return
+        
+        # create the block indication book
+        block_indication_book = dark_pool.Block_Indication_Book()
+
+        # create a match
+        block_indication_book.matches[0] = {}
+        block_indication_book.matches[0]["buy_side_BI"] = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 75, 500)
+        block_indication_book.matches[0]["sell_side_BI"] = dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, None, 500)
+        block_indication_book.matches[0]["buy_side_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'B00', 'Buy', 1000, 75, 500, 0)
+        block_indication_book.matches[0]["sell_side_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 495, None, 500, 0)
+
+        block_indication_book.composite_reputational_scores['B00'] = 100
+        block_indication_book.composite_reputational_scores['S00'] = 100
+
+        self.assertEqual(block_indication_book.create_order_submission_requests(0)["buy_side_OSR"].__str__(), "OSR: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500 MID=0 CRP=100]")
+        self.assertEqual(block_indication_book.create_order_submission_requests(0)["sell_side_OSR"].__str__(), "OSR: [ID=3 T=100.00 S00 Sell Q=500 P=None MES=500 MID=0 CRP=100]")
 
 ####################################################################################
 # testing general functions

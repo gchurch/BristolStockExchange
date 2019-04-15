@@ -742,7 +742,7 @@ class Exchange:
         if(isinstance(BI, Block_Indication)):
             # Add the block indication to the exchange
             [BI_id, response] = self.block_indication_book.add_block_indication(BI, verbose)
-            # If the trader already has an order on the exchange, then delete it
+            # If the trader already has an order in the order book, then delete it
             if response != "Block Indication Rejected" and self.order_book.trader_has_order(BI.trader_id):
                 self.order_book.book_del(BI.trader_id)
                 response = 'Overwrite'

@@ -580,13 +580,14 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(exchange.order_book.buy_side.orders[2].__str__(), "Order: [ID=2 T=55.00 B02 Buy Q=2 P=53 MES=1]")
 
         # test the tape
-        self.assertEqual(exchange.order_book.tape, [{'price': 50, 'seller': 'S03', 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 6}, {'price': 50, 'seller': 'S02', 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 5}, {'price': 50, 'seller': 'S01', 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 4}, {'price': 50, 'seller': 'S02', 'time': 100.0, 'buyer': 'B02', 'type': 'Trade', 'quantity': 1}])
+        self.assertEqual(exchange.order_book.tape, [{'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 6}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 5}, {'price': 50.0, 'seller': 'S01', 'BDS': False, 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 4}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B02', 'type': 'Trade', 'quantity': 1}])
 
 
     def test__find_matching_block_indications(self):
 
         # create the block indication book
         block_indication_book = dark_pool.Block_Indication_Book()
+        block_indication_book.MIV = 450
 
         # create some block indications
         block_indications = []
@@ -602,8 +603,6 @@ class Test_Exchange(unittest.TestCase):
 
         # add another block indication
         block_indication_book.add_block_indication(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, None, None), False)
-
-        block_indication_book.print_block_indications()
 
         # check that there is a match
         self.assertEqual(block_indication_book.find_matching_block_indications(50.0), 0)
@@ -622,6 +621,7 @@ class Test_Exchange(unittest.TestCase):
 
         # create the block indication book
         block_indication_book = dark_pool.Block_Indication_Book()
+        block_indication_book.MIV = 450
 
         # create some block indications
         block_indications = []

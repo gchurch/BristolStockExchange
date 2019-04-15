@@ -40,6 +40,7 @@ class Order:
         self.quantity = quantity        # quantity
         self.limit_price = limit_price  # limit price, None means no limit price
         self.MES = MES                  # minimum execution size, None means no MES
+        self.BDS = False
 
     def __str__(self):
         return 'Order: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.limit_price, self.MES)
@@ -306,12 +307,13 @@ class Orderbook:
             self.sell_side.book_add(trade_info["sell_order"])
 
         # create a record of the transaction to the tape
-        transaction_record = {   'type': 'Trade',
-                    'time': time,
-                    'price': trade_info["price"],
-                    'quantity': trade_info["trade_size"],
-                    'buyer': trade_info["buy_order"].trader_id,
-                    'seller': trade_info["sell_order"].trader_id}
+        transaction_record = {  'type': 'Trade',
+                                'time': time,
+                                'price': trade_info["price"],
+                                'quantity': trade_info["trade_size"],
+                                'buyer': trade_info["buy_order"].trader_id,
+                                'seller': trade_info["sell_order"].trader_id,
+                                'BDS': trade_info["buy_order"].BDS and trade_info["sell_order"].BDS}
 
         # add a record to the tape
         self.tape.append(transaction_record)
@@ -323,11 +325,11 @@ class Orderbook:
     def tape_dump(self, fname, fmode, tmode):
         dumpfile = open(fname, fmode)
         # write the title for each column
-        dumpfile.write('time, buyer, seller, quantity, price\n')
+        dumpfile.write('time, buyer, seller, quantity, price, BDS\n')
         # write the information for each trade
         for tapeitem in self.tape:
             if tapeitem['type'] == 'Trade' :
-                dumpfile.write('%s, %s, %s, %s, %s\n' % (tapeitem['time'], tapeitem['buyer'], tapeitem['seller'], tapeitem['quantity'], tapeitem['price']))
+                dumpfile.write('%s, %s, %s, %s, %s, %s\n' % (tapeitem['time'], tapeitem['buyer'], tapeitem['seller'], tapeitem['quantity'], tapeitem['price'], tapeitem['BDS']))
         dumpfile.close()
         if tmode == 'wipe':
             self.tape = []
@@ -379,7 +381,7 @@ class Block_Indication_Book:
         self.RST = 55
         # The minimum indication value (MIV) is the quantity that a block indication must be greater
         # than in order to be accepted
-        self.MIV = 100
+        self.MIV = 500
         # A dictionary to hold matched BIs and the corresponding QBOs
         self.matches = {}
         # ID to be given to next Qualifying Block Order received
@@ -428,7 +430,7 @@ class Block_Indication_Book:
             return [BI.id, response]
 
         # if the quantity of the order was not greater than the MIV then return a message
-        return "Block Indication Rejected"
+        return [-1, "Block Indication Rejected"]
 
     def trader_has_block_indication(self, trader_id):
         if self.buy_side.trader_has_order(trader_id) or self.sell_side.trader_has_order(trader_id):
@@ -600,7 +602,10 @@ class Block_Indication_Book:
             w -= 1
 
         # return the composite reputational score (int() rounds down)
-        return int(total / w_total)
+        if w_total == 0:
+            return total
+        else:
+            return int(total / w_total)
         
 
     # update both traders' reputation score given this matching event
@@ -730,7 +735,7 @@ class Exchange:
             # Return the order id and the response
             return [order_id, response]
         else:
-            return "Not an Order."
+            return [-1, "Not an Order."]
     
     def add_block_indication(self, BI, verbose):
         # Make sure that what is being added is actually a block indication
@@ -738,13 +743,13 @@ class Exchange:
             # Add the block indication to the exchange
             [BI_id, response] = self.block_indication_book.add_block_indication(BI, verbose)
             # If the trader already has an order on the exchange, then delete it
-            if self.order_book.trader_has_order(BI.trader_id):
+            if response != "Block Indication Rejected" and self.order_book.trader_has_order(BI.trader_id):
                 self.order_book.book_del(BI.trader_id)
                 response = 'Overwrite'
             # Return the block indication ID and the response
             return [BI_id, response]
         else:
-            return "Not a Block Indication."
+            return [-1, "Not a Block Indication."]
 
     def add_qualifying_block_order(self, QBO, verbose):
         if(isinstance(QBO, Qualifying_Block_Order)):
@@ -758,7 +763,7 @@ class Exchange:
         return self.order_book.del_order(time, order, verbose)
 
     # this function executes the uncross event, trades occur at the given time at the given price
-    # keep making trades out of matching order until no more matches can be found
+    # keep making trades out of matching orders until no more matches can be found
     def uncross(self, time, price):
 
         # a list of all the trades made in the uncross function call
@@ -817,6 +822,8 @@ class Exchange:
                                 sell_side_QBO.quantity,
                                 None,
                                 sell_side_QBO.MES)
+        buy_side_order.BDS = True
+        sell_side_order.BDS = True
         self.add_order(buy_side_order, False)
         self.add_order(sell_side_order, False)
 
@@ -938,15 +945,16 @@ class Trader:
 class Trader_Giveaway(Trader):
 
     def getorder(self, time):
+        BI_threshold = 700
         if self.customer_order == None:
             order = None
-        elif self.customer_order.quantity >= 10000:
+        elif self.customer_order.quantity - self.quantity_traded >= BI_threshold:
             # create a block indication
-            MES = 20
+            MES = 700
             block_indication = Block_Indication(time, 
                                                 self.trader_id, 
                                                 self.customer_order.otype, 
-                                                self.customer_order.quantity,
+                                                self.customer_order.quantity - self.quantity_traded,
                                                 self.customer_order.price,
                                                 MES)
             self.lastquote = block_indication
@@ -975,7 +983,7 @@ class Trader_Giveaway(Trader):
         QOB = Qualifying_Block_Order(time, 
                                      OSR.trader_id, 
                                      OSR.otype, 
-                                     OSR.quantity - 10,
+                                     OSR.quantity,
                                      OSR.limit_price,
                                      OSR.MES, 
                                      OSR.match_id)
@@ -1423,8 +1431,12 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
                 # if the randomly selected trader gives us a quote, then add it to the exchange
                 if order != None:
                         # send order to exchange
+                        if isinstance(order, Order):
+                            result = exchange.add_order(order, process_verbose)
+                        elif isinstance(order, Block_Indication):
+                            result = exchange.add_block_indication(order, process_verbose)
+                            match_block_indications_and_add_firm_orders_to_the_order_book(exchange, 50, traders)
                         traders[tid].n_quotes = 1
-                        result = exchange.add_order(order, process_verbose)
                         trades = exchange.uncross(time, 50)
                         for trade in trades:
                             # trade occurred,
@@ -1436,6 +1448,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
         # print the final order book
         exchange.print_order_book()
+        exchange.print_block_indications()
 
         # end of an experiment -- dump the tape
         exchange.tape_dump('transactions_dark.csv', 'w', 'keep')

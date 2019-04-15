@@ -419,7 +419,7 @@ class Test_Orderbook(unittest.TestCase):
         match_info = orderbook.find_matching_orders(50)
         orderbook.perform_trade(100.0, match_info)
 
-        self.assertEqual(orderbook.tape, [{'price': 50, 'seller': 'S00', 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 8}])
+        self.assertEqual(orderbook.tape, [{'price': 50, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 8}])
         self.assertEqual(len(orderbook.buy_side.orders), 1)
         self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order: [ID=0 T=25.00 B00 Buy Q=5 P=56 MES=3]")
         self.assertEqual(len(orderbook.sell_side.orders), 1)
@@ -602,6 +602,8 @@ class Test_Exchange(unittest.TestCase):
 
         # add another block indication
         block_indication_book.add_block_indication(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, None, None), False)
+
+        block_indication_book.print_block_indications()
 
         # check that there is a match
         self.assertEqual(block_indication_book.find_matching_block_indications(50.0), 0)

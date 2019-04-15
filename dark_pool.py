@@ -37,13 +37,14 @@ class Order:
         self.time = time                # timestamp
         self.trader_id = trader_id      # trader i.d.
         self.otype = otype              # order type
-        self.quantity = quantity        # quantity
+        self.quantity = quantity        # the quantity remaining on the order
         self.limit_price = limit_price  # limit price, None means no limit price
         self.MES = MES                  # minimum execution size, None means no MES
         self.BDS = False
+        self.quantity_remaining = quantity # the remaining on this order
 
     def __str__(self):
-        return 'Order: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.limit_price, self.MES)
+        return 'Order: [ID=%d T=%5.2f %s %s Q=%s QR=%s P=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.quantity_remaining, self.limit_price, self.MES)
 
 
 ######################-Block_Indication Class-#######################################
@@ -120,7 +121,7 @@ class Orderbook_half:
         self.orders = []
 
     # find the position to insert the order into the order_book list such that the order_book list maintains
-    # it's ordering of (size,time)
+    # it's ordering of (size,time) (where size is the original quantity of the order)
     def find_order_position(self, order):
         quantity = order.quantity
         time = order.time
@@ -253,6 +254,52 @@ class Orderbook:
             # neither bid nor ask?
             sys.exit('bad order type in del_quote()')
 
+    def check_price_match(self, buy_side, sell_side, price):
+
+        if buy_side.limit_price == None and sell_side.limit_price == None:
+            return True
+
+        elif buy_side.limit_price != None and sell_side.limit_price == None:
+            if buy_side.limit_price >= price:
+                return True
+
+        elif buy_side.limit_price == None and sell_side.limit_price != None:
+            if sell_side.limit_price <= price:
+                return True
+
+        elif buy_side.limit_price != None and sell_side.limit_price != None:
+            if buy_side.limit_price >= price and sell_side.limit_price <= price:
+                return True
+
+        return False
+
+    def check_size_match(self, buy_side, sell_side):
+
+        if buy_side.MES == None and sell_side.MES == None:
+            return True
+
+        elif buy_side.MES != None and sell_side.MES == None:
+            if sell_side.quantity_remaining >= buy_side.MES:
+                return True
+
+        elif buy_side.MES == None and sell_side.MES != None:
+            if buy_side.quantity_remaining >= sell_side.MES:
+                return True
+
+        elif buy_side.MES != None and sell_side.MES != None:
+            if buy_side.quantity_remaining >= sell_side.MES and sell_side.quantity_remaining >= buy_side.MES:
+                return True
+
+        return False
+
+    def check_match(self, buy_side, sell_side, price):
+        # check that both the order size and the price match
+        if self.check_price_match(buy_side, sell_side, price) and self.check_size_match(buy_side, sell_side):
+            return True
+        else:
+            return False
+
+
 
     # match two orders and perform the trade
     def find_matching_orders(self, price):
@@ -265,12 +312,12 @@ class Orderbook:
         for buy_order in buy_orders:
             for sell_order in sell_orders:
                 # find two matching orders in the order_book list
-                if check_match(buy_order, sell_order, price):
+                if self.check_match(buy_order, sell_order, price):
                     # calculate the trade size
-                    if buy_order.quantity >= sell_order.quantity:
-                        trade_size = sell_order.quantity
+                    if buy_order.quantity_remaining >= sell_order.quantity_remaining:
+                        trade_size = sell_order.quantity_remaining
                     else:
-                        trade_size = buy_order.quantity
+                        trade_size = buy_order.quantity_remaining
                     # return a dictionary containing the trade info
                     # Note. Here we are returning references to the orders, so changing the returned orders will
                     # change the orders in the order_book
@@ -282,27 +329,27 @@ class Orderbook:
     # given a buy order, a sell order and a trade size, perform the trade
     def perform_trade(self, time, trade_info):
 
-        # subtract the trade quantity from the orders' quantity
-        trade_info["buy_order"].quantity -= trade_info["trade_size"]
-        trade_info["sell_order"].quantity -= trade_info["trade_size"]
+        # subtract the trade quantity from the orders' quantity remaining
+        trade_info["buy_order"].quantity_remaining -= trade_info["trade_size"]
+        trade_info["sell_order"].quantity_remaining -= trade_info["trade_size"]
 
         # remove orders from the order_book
         self.buy_side.book_del(trade_info["buy_order"].trader_id)
         self.sell_side.book_del(trade_info["sell_order"].trader_id)
 
         # re-add the the residual
-        if trade_info["buy_order"].quantity > 0:
+        if trade_info["buy_order"].quantity_remaining > 0:
             # update the MES if necessary
-            if trade_info["buy_order"].MES > trade_info["buy_order"].quantity:
-                trade_info["buy_order"].MES = trade_info["buy_order"].quantity
+            if trade_info["buy_order"].MES > trade_info["buy_order"].quantity_remaining:
+                trade_info["buy_order"].MES = trade_info["buy_order"].quantity_remaining
             # add the order to the order_book list
             self.buy_side.book_add(trade_info["buy_order"])
 
         # re-add the residual
-        if trade_info["sell_order"].quantity > 0:
+        if trade_info["sell_order"].quantity_remaining > 0:
             # update the MES if necessary
-            if trade_info["sell_order"].MES > trade_info["sell_order"].quantity:
-                trade_info["sell_order"].MES = trade_info["sell_order"].quantity
+            if trade_info["sell_order"].MES > trade_info["sell_order"].quantity_remaining:
+                trade_info["sell_order"].MES = trade_info["sell_order"].quantity_remaining
             # add the order to the order_book list
             self.sell_side.book_add(trade_info["sell_order"])
 
@@ -818,13 +865,13 @@ class Exchange:
                                buy_side_QBO.trader_id,
                                buy_side_QBO.otype,
                                buy_side_QBO.quantity,
-                               None,
+                               buy_side_QBO.limit_price,
                                buy_side_QBO.MES)
         sell_side_order = Order(sell_side_QBO.time,
                                 sell_side_QBO.trader_id,
                                 sell_side_QBO.otype,
                                 sell_side_QBO.quantity,
-                                None,
+                                sell_side_QBO.limit_price,
                                 sell_side_QBO.MES)
         buy_side_order.BDS = True
         sell_side_order.BDS = True
@@ -955,9 +1002,9 @@ class Trader_Giveaway(Trader):
         elif self.customer_order.quantity - self.quantity_traded >= BI_threshold:
             # create a block indication
             MES = 700
-            block_indication = Block_Indication(time, 
-                                                self.trader_id, 
-                                                self.customer_order.otype, 
+            block_indication = Block_Indication(time,
+                                                self.trader_id,
+                                                self.customer_order.otype,
                                                 self.customer_order.quantity - self.quantity_traded,
                                                 self.customer_order.price,
                                                 MES)
@@ -1460,6 +1507,101 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
         # write trade_stats for this experiment NB end-of-session summary only
         trade_stats(sess_id, traders, dumpfile, time)
 
+# one session in the market
+def market_session1(sess_id, starttime, endtime, trader_spec, order_schedule, dumpfile, dump_each_trade):
+
+        # variables which dictate what information is printed to the output
+        verbose = False
+        traders_verbose = False
+        orders_verbose = False
+        lob_verbose = False
+        process_verbose = False
+        respond_verbose = False
+        bookkeep_verbose = False
+
+
+        # initialise the exchange
+        exchange = Exchange()
+
+
+        # create a bunch of traders
+        traders = {}
+        trader_stats = populate_market(trader_spec, traders, True, traders_verbose)
+
+
+        # timestep set so that can process all traders in one second
+        # NB minimum interarrival time of customer orders may be much less than this!! 
+        timestep = 1.0 / float(trader_stats['n_buyers'] + trader_stats['n_sellers'])
+        
+        duration = float(endtime - starttime)
+
+        last_update = -1.0
+
+        time = starttime
+
+        # this list contains all the pending customer orders that are yet to happen
+        pending_cust_orders = []
+
+        print('\n%s;  ' % (sess_id))
+
+        while time < endtime:
+
+                # how much time left, as a percentage?
+                time_left = (endtime - time) / duration
+
+                if verbose: print('%s; t=%08.2f (%4.1f/100) ' % (sess_id, time, time_left*100))
+
+                trade = None
+
+                # update the pending customer orders list by generating new orders if none remain and issue 
+                # any customer orders that were scheduled in the past. Note these are customer orders being
+                # issued to traders, quotes will not be put onto the exchange yet
+                [pending_cust_orders, kills] = customer_orders(time, last_update, traders, trader_stats,
+                                                 order_schedule, pending_cust_orders, orders_verbose)
+
+                # if any newly-issued customer orders mean quotes on the LOB need to be cancelled, kill them
+                if len(kills) > 0 :
+                        if verbose : print('Kills: %s' % (kills))
+                        for kill in kills :
+                                if verbose : print('lastquote=%s' % traders[kill].lastquote)
+                                if traders[kill].lastquote != None :
+                                        if verbose : print('Killing order %s' % (str(traders[kill].lastquote)))
+                                        exchange.del_order(time, traders[kill].lastquote, verbose)
+
+
+                # get a limit-order quote (or None) from a randomly chosen trader
+                tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
+                order = traders[tid].getorder(time)
+
+                if verbose: print('Trader Quote: %s' % (order))
+
+                # if the randomly selected trader gives us a quote, then add it to the exchange
+                if order != None:
+                        # send order to exchange
+                        if isinstance(order, Order):
+                            result = exchange.add_order(order, process_verbose)
+                        elif isinstance(order, Block_Indication):
+                            result = exchange.add_block_indication(order, process_verbose)
+                            match_block_indications_and_add_firm_orders_to_the_order_book(exchange, 50, traders)
+                        traders[tid].n_quotes = 1
+                        trades = exchange.uncross(time, 50)
+                        for trade in trades:
+                            # trade occurred,
+                            # so the counterparties update order lists and blotters
+                            traders[trade['buyer']].bookkeep(trade, bookkeep_verbose)
+                            traders[trade['seller']].bookkeep(trade, bookkeep_verbose)
+
+                time = time + timestep
+
+        # print the final order book
+        exchange.print_order_book()
+        exchange.print_block_indications()
+
+        # end of an experiment -- dump the tape
+        exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
+
+        # write trade_stats for this experiment NB end-of-session summary only
+        trade_stats(sess_id, traders, dumpfile, time)
 
 
 
@@ -1494,7 +1636,7 @@ def experiment1():
             
     while (trial<(n_trials+1)):
             trial_id = 'trial%04d' % trial
-            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
+            market_session1(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
             tdump.flush()
             trial = trial + 1
     tdump.close()
@@ -1648,41 +1790,33 @@ def test1():
     exchange.print_order_book()
 
 def test2():
+
     # initialise the exchange
     exchange = Exchange()
 
-    # create the trader specs
-    buyers_spec = [('GVWY',4)]
-    sellers_spec = buyers_spec
-    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
+    # create some example orders
+    orders = []
+    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
+    orders.append(Order(35.0, 'B01', 'Buy', 10, None, None))
+    orders.append(Order(55.0, 'B02', 'Buy', 3, None, None))
+    orders.append(Order(75.0, 'B03', 'Buy', 3, None, None))
+    orders.append(Order(65.0, 'B04', 'Buy', 3, None, None))
+    orders.append(Order(45.0, 'S00', 'Sell', 11, None, None))
+    orders.append(Order(55.0, 'S01', 'Sell', 4, None, None))
+    orders.append(Order(65.0, 'S02', 'Sell', 6, None, None))
+    orders.append(Order(55.0, 'S03', 'Sell', 6, None, None))
+    orders.append(Order(75.0, 'B00', 'Sell', 8, None, None))
+    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
 
-    # create a bunch of traders
-    traders = {}
-    trader_stats = populate_market(traders_spec, traders, True, False)
+    
+    for order in orders:
+        exchange.add_order(order, False)
 
-    # create some customer orders
-    customer_orders = []
-    customer_orders.append(Customer_Order(25.0, 'B00', 'Buy', 100, 5,))
-    customer_orders.append(Customer_Order(35.0, 'B01', 'Buy', 100, 10))
-    customer_orders.append(Customer_Order(55.0, 'S00', 'Sell', 0, 3))
-    customer_orders.append(Customer_Order(75.0, 'S01', 'Sell', 0, 352))
+    exchange.print_order_book()
 
-    # assign customer orders to traders
-    for customer_order in customer_orders:
-        traders[customer_order.trader_id].add_order(customer_order, False)
+    exchange.uncross(100, 50)
 
-    for tid in traders.keys():
-        print(traders[tid].getorder(10))
-        exchange.add_order(traders[tid].getorder(10), False)
-
-    #exchange.print_order_book()
-    #exchange.uncross(100, 50)
-    #exchange.print_order_book()
-
-    #exchange.order_book.print_tape()
-
-    for tid in traders.keys():
-        print(traders[tid].lastquote)
+    exchange.print_order_book()
 
 
 # the main function is called if BSE.py is run as the main program

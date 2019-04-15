@@ -26,6 +26,7 @@ class Test_Order(unittest.TestCase):
         self.assertEqual(order.limit_price, limit_price)
         self.assertEqual(order.MES, MES)
         self.assertEqual(order.time, time)
+        self.assertEqual(order.original_quantity, qty)
 
     # test the __str__ function
     def test__str__(self):

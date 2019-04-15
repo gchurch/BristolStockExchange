@@ -417,7 +417,7 @@ class Test_Orderbook(unittest.TestCase):
 
         # find a match
         match_info = orderbook.find_matching_orders(50)
-        orderbook.perform_trade(None, 100.0, 50, match_info)
+        orderbook.perform_trade(100.0, match_info)
 
         self.assertEqual(orderbook.tape, [{'price': 50, 'seller': 'S00', 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 8}])
         self.assertEqual(len(orderbook.buy_side.orders), 1)
@@ -568,7 +568,7 @@ class Test_Exchange(unittest.TestCase):
             exchange.add_order(order, False)
 
         # invoke an uncross event, setting the traders parameters to None to avID using traders
-        exchange.uncross(None, 100.0, 50.0)
+        exchange.uncross(100.0, 50.0)
 
         # test the buy side
         self.assertEqual(len(exchange.order_book.buy_side.orders), 3)

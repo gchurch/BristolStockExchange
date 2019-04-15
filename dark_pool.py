@@ -273,13 +273,13 @@ class Orderbook:
                     # return a dictionary containing the trade info
                     # Note. Here we are returning references to the orders, so changing the returned orders will
                     # change the orders in the order_book
-                    return {"buy_order": buy_order, "sell_order": sell_order, "trade_size": trade_size}
+                    return {"buy_order": buy_order, "sell_order": sell_order, "trade_size": trade_size, "price": price}
 
         # if no match can be found, return None
         return None
 
     # given a buy order, a sell order and a trade size, perform the trade
-    def perform_trade(self, traders, time, price, trade_info):
+    def perform_trade(self, time, trade_info):
 
         # subtract the trade quantity from the orders' quantity
         trade_info["buy_order"].quantity -= trade_info["trade_size"]
@@ -306,21 +306,18 @@ class Orderbook:
             self.sell_side.book_add(trade_info["sell_order"])
 
         # create a record of the transaction to the tape
-        trade = {   'type': 'Trade',
+        transaction_record = {   'type': 'Trade',
                     'time': time,
-                    'price': price,
+                    'price': trade_info["price"],
                     'quantity': trade_info["trade_size"],
                     'buyer': trade_info["buy_order"].trader_id,
                     'seller': trade_info["sell_order"].trader_id}
 
-        # the traders parameter may be set to none when we are just trying to test the uncross function
-        if traders != None:
-            # inform the traders of the trade
-            traders[trade_info["buy_order"].trader_id].bookkeep(trade, False)
-            traders[trade_info["sell_order"].trader_id].bookkeep(trade, False)
-
         # add a record to the tape
-        self.tape.append(trade)
+        self.tape.append(transaction_record)
+
+        # return the transaction
+        return transaction_record
 
     # write the tape to an output file
     def tape_dump(self, fname, fmode, tmode):
@@ -762,7 +759,10 @@ class Exchange:
 
     # this function executes the uncross event, trades occur at the given time at the given price
     # keep making trades out of matching order until no more matches can be found
-    def uncross(self, traders, time, price):
+    def uncross(self, time, price):
+
+        # a list of all the trades made in the uncross function call
+        trades = []
 
         # find a match between a buy order a sell order
         match_info = self.order_book.find_matching_orders(price)
@@ -771,10 +771,12 @@ class Exchange:
         while match_info != None:
 
             # execute the trade with the matched orders
-            self.order_book.perform_trade(traders, time, price, match_info)
+            trades.append(self.order_book.perform_trade(time, match_info))
 
             # find another match
             match_info = self.order_book.find_matching_orders(price)
+
+        return trades
 
     def del_block_indication(self, time, order, verbose):
         response = self.block_indication_book.del_block_indication(time, order, verbose)
@@ -868,6 +870,7 @@ class Trader:
         self.profitpertime = 0         # profit per unit time
         self.n_trades = 0              # how many trades has this trader done?
         self.lastquote = None          # record of what its last quote was
+        self.quantity_traded = 0       # the quantity that has currently been traded from the last quote
 
 
     def __str__(self):
@@ -889,7 +892,7 @@ class Trader:
         return response
 
 
-    def del_order(self, order):
+    def del_order(self):
         # this is lazy: assumes each trader has only one customer order with quantity=1, so deleting sole order
         # CHANGE TO DELETE THE HEAD OF THE LIST AND KEEP THE TAIL
         self.customer_order = None
@@ -912,6 +915,10 @@ class Trader:
 
         if verbose: print('%s profit=%d balance=%d profit/time=%d' % (outstr, profit, self.balance, self.profitpertime))
 
+        self.quantity_traded += trade['quantity']
+        if self.quantity_traded == self.customer_order.quantity:
+            self.del_order()
+
 
     # specify how trader responds to events in the market
     # this is a null action, expect it to be overloaded by specific algos
@@ -933,22 +940,23 @@ class Trader_Giveaway(Trader):
         if self.customer_order == None:
             order = None
         elif self.customer_order.quantity >= 10000:
-            # the Minimum Execution Size (MES) of the block indication
+            # create a block indication
             MES = 20
-            # return a block indication
             block_indication = Block_Indication(time, 
                                                 self.trader_id, 
                                                 self.customer_order.otype, 
                                                 self.customer_order.quantity,
                                                 self.customer_order.price,
                                                 MES)
+            self.lastquote = block_indication
             return block_indication
         else:
+            # create a normal order
             MES = 2
             order = Order(time, 
                           self.trader_id, 
                           self.customer_order.otype, 
-                          self.customer_order.quantity,
+                          self.customer_order.quantity - self.quantity_traded,
                           self.customer_order.price,
                           MES)
             self.lastquote=order
@@ -1003,7 +1011,7 @@ def trade_stats(expid, traders, dumpfile, time):
         # write the title for each column
         dumpfile.write('trial, time,')
         for i in range(0, len(trader_types)):
-            dumpfile.write('type, sum, n, avg\n')
+            dumpfile.write('type, total sum, n traders, avg\n')
 
         # write the trial number followed by the time
         dumpfile.write('%s, %06d, ' % (expid, time))
@@ -1416,9 +1424,13 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
                         # send order to exchange
                         traders[tid].n_quotes = 1
                         result = exchange.add_order(order, process_verbose)
-                        exchange.uncross(traders, time, 50)
-
-                exchange.print_order_book()
+                        trades = exchange.uncross(time, 50)
+                        print(trades)
+                        for trade in trades:
+                            # trade occurred,
+                            # so the counterparties update order lists and blotters
+                            traders[trade['buyer']].bookkeep(trade, bookkeep_verbose)
+                            traders[trade['seller']].bookkeep(trade, bookkeep_verbose)
 
                 time = time + timestep
 
@@ -1426,6 +1438,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
         #exchange.order_book.print_tape()
         # end of an experiment -- dump the tape
         exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
+        exchange.order_book.print_tape()
 
 
         # write trade_stats for this experiment NB end-of-session summary only
@@ -1456,7 +1469,7 @@ def experiment1():
     traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
 
     n_trials = 1
-    tdump=open('avg_balance.csv','w')
+    tdump=open('avg_balance_dark.csv','w')
     trial = 1
     if n_trials > 1:
             dump_all = False
@@ -1566,7 +1579,7 @@ def test():
                     print("before:")
                     exchange.print_order_book()
                     # if there is a match then start trading
-                    exchange.uncross(traders, 100.0, price)
+                    exchange.uncross(100.0, price)
                     print("after:")
                     exchange.print_order_book()
 
@@ -1617,6 +1630,43 @@ def test1():
 
     exchange.print_block_indications()
     exchange.print_order_book()
+
+def test2():
+    # initialise the exchange
+    exchange = Exchange()
+
+    # create the trader specs
+    buyers_spec = [('GVWY',4)]
+    sellers_spec = buyers_spec
+    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
+
+    # create a bunch of traders
+    traders = {}
+    trader_stats = populate_market(traders_spec, traders, True, False)
+
+    # create some customer orders
+    customer_orders = []
+    customer_orders.append(Customer_Order(25.0, 'B00', 'Buy', 100, 5,))
+    customer_orders.append(Customer_Order(35.0, 'B01', 'Buy', 100, 10))
+    customer_orders.append(Customer_Order(55.0, 'S00', 'Sell', 0, 3))
+    customer_orders.append(Customer_Order(75.0, 'S01', 'Sell', 0, 352))
+
+    # assign customer orders to traders
+    for customer_order in customer_orders:
+        traders[customer_order.trader_id].add_order(customer_order, False)
+
+    for tid in traders.keys():
+        print(traders[tid].getorder(10))
+        exchange.add_order(traders[tid].getorder(10), False)
+
+    #exchange.print_order_book()
+    #exchange.uncross(100, 50)
+    #exchange.print_order_book()
+
+    #exchange.order_book.print_tape()
+
+    for tid in traders.keys():
+        print(traders[tid].lastquote)
 
 
 # the main function is called if BSE.py is run as the main program

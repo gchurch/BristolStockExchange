@@ -889,6 +889,7 @@ class Trader:
             response = 'Proceed'
         self.customer_order = customer_order
         if verbose : print('add_order < response=%s' % response)
+        self.quantity_traded = 0
         return response
 
 
@@ -1425,7 +1426,6 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
                         traders[tid].n_quotes = 1
                         result = exchange.add_order(order, process_verbose)
                         trades = exchange.uncross(time, 50)
-                        print(trades)
                         for trade in trades:
                             # trade occurred,
                             # so the counterparties update order lists and blotters
@@ -1434,12 +1434,11 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
                 time = time + timestep
 
+        # print the final order book
+        exchange.print_order_book()
 
-        #exchange.order_book.print_tape()
         # end of an experiment -- dump the tape
         exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
-        exchange.order_book.print_tape()
-
 
         # write trade_stats for this experiment NB end-of-session summary only
         trade_stats(sess_id, traders, dumpfile, time)
@@ -1450,21 +1449,21 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 def experiment1():
 
     start_time = 0.0
-    end_time = 20.0
+    end_time = 600.0
     duration = end_time - start_time
 
-    range1 = (40, 70)
+    range1 = (25, 45)
     supply_schedule = [ {'from':start_time, 'to':end_time, 'ranges':[range1], 'stepmode':'fixed'}
                       ]
 
-    range1 = (30, 60)
+    range1 = (55, 75)
     demand_schedule = [ {'from':start_time, 'to':end_time, 'ranges':[range1], 'stepmode':'fixed'}
                       ]
 
     order_sched = {'sup':supply_schedule, 'dem':demand_schedule,
-                   'interval':10, 'timemode':'drip-fixed'}
+                   'interval':30, 'timemode':'drip-fixed'}
 
-    buyers_spec = [('GVWY',5)]
+    buyers_spec = [('GVWY',20)]
     sellers_spec = buyers_spec
     traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
 

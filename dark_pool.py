@@ -329,7 +329,11 @@ class Orderbook:
         # write the information for each trade
         for tapeitem in self.tape:
             if tapeitem['type'] == 'Trade' :
-                dumpfile.write('%s, %s, %s, %s, %s, %s\n' % (tapeitem['time'], tapeitem['buyer'], tapeitem['seller'], tapeitem['quantity'], tapeitem['price'], tapeitem['BDS']))
+                if tapeitem['BDS']:
+                    BDS = "BDS"
+                else:
+                    BDS = ""
+                dumpfile.write('%s, %s, %s, %s, %s, %s\n' % (tapeitem['time'], tapeitem['buyer'], tapeitem['seller'], tapeitem['quantity'], tapeitem['price'], BDS))
         dumpfile.close()
         if tmode == 'wipe':
             self.tape = []
@@ -381,7 +385,7 @@ class Block_Indication_Book:
         self.RST = 55
         # The minimum indication value (MIV) is the quantity that a block indication must be greater
         # than in order to be accepted
-        self.MIV = 500
+        self.MIV = 5
         # A dictionary to hold matched BIs and the corresponding QBOs
         self.matches = {}
         # ID to be given to next Qualifying Block Order received

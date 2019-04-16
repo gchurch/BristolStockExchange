@@ -402,7 +402,7 @@ class Orderbook:
                     BDS = "BDS"
                 else:
                     BDS = ""
-                dumpfile.write('%s, %s, %s, %s, %s, %s\n' % (tapeitem['time'], tapeitem['buyer'], tapeitem['seller'], tapeitem['quantity'], tapeitem['price'], BDS))
+                dumpfile.write('%.2f, %s, %s, %s, %s, %s\n' % (tapeitem['time'], tapeitem['buyer'], tapeitem['seller'], tapeitem['quantity'], tapeitem['price'], BDS))
         dumpfile.close()
         if tmode == 'wipe':
             self.tape = []
@@ -1553,9 +1553,9 @@ def market_session_with_uncross_events(sess_id, starttime, endtime, trader_spec,
     print('\n%s;  ' % (sess_id))
 
     # the amount of time for the submission of orders to the uncross event
-    order_submission_interval = 5.0
+    order_submission_interval = 0.01
     # the time of the next uncross event
-    uncross_event_time = 0.0
+    next_uncross_event_time = 0.0
 
     while time < endtime:
 
@@ -1595,10 +1595,9 @@ def market_session_with_uncross_events(sess_id, starttime, endtime, trader_spec,
             if isinstance(order, Order):
                 result = exchange.add_order(order, process_verbose)
 
-            # add a block indication to the exchange and check for matches
+            # add a block indication to the exchange
             elif isinstance(order, Block_Indication):
                 result = exchange.add_block_indication(order, process_verbose)
-                match_block_indications_and_add_firm_orders_to_the_order_book(exchange, 50, traders)
             
             # execute all possible trades
             trades = exchange.execute_trades(time, 50)
@@ -1607,6 +1606,11 @@ def market_session_with_uncross_events(sess_id, starttime, endtime, trader_spec,
             for trade in trades:
                 traders[trade['buyer']].bookkeep(trade, bookkeep_verbose)
                 traders[trade['seller']].bookkeep(trade, bookkeep_verbose)
+
+            # check for block indication matches and add then to the order book
+            if match_block_indications_and_add_firm_orders_to_the_order_book(exchange, 50, traders):
+                next_uncross_event_time = time + order_submission_interval
+                print(time, next_uncross_event_time)
 
         # update the time
         time = time + timestep
@@ -1652,7 +1656,7 @@ def experiment1():
             
     while (trial<(n_trials+1)):
             trial_id = 'trial%04d' % trial
-            market_session_with_uncross_events(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
+            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
             tdump.flush()
             trial = trial + 1
     tdump.close()
@@ -1688,8 +1692,8 @@ def match_block_indications_and_add_firm_orders_to_the_order_book(exchange, pric
         # delete the block indication match
         exchange.delete_block_indication_match(match_id)
 
-        return "Match found."
-    return "No match found."
+        return True
+    return False
 
 # perform a test with the dark pool
 def test():

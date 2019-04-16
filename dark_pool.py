@@ -327,7 +327,7 @@ class Orderbook:
         return None
 
     # given a buy order, a sell order and a trade size, perform the trade
-    def perform_trade(self, time, trade_info):
+    def execute_trade(self, time, trade_info):
 
         # subtract the trade quantity from the orders' quantity remaining
         trade_info["buy_order"].quantity_remaining -= trade_info["trade_size"]
@@ -367,6 +367,28 @@ class Orderbook:
 
         # return the transaction
         return transaction_record
+
+
+    # trades occur at the given time at the given price
+    # keep making trades out of matching orders until no more matches can be found
+    def execute_trades(self, time, price):
+
+        # a list of all the trades made in the uncross function call
+        trades = []
+
+        # find a match between a buy order a sell order
+        match_info = self.find_matching_orders(price)
+
+        # keep on going until no more matches can be found
+        while match_info != None:
+
+            # execute the trade with the matched orders
+            trades.append(self.execute_trade(time, match_info))
+
+            # find another match
+            match_info = self.find_matching_orders(price)
+
+        return trades
 
     # write the tape to an output file
     def tape_dump(self, fname, fmode, tmode):
@@ -860,24 +882,8 @@ class Exchange:
 
     # this function executes the uncross event, trades occur at the given time at the given price
     # keep making trades out of matching orders until no more matches can be found
-    def uncross(self, time, price):
-
-        # a list of all the trades made in the uncross function call
-        trades = []
-
-        # find a match between a buy order a sell order
-        match_info = self.order_book.find_matching_orders(price)
-
-        # keep on going until no more matches can be found
-        while match_info != None:
-
-            # execute the trade with the matched orders
-            trades.append(self.order_book.perform_trade(time, match_info))
-
-            # find another match
-            match_info = self.order_book.find_matching_orders(price)
-
-        return trades
+    def execute_trades(self, time, price):
+        return self.order_book.execute_trades(time, price)
 
     def del_block_indication(self, time, order, verbose):
         response = self.block_indication_book.del_block_indication(time, order, verbose)
@@ -1490,7 +1496,103 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
                 result = exchange.add_block_indication(order, process_verbose)
                 match_block_indications_and_add_firm_orders_to_the_order_book(exchange, 50, traders)
             traders[tid].n_quotes = 1
-            trades = exchange.uncross(time, 50)
+            trades = exchange.execute_trades(time, 50)
+            for trade in trades:
+                # trade occurred,
+                # so the counterparties update order lists and blotters
+                traders[trade['buyer']].bookkeep(trade, bookkeep_verbose)
+                traders[trade['seller']].bookkeep(trade, bookkeep_verbose)
+
+        time = time + timestep
+
+    # print the final order book
+    exchange.print_order_book()
+    exchange.print_block_indications()
+
+    # end of an experiment -- dump the tape
+    exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
+
+    # write trade_stats for this experiment NB end-of-session summary only
+    trade_stats(sess_id, traders, dumpfile, time)
+
+# one session in the market
+def market_session_with_uncross_events(sess_id, starttime, endtime, trader_spec, order_schedule, dumpfile, dump_each_trade):
+
+    # variables which dictate what information is printed to the output
+    verbose = False
+    traders_verbose = False
+    orders_verbose = False
+    lob_verbose = False
+    process_verbose = False
+    respond_verbose = False
+    bookkeep_verbose = False
+
+
+    # initialise the exchange
+    exchange = Exchange()
+
+
+    # create a bunch of traders
+    traders = {}
+    trader_stats = populate_market(trader_spec, traders, True, traders_verbose)
+
+
+    # timestep set so that can process all traders in one second
+    # NB minimum interarrival time of customer orders may be much less than this!! 
+    timestep = 1.0 / float(trader_stats['n_buyers'] + trader_stats['n_sellers'])
+    
+    duration = float(endtime - starttime)
+
+    last_update = -1.0
+
+    time = starttime
+
+    # this list contains all the pending customer orders that are yet to happen
+    pending_cust_orders = []
+
+    print('\n%s;  ' % (sess_id))
+
+    while time < endtime:
+
+        # how much time left, as a percentage?
+        time_left = (endtime - time) / duration
+
+        if verbose: print('%s; t=%08.2f (%4.1f/100) ' % (sess_id, time, time_left*100))
+
+        trade = None
+
+        # update the pending customer orders list by generating new orders if none remain and issue 
+        # any customer orders that were scheduled in the past. Note these are customer orders being
+        # issued to traders, quotes will not be put onto the exchange yet
+        [pending_cust_orders, kills] = customer_orders(time, last_update, traders, trader_stats,
+                                         order_schedule, pending_cust_orders, orders_verbose)
+
+        # if any newly-issued customer orders mean quotes on the LOB need to be cancelled, kill them
+        if len(kills) > 0 :
+            if verbose : print('Kills: %s' % (kills))
+            for kill in kills :
+                if verbose : print('lastquote=%s' % traders[kill].lastquote)
+                if traders[kill].lastquote != None :
+                    if verbose : print('Killing order %s' % (str(traders[kill].lastquote)))
+                    exchange.del_order(time, traders[kill].lastquote, verbose)
+
+
+        # get a limit-order quote (or None) from a randomly chosen trader
+        tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
+        order = traders[tid].getorder(time)
+
+        if verbose: print('Trader Quote: %s' % (order))
+
+        # if the randomly selected trader gives us a quote, then add it to the exchange
+        if order != None:
+            # send order to exchange
+            if isinstance(order, Order):
+                result = exchange.add_order(order, process_verbose)
+            elif isinstance(order, Block_Indication):
+                result = exchange.add_block_indication(order, process_verbose)
+                match_block_indications_and_add_firm_orders_to_the_order_book(exchange, 50, traders)
+            traders[tid].n_quotes = 1
+            trades = exchange.execute_trades(time, 50)
             for trade in trades:
                 # trade occurred,
                 # so the counterparties update order lists and blotters
@@ -1641,7 +1743,7 @@ def test():
                     print("before:")
                     exchange.print_order_book()
                     # if there is a match then start trading
-                    exchange.uncross(100.0, price)
+                    exchange.execute_trades(100.0, price)
                     print("after:")
                     exchange.print_order_book()
 
@@ -1716,7 +1818,7 @@ def test2():
 
     exchange.print_order_book()
 
-    exchange.uncross(100, 50)
+    exchange.execute_trades(100, 50)
 
     exchange.print_order_book()
 

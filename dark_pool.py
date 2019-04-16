@@ -507,6 +507,51 @@ class Block_Indication_Book:
             # neither bid nor ask?
             sys.exit('bad order type in del_quote()')
 
+    def check_price_match(self, buy_side, sell_side, price):
+
+        if buy_side.limit_price == None and sell_side.limit_price == None:
+            return True
+
+        elif buy_side.limit_price != None and sell_side.limit_price == None:
+            if buy_side.limit_price >= price:
+                return True
+
+        elif buy_side.limit_price == None and sell_side.limit_price != None:
+            if sell_side.limit_price <= price:
+                return True
+
+        elif buy_side.limit_price != None and sell_side.limit_price != None:
+            if buy_side.limit_price >= price and sell_side.limit_price <= price:
+                return True
+
+        return False
+
+    def check_size_match(self, buy_side, sell_side):
+
+        if buy_side.MES == None and sell_side.MES == None:
+            return True
+
+        elif buy_side.MES != None and sell_side.MES == None:
+            if sell_side.quantity >= buy_side.MES:
+                return True
+
+        elif buy_side.MES == None and sell_side.MES != None:
+            if buy_side.quantity >= sell_side.MES:
+                return True
+
+        elif buy_side.MES != None and sell_side.MES != None:
+            if buy_side.quantity >= sell_side.MES and sell_side.quantity >= buy_side.MES:
+                return True
+
+        return False
+
+    def check_match(self, buy_side, sell_side, price):
+        # check that both the order size and the price match
+        if self.check_price_match(buy_side, sell_side, price) and self.check_size_match(buy_side, sell_side):
+            return True
+        else:
+            return False
+
     # attempt to find two matching block indications
     def find_matching_block_indications(self, price):
         
@@ -518,7 +563,7 @@ class Block_Indication_Book:
         for buy_side_BI in buy_side_BIs:
             for sell_side_BI in sell_side_BIs:
                 # check if the two block indications match
-                if check_match(buy_side_BI, sell_side_BI, price):
+                if self.check_match(buy_side_BI, sell_side_BI, price):
                     
                     # Add the matched BIs to the matches dictionary
                     self.matches[self.match_id] = {"buy_side_BI": buy_side_BI, 
@@ -1084,52 +1129,6 @@ def trade_stats(expid, traders, dumpfile, time):
         dumpfile.write('N, ')
         # write a new line
         dumpfile.write('\n');
-
-
-def check_price_match(buy_side, sell_side, price):
-
-    if buy_side.limit_price == None and sell_side.limit_price == None:
-        return True
-
-    elif buy_side.limit_price != None and sell_side.limit_price == None:
-        if buy_side.limit_price >= price:
-            return True
-
-    elif buy_side.limit_price == None and sell_side.limit_price != None:
-        if sell_side.limit_price <= price:
-            return True
-
-    elif buy_side.limit_price != None and sell_side.limit_price != None:
-        if buy_side.limit_price >= price and sell_side.limit_price <= price:
-            return True
-
-    return False
-
-def check_size_match(buy_side, sell_side):
-
-    if buy_side.MES == None and sell_side.MES == None:
-        return True
-
-    elif buy_side.MES != None and sell_side.MES == None:
-        if sell_side.quantity >= buy_side.MES:
-            return True
-
-    elif buy_side.MES == None and sell_side.MES != None:
-        if buy_side.quantity >= sell_side.MES:
-            return True
-
-    elif buy_side.MES != None and sell_side.MES != None:
-        if buy_side.quantity >= sell_side.MES and sell_side.quantity >= buy_side.MES:
-            return True
-
-    return False
-
-def check_match(buy_side, sell_side, price):
-    # check that both the order size and the price match
-    if check_price_match(buy_side, sell_side, price) and check_size_match(buy_side, sell_side):
-        return True
-    else:
-        return False
 
 
 # create a bunch of traders from traders_spec

@@ -306,7 +306,27 @@ class Test_Orderbook_half(unittest.TestCase):
         self.assertEqual(orderbook_half.orders[0].__str__(), "Order: [ID=-1 T=35.00 B01 Buy Q=10 QR=10 P=111 MES=4]")
 
 
+    def test_trader_has_order_function(self):
 
+        # create the order book
+        booktype = "Buy"
+        orderbook_half = dark_pool.Orderbook_half(booktype)
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 100, 3))
+        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 100, 4))
+        orders.append(dark_pool.Order(45.0, 'B02', 'Buy', 10, 110, 4))
+
+        # add the orders
+        for order in orders:
+            orderbook_half.book_add(order)
+
+        self.assertEqual(orderbook_half.trader_has_order('B00'), True)
+        self.assertEqual(orderbook_half.trader_has_order('B01'), True)
+        self.assertEqual(orderbook_half.trader_has_order('B02'), True)
+        self.assertEqual(orderbook_half.trader_has_order('B03'), False)
+        self.assertEqual(orderbook_half.trader_has_order('B04'), False)
 
 ##################################################################################################
 # tests for the Orderbook class
@@ -324,7 +344,7 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(orderbook.buy_side.orders, [])
         self.assertEqual(orderbook.sell_side.orders, [])
 
-    def test_add_order_function_simple(self):
+    def test_add_order_function(self):
 
         # create the order book
         orderbook = dark_pool.Orderbook()
@@ -344,6 +364,25 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(len(orderbook.buy_side.orders), 1)
         self.assertEqual(len(orderbook.sell_side.orders), 1)
         self.assertEqual(orderbook.order_id, 2)
+
+    def test_trader_has_order_function(self):
+        
+        # create the order book
+        orderbook = dark_pool.Orderbook()
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 100, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 100, 6))
+
+        for order in orders:
+            orderbook.add_order(order, False)
+
+        self.assertEqual(orderbook.trader_has_order('B00'), True)
+        self.assertEqual(orderbook.trader_has_order('S00'), True)
+        self.assertEqual(orderbook.trader_has_order('B01'), False)
+        self.assertEqual(orderbook.trader_has_order('S01'), False)
+
 
     def test_del_order_function(self):
         # create the order book
@@ -367,6 +406,10 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(len(orderbook.buy_side.orders), 1)
         self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 QR=11 P=100 MES=6]")
         self.assertEqual(len(orderbook.sell_side.orders), 1)
+
+
+    def test_check_price_match(self):
+        return
 
 
     def test_find_matching_orders_function(self):

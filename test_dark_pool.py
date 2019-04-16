@@ -8,7 +8,7 @@ import csv
 class Test_Order(unittest.TestCase):
 
     # test the __init__ function
-    def test__init__(self):
+    def test_init_function(self):
 
         # create an Order
         tid = 'B5'
@@ -26,10 +26,10 @@ class Test_Order(unittest.TestCase):
         self.assertEqual(order.limit_price, limit_price)
         self.assertEqual(order.MES, MES)
         self.assertEqual(order.time, time)
-        self.assertEqual(order.original_quantity, qty)
+        self.assertEqual(order.quantity_remaining, qty)
 
     # test the __str__ function
-    def test__str__(self):
+    def test_str_function(self):
 
         # create an Order
         tid = 'B5'
@@ -41,7 +41,7 @@ class Test_Order(unittest.TestCase):
         order = dark_pool.Order(time, tid, otype, qty, limit_price, MES)
 
         # test that the string produced is as expected
-        self.assertEqual(order.__str__(), "Order: [ID=-1 T=25.00 B5 Bid Q=1 P=1 MES=1]")
+        self.assertEqual(order.__str__(), "Order: [ID=-1 T=25.00 B5 Bid Q=1 QR=1 P=1 MES=1]")
 
 #################################################################################
 # tests for the Block_Indication class
@@ -49,7 +49,7 @@ class Test_Order(unittest.TestCase):
 class Test_Block_Indication(unittest.TestCase):
 
     # test the __init__ function
-    def test__init__(self):
+    def test_init_function(self):
 
         # create a Block Indication
         time = 25.0
@@ -69,7 +69,7 @@ class Test_Block_Indication(unittest.TestCase):
         self.assertEqual(BI.time, time)
 
     # test the __str__ function
-    def test__str__(self):
+    def test_str_function(self):
 
         # create a Block Indication
         time = 25.0
@@ -89,7 +89,7 @@ class Test_Block_Indication(unittest.TestCase):
 class Test_Order_Submission_Request(unittest.TestCase):
 
     # test the __init__ function
-    def test__init__(self):
+    def test_init_function(self):
 
         # create an Order Submission Request
         time = 25.0
@@ -113,7 +113,7 @@ class Test_Order_Submission_Request(unittest.TestCase):
         self.assertEqual(OSR.CRP, CRP)
 
     # test the __str__ function
-    def test__str__(self):
+    def test_str_function(self):
 
         # create a Order Submission Request
         time = 25.0
@@ -136,7 +136,7 @@ class Test_Order_Submission_Request(unittest.TestCase):
 class Test_Qualifying_Block_Order(unittest.TestCase):
 
     # test the __init__ function
-    def test__init__(self):
+    def test_init_function(self):
 
         # create a qualifying block order
         time = 25.0
@@ -158,7 +158,7 @@ class Test_Qualifying_Block_Order(unittest.TestCase):
         self.assertEqual(QBO.match_id, match_id)
 
     # test the __str__ function
-    def test__str__(self):
+    def test_str_function(self):
 
         # create a qualifying block order
         time = 25.0
@@ -180,7 +180,7 @@ class Test_Qualifying_Block_Order(unittest.TestCase):
 class Test_Orderbook_half(unittest.TestCase):
 
     # testing whether the initialised variables are as expected
-    def test__init__(self):
+    def test_init_function(self):
 
         # create an instance of the Orderbook_half class
         booktype = "Buy"
@@ -191,7 +191,7 @@ class Test_Orderbook_half(unittest.TestCase):
         self.assertEqual(orderbook_half.traders, {})
         self.assertEqual(orderbook_half.orders, [])
 
-    def test__find_order_position(self):
+    def test_find_order_position_function(self):
         
         # create the order book
         booktype = "Buy"
@@ -214,12 +214,9 @@ class Test_Orderbook_half(unittest.TestCase):
         self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(55.0, 'B03', 'Buy', 4, None, 4)), 3)
         self.assertEqual(orderbook_half.find_order_position(dark_pool.Order(40.0, 'B03', 'Buy', 10, None, 4)), 1)
 
-    def test__remove_from_order_book(self):
-        return
-
     # test that when a single order is added, it is added to the orders dictionary
     # and the order_book list
-    def test__book_add__simple(self):
+    def test_book_add_function_simple(self):
 
         # create the order book
         booktype = "Buy"
@@ -236,10 +233,10 @@ class Test_Orderbook_half(unittest.TestCase):
         # test
         self.assertEqual(orderbook_half.traders.keys(), ['B00'])
         self.assertEqual(orderbook_half.traders['B00'], 1)
-        self.assertEqual(orderbook_half.orders[0].__str__(), "Order: [ID=-1 T=25.00 B00 Buy Q=5 P=100 MES=3]")
+        self.assertEqual(orderbook_half.orders[0].__str__(), "Order: [ID=-1 T=25.00 B00 Buy Q=5 QR=5 P=100 MES=3]")
 
     # testing that when that the order of orders in the order_book list is ordered by quantity then time
-    def test__book_add__ordering(self):
+    def test_book_add_function_ordering(self):
 
         # create the order book
         booktype = "Buy"
@@ -259,11 +256,11 @@ class Test_Orderbook_half(unittest.TestCase):
         self.assertEqual(orderbook_half.traders['B00'], 1)
         self.assertEqual(orderbook_half.traders['B01'], 1)
         self.assertEqual(orderbook_half.traders['B02'], 1)
-        self.assertEqual(orderbook_half.orders[0].__str__(), "Order: [ID=-1 T=35.00 B01 Buy Q=10 P=100 MES=4]")
-        self.assertEqual(orderbook_half.orders[1].__str__(), "Order: [ID=-1 T=45.00 B02 Buy Q=10 P=110 MES=4]")
-        self.assertEqual(orderbook_half.orders[2].__str__(), "Order: [ID=-1 T=25.00 B00 Buy Q=5 P=100 MES=3]")
+        self.assertEqual(orderbook_half.orders[0].__str__(), "Order: [ID=-1 T=35.00 B01 Buy Q=10 QR=10 P=100 MES=4]")
+        self.assertEqual(orderbook_half.orders[1].__str__(), "Order: [ID=-1 T=45.00 B02 Buy Q=10 QR=10 P=110 MES=4]")
+        self.assertEqual(orderbook_half.orders[2].__str__(), "Order: [ID=-1 T=25.00 B00 Buy Q=5 QR=5 P=100 MES=3]")
 
-    def test__book_add__overwrite(self):
+    def test_book_add_function_overwrite(self):
         # create the order book
         booktype = "Buy"
         orderbook_half = dark_pool.Orderbook_half(booktype)
@@ -282,12 +279,12 @@ class Test_Orderbook_half(unittest.TestCase):
         # tests
         self.assertEqual(return_values, ['Addition', 'Addition', 'Overwrite'])
         self.assertEqual(orderbook_half.traders.keys(), ['B01', 'B00'])
-        self.assertEqual(orderbook_half.orders[0].__str__(), "Order: [ID=-1 T=35.00 B01 Buy Q=10 P=221 MES=4]")
-        self.assertEqual(orderbook_half.orders[1].__str__(), "Order: [ID=-1 T=45.00 B00 Buy Q=10 P=112 MES=4]")
+        self.assertEqual(orderbook_half.orders[0].__str__(), "Order: [ID=-1 T=35.00 B01 Buy Q=10 QR=10 P=221 MES=4]")
+        self.assertEqual(orderbook_half.orders[1].__str__(), "Order: [ID=-1 T=45.00 B00 Buy Q=10 QR=10 P=112 MES=4]")
         self.assertEqual(len(orderbook_half.orders), 2)
 
 
-    def test__book_del(self):
+    def test_book_del_function(self):
 
         # create the order book
         booktype = "Buy"
@@ -306,7 +303,7 @@ class Test_Orderbook_half(unittest.TestCase):
         # delete an order
         orderbook_half.book_del(orders[0].trader_id)
 
-        self.assertEqual(orderbook_half.orders[0].__str__(), "Order: [ID=-1 T=35.00 B01 Buy Q=10 P=111 MES=4]")
+        self.assertEqual(orderbook_half.orders[0].__str__(), "Order: [ID=-1 T=35.00 B01 Buy Q=10 QR=10 P=111 MES=4]")
 
 
 
@@ -316,7 +313,7 @@ class Test_Orderbook_half(unittest.TestCase):
 
 class Test_Orderbook(unittest.TestCase):
 
-    def test__init__simple(self):
+    def test_init_function(self):
 
         orderbook = dark_pool.Orderbook()
 
@@ -327,7 +324,7 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(orderbook.buy_side.orders, [])
         self.assertEqual(orderbook.sell_side.orders, [])
 
-    def test__add_order__simple(self):
+    def test_add_order_function_simple(self):
 
         # create the order book
         orderbook = dark_pool.Orderbook()
@@ -342,13 +339,13 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(orderbook.add_order(orders[1], False), [1, 'Addition'])
 
         # check the state of the orderbook is as expected
-        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order: [ID=0 T=25.00 B00 Buy Q=5 P=100 MES=3]")
-        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 P=100 MES=6]")
+        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order: [ID=0 T=25.00 B00 Buy Q=5 QR=5 P=100 MES=3]")
+        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 QR=11 P=100 MES=6]")
         self.assertEqual(len(orderbook.buy_side.orders), 1)
         self.assertEqual(len(orderbook.sell_side.orders), 1)
         self.assertEqual(orderbook.order_id, 2)
 
-    def test__del_order(self):
+    def test_del_order_function(self):
         # create the order book
         orderbook = dark_pool.Orderbook()
  
@@ -366,13 +363,13 @@ class Test_Orderbook(unittest.TestCase):
         orderbook.del_order(65.0, orders[0], False)
 
         # check that the state of the orderbook is as expected
-        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order: [ID=2 T=55.00 B01 Buy Q=12 P=100 MES=3]")
+        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order: [ID=2 T=55.00 B01 Buy Q=12 QR=12 P=100 MES=3]")
         self.assertEqual(len(orderbook.buy_side.orders), 1)
-        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 P=100 MES=6]")
+        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 QR=11 P=100 MES=6]")
         self.assertEqual(len(orderbook.sell_side.orders), 1)
 
 
-    def test__find_matching_orders(self):
+    def test_find_matching_orders_function(self):
         
         # create the orderbook
         orderbook = dark_pool.Orderbook()
@@ -397,10 +394,10 @@ class Test_Orderbook(unittest.TestCase):
 
         # test that the match is as expected
         self.assertEqual(match["trade_size"], 8)
-        self.assertEqual(match["sell_order"].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 P=49 MES=6]")
-        self.assertEqual(match["buy_order"].__str__(), "Order: [ID=2 T=25.00 B01 Buy Q=8 P=53 MES=7]")
+        self.assertEqual(match["sell_order"].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 QR=11 P=49 MES=6]")
+        self.assertEqual(match["buy_order"].__str__(), "Order: [ID=2 T=25.00 B01 Buy Q=8 QR=8 P=53 MES=7]")
 
-    def test__perform_trade(self):
+    def test_execute_trade_function(self):
         # create the orderbook
         orderbook = dark_pool.Orderbook()
 
@@ -418,20 +415,20 @@ class Test_Orderbook(unittest.TestCase):
 
         # find a match
         match_info = orderbook.find_matching_orders(50)
-        orderbook.perform_trade(100.0, match_info)
+        orderbook.execute_trade(100.0, match_info)
 
         self.assertEqual(orderbook.tape, [{'price': 50, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 8}])
         self.assertEqual(len(orderbook.buy_side.orders), 1)
-        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order: [ID=0 T=25.00 B00 Buy Q=5 P=56 MES=3]")
+        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order: [ID=0 T=25.00 B00 Buy Q=5 QR=5 P=56 MES=3]")
         self.assertEqual(len(orderbook.sell_side.orders), 1)
-        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=3 P=46 MES=3]")
+        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 QR=3 P=46 MES=3]")
 
 ###############################################################################
 # tests for the Block_Indication_Book class
 
 class Test_Block_Indication_Book(unittest.TestCase):
 
-    def test__init__(self):
+    def test_init_function(self):
 
         block_indication_book = dark_pool.Block_Indication_Book()
 
@@ -443,7 +440,7 @@ class Test_Block_Indication_Book(unittest.TestCase):
         self.assertEqual(block_indication_book.tape, [])
         self.assertEqual(block_indication_book.OSR_id, 0)
 
-    def test__add_block_indication(self):
+    def test_add_block_indication_function(self):
 
         # create a block indication book
         block_indication_book = dark_pool.Block_Indication_Book()
@@ -469,7 +466,7 @@ class Test_Block_Indication_Book(unittest.TestCase):
         self.assertEqual(block_indication_book.event_reputational_scores['B00'], [])
         self.assertEqual(block_indication_book.event_reputational_scores['S00'], [])
 
-    def test__del_block_indication(self):
+    def test_del_block_indication_function(self):
 
         # create the block indication book
         block_indication_book = dark_pool.Block_Indication_Book()
@@ -491,7 +488,7 @@ class Test_Block_Indication_Book(unittest.TestCase):
         self.assertEqual(block_indication_book.buy_side.orders[0].__str__(), "BI: [ID=1 T=100.00 B01 Buy Q=900 P=112 MES=450]")
         self.assertEqual(block_indication_book.sell_side.orders[0].__str__(), "BI: [ID=2 T=100.00 S00 Sell Q=999 P=None MES=None]")
 
-    def test__tape_dump(self):
+    def test_tape_dump_function(self):
         return
 
 ###############################################################################
@@ -499,7 +496,7 @@ class Test_Block_Indication_Book(unittest.TestCase):
 
 class Test_Exchange(unittest.TestCase):
 
-    def test__init__simple(self):
+    def test_init_function(self):
 
         # create an exchange
         exchange = dark_pool.Exchange()
@@ -510,7 +507,7 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(exchange.order_book.buy_side.traders, {})
         self.assertEqual(exchange.order_book.sell_side.traders, {})
 
-    def test__add_order__normal(self):
+    def test_add_order_function(self):
         
         # create an exchange
         exchange = dark_pool.Exchange()
@@ -528,7 +525,7 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
 
 
-    def test__del_order(self):
+    def test_del_order_function(self):
 
         # create an exchange
         exchange = dark_pool.Exchange()
@@ -548,7 +545,7 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
         self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
 
-    def test__uncross(self):
+    def test_execute_trades_function(self):
         # initialise the exchange
         exchange = dark_pool.Exchange()
 
@@ -559,7 +556,7 @@ class Test_Exchange(unittest.TestCase):
         orders.append(dark_pool.Order(55.0, 'B02', 'Buy', 3, 53, 1))
         orders.append(dark_pool.Order(75.0, 'B03', 'Buy', 3, 59, 2))
         orders.append(dark_pool.Order(65.0, 'B04', 'Buy', 3, 61, 2))
-        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 51, 6))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 49, 6))
         orders.append(dark_pool.Order(55.0, 'S01', 'Sell', 4, 43, 2))
         orders.append(dark_pool.Order(65.0, 'S02', 'Sell', 6, 48, 3))
         orders.append(dark_pool.Order(55.0, 'S03', 'Sell', 6, 49, 4))
@@ -569,24 +566,23 @@ class Test_Exchange(unittest.TestCase):
             exchange.add_order(order, False)
 
         # invoke an uncross event, setting the traders parameters to None to avID using traders
-        exchange.uncross(100.0, 50.0)
+        exchange.execute_trades(100.0, 50.0)
 
         # test the buy side
-        self.assertEqual(len(exchange.order_book.buy_side.orders), 3)
+        self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
+        self.assertEqual(exchange.order_book.buy_side.orders[0].__str__(), "Order: [ID=2 T=55.00 B02 Buy Q=3 QR=1 P=53 MES=1]")
 
         # test the sell side
         self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
-        self.assertEqual(exchange.order_book.buy_side.orders[0].__str__(), "Order: [ID=4 T=65.00 B04 Buy Q=3 P=61 MES=2]")
-        self.assertEqual(exchange.order_book.buy_side.orders[1].__str__(), "Order: [ID=3 T=75.00 B03 Buy Q=3 P=59 MES=2]")
-        self.assertEqual(exchange.order_book.buy_side.orders[2].__str__(), "Order: [ID=2 T=55.00 B02 Buy Q=2 P=53 MES=1]")
+        self.assertEqual(exchange.order_book.sell_side.orders[0].__str__(), "Order: [ID=6 T=55.00 S01 Sell Q=4 QR=4 P=43 MES=2]")
 
         # test the tape
-        self.assertEqual(exchange.order_book.tape, [{'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 6}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 5}, {'price': 50.0, 'seller': 'S01', 'BDS': False, 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 4}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B02', 'type': 'Trade', 'quantity': 1}])
+        self.assertEqual(exchange.order_book.tape, [{'price': 50.0, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 10}, {'price': 50.0, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 1}, {'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 4}, {'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B02', 'type': 'Trade', 'quantity': 2}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B04', 'type': 'Trade', 'quantity': 3}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B03', 'type': 'Trade', 'quantity': 3}])
 
 
-    def test__find_matching_block_indications(self):
+    def test_find_matching_block_indications_function(self):
 
-        # create the block indication book
+        # create the block ixndication book
         block_indication_book = dark_pool.Block_Indication_Book()
         block_indication_book.MIV = 450
 
@@ -615,10 +611,7 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(block_indication_book.matches[0]["sell_side_QBO"], None)
 
 
-    def test__block_indication_match(self):
-        return
-
-    def test__add_qualifying_block_order(self):
+    def test_add_qualifying_block_order_function(self):
 
         # create the block indication book
         block_indication_book = dark_pool.Block_Indication_Book()
@@ -649,7 +642,7 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(block_indication_book.matches[0]["buy_side_QBO"].__str__(), "QBO: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500 MID=0]")
         self.assertEqual(block_indication_book.matches[0]["sell_side_QBO"].__str__(), "QBO: [ID=1 T=100.00 S00 Sell Q=500 P=None MES=500 MID=0]")
 
-    def test__marketable(self):
+    def test_marketable_function(self):
 
         block_indication_book = dark_pool.Block_Indication_Book()
 
@@ -677,7 +670,7 @@ class Test_Exchange(unittest.TestCase):
         QBO6 = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 501, None, 500, 0)
         self.assertEqual(block_indication_book.marketable(BI6, QBO6), False)
 
-    def test__calculate_event_reputational_score(self):
+    def test_calculate_event_reputational_score_function(self):
         
         block_indication_book = dark_pool.Block_Indication_Book()
         block_indication_book.event_reputational_scores['B00'] = []
@@ -695,7 +688,7 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(block_indication_book.calculate_event_reputational_score(BI2, QBO2), 100)
         self.assertEqual(block_indication_book.calculate_event_reputational_score(BI3, QBO3), 94)
 
-    def test__calculate_composite_reputational_score(self):
+    def test_calculate_composite_reputational_score_function(self):
         
         block_indication_book = dark_pool.Block_Indication_Book()
         block_indication_book.event_reputational_scores['B00'] = [100,90,80,70,60,50,0]
@@ -703,7 +696,7 @@ class Test_Exchange(unittest.TestCase):
         block_indication_book.event_reputational_scores['B00'] = [0,50,60,70,80,90,100]
         self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 63)
 
-    def test__update_composite_reputational_scores(self):
+    def test_update_composite_reputational_scores_function(self):
         
         # create the block indication book
         block_indication_book = dark_pool.Block_Indication_Book()
@@ -728,10 +721,10 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(block_indication_book.composite_reputational_scores['B00'], 91)
         self.assertEqual(block_indication_book.composite_reputational_scores['S00'], 97)
 
-    def test__delete_match(self):
+    def test_delete_match_function(self):
         return
 
-    def test__create_order_submission_requests(self):
+    def test_create_order_submission_requests_function(self):
         
         # create the block indication book
         block_indication_book = dark_pool.Block_Indication_Book()
@@ -754,7 +747,7 @@ class Test_Exchange(unittest.TestCase):
 
 class Test_Functions(unittest.TestCase):
 
-    def test_populate_market(self):
+    def test_populate_market_function(self):
 
         # create the trader specs
         buyers_spec = [('GVWY',2),('GVWY',1),('GVWY',2),('GVWY',3)]

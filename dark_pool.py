@@ -1046,7 +1046,7 @@ class Trader_Giveaway(Trader):
             order = None
         elif self.customer_order.quantity - self.quantity_traded >= BI_threshold:
             # create a block indication
-            MES = 700
+            MES = None
             block_indication = Block_Indication(time,
                                                 self.trader_id,
                                                 self.customer_order.otype,
@@ -1057,7 +1057,7 @@ class Trader_Giveaway(Trader):
             return block_indication
         else:
             # create a normal order
-            MES = 2
+            MES = None
             order = Order(time, 
                           self.trader_id, 
                           self.customer_order.otype, 
@@ -1074,12 +1074,15 @@ class Trader_Giveaway(Trader):
 
         # The composite reputational score for this trader
         CRP = OSR.CRP
+        
+        # create a small quantity discrepency half of the time
+        quantity_discrepency = random.randint(0,1) * random.randint(1,100)
 
         # create a QOB from the received OSR
         QOB = Qualifying_Block_Order(time, 
                                      OSR.trader_id, 
                                      OSR.otype, 
-                                     OSR.quantity,
+                                     OSR.quantity - quantity_discrepency,
                                      OSR.limit_price,
                                      OSR.MES, 
                                      OSR.match_id)
@@ -1642,7 +1645,7 @@ def experiment1():
 
     sys.exit('Done Now')
 
-
+# match block indications and then convert those block indication into firm orders
 def match_block_indications_and_add_firm_orders_to_the_order_book(exchange, price, traders):
     # check if there is a match between any two block indications
     match_id = exchange.find_matching_block_indications(price)
@@ -1741,9 +1744,7 @@ def test():
                     exchange.print_order_book()
 
     exchange.print_matches()
-
     exchange.print_composite_reputational_scores()
-    exchange.print_event_reputational_scores()
 
     # dump the trading data
     exchange.tape_dump('transactions_dark.csv', 'w', 'keep')

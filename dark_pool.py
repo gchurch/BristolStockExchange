@@ -1552,14 +1552,17 @@ def market_session_with_uncross_events(sess_id, starttime, endtime, trader_spec,
 
     print('\n%s;  ' % (sess_id))
 
+    # the amount of time for the submission of orders to the uncross event
+    order_submission_interval = 5.0
+    # the time of the next uncross event
+    uncross_event_time = 0.0
+
     while time < endtime:
 
         # how much time left, as a percentage?
         time_left = (endtime - time) / duration
 
         if verbose: print('%s; t=%08.2f (%4.1f/100) ' % (sess_id, time, time_left*100))
-
-        trade = None
 
         # update the pending customer orders list by generating new orders if none remain and issue 
         # any customer orders that were scheduled in the past. Note these are customer orders being
@@ -1585,20 +1588,27 @@ def market_session_with_uncross_events(sess_id, starttime, endtime, trader_spec,
 
         # if the randomly selected trader gives us a quote, then add it to the exchange
         if order != None:
-            # send order to exchange
+
+            traders[tid].n_quotes = 1
+
+            # add an order to the exchange
             if isinstance(order, Order):
                 result = exchange.add_order(order, process_verbose)
+
+            # add a block indication to the exchange and check for matches
             elif isinstance(order, Block_Indication):
                 result = exchange.add_block_indication(order, process_verbose)
                 match_block_indications_and_add_firm_orders_to_the_order_book(exchange, 50, traders)
-            traders[tid].n_quotes = 1
+            
+            # execute all possible trades
             trades = exchange.execute_trades(time, 50)
+
+            # for each trade, notify the traders
             for trade in trades:
-                # trade occurred,
-                # so the counterparties update order lists and blotters
                 traders[trade['buyer']].bookkeep(trade, bookkeep_verbose)
                 traders[trade['seller']].bookkeep(trade, bookkeep_verbose)
 
+        # update the time
         time = time + timestep
 
     # print the final order book
@@ -1642,7 +1652,7 @@ def experiment1():
             
     while (trial<(n_trials+1)):
             trial_id = 'trial%04d' % trial
-            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
+            market_session_with_uncross_events(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
             tdump.flush()
             trial = trial + 1
     tdump.close()
@@ -1676,7 +1686,7 @@ def match_block_indications_and_add_firm_orders_to_the_order_book(exchange, pric
         # add the firm orders to the order book.
         exchange.add_firm_orders_to_order_book(match_id)
         # delete the block indication match
-        # exchange.delete_block_indication_match(match_id)
+        exchange.delete_block_indication_match(match_id)
 
         return "Match found."
     return "No match found."

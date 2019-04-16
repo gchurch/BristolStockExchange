@@ -1041,7 +1041,7 @@ class Trader:
 class Trader_Giveaway(Trader):
 
     def getorder(self, time):
-        BI_threshold = 700
+        BI_threshold = 950
         if self.customer_order == None:
             order = None
         elif self.customer_order.quantity - self.quantity_traded >= BI_threshold:
@@ -1416,196 +1416,98 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
 # one session in the market
 def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dumpfile, dump_each_trade):
 
-        # variables which dictate what information is printed to the output
-        verbose = False
-        traders_verbose = False
-        orders_verbose = False
-        lob_verbose = False
-        process_verbose = False
-        respond_verbose = False
-        bookkeep_verbose = False
+    # variables which dictate what information is printed to the output
+    verbose = False
+    traders_verbose = False
+    orders_verbose = False
+    lob_verbose = False
+    process_verbose = False
+    respond_verbose = False
+    bookkeep_verbose = False
 
 
-        # initialise the exchange
-        exchange = Exchange()
+    # initialise the exchange
+    exchange = Exchange()
 
 
-        # create a bunch of traders
-        traders = {}
-        trader_stats = populate_market(trader_spec, traders, True, traders_verbose)
+    # create a bunch of traders
+    traders = {}
+    trader_stats = populate_market(trader_spec, traders, True, traders_verbose)
 
 
-        # timestep set so that can process all traders in one second
-        # NB minimum interarrival time of customer orders may be much less than this!! 
-        timestep = 1.0 / float(trader_stats['n_buyers'] + trader_stats['n_sellers'])
-        
-        duration = float(endtime - starttime)
+    # timestep set so that can process all traders in one second
+    # NB minimum interarrival time of customer orders may be much less than this!! 
+    timestep = 1.0 / float(trader_stats['n_buyers'] + trader_stats['n_sellers'])
+    
+    duration = float(endtime - starttime)
 
-        last_update = -1.0
+    last_update = -1.0
 
-        time = starttime
+    time = starttime
 
-        # this list contains all the pending customer orders that are yet to happen
-        pending_cust_orders = []
+    # this list contains all the pending customer orders that are yet to happen
+    pending_cust_orders = []
 
-        print('\n%s;  ' % (sess_id))
+    print('\n%s;  ' % (sess_id))
 
-        while time < endtime:
+    while time < endtime:
 
-                # how much time left, as a percentage?
-                time_left = (endtime - time) / duration
+        # how much time left, as a percentage?
+        time_left = (endtime - time) / duration
 
-                if verbose: print('%s; t=%08.2f (%4.1f/100) ' % (sess_id, time, time_left*100))
+        if verbose: print('%s; t=%08.2f (%4.1f/100) ' % (sess_id, time, time_left*100))
 
-                trade = None
+        trade = None
 
-                # update the pending customer orders list by generating new orders if none remain and issue 
-                # any customer orders that were scheduled in the past. Note these are customer orders being
-                # issued to traders, quotes will not be put onto the exchange yet
-                [pending_cust_orders, kills] = customer_orders(time, last_update, traders, trader_stats,
-                                                 order_schedule, pending_cust_orders, orders_verbose)
+        # update the pending customer orders list by generating new orders if none remain and issue 
+        # any customer orders that were scheduled in the past. Note these are customer orders being
+        # issued to traders, quotes will not be put onto the exchange yet
+        [pending_cust_orders, kills] = customer_orders(time, last_update, traders, trader_stats,
+                                         order_schedule, pending_cust_orders, orders_verbose)
 
-                # if any newly-issued customer orders mean quotes on the LOB need to be cancelled, kill them
-                if len(kills) > 0 :
-                        if verbose : print('Kills: %s' % (kills))
-                        for kill in kills :
-                                if verbose : print('lastquote=%s' % traders[kill].lastquote)
-                                if traders[kill].lastquote != None :
-                                        if verbose : print('Killing order %s' % (str(traders[kill].lastquote)))
-                                        exchange.del_order(time, traders[kill].lastquote, verbose)
-
-
-                # get a limit-order quote (or None) from a randomly chosen trader
-                tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
-                order = traders[tid].getorder(time)
-
-                if verbose: print('Trader Quote: %s' % (order))
-
-                # if the randomly selected trader gives us a quote, then add it to the exchange
-                if order != None:
-                        # send order to exchange
-                        if isinstance(order, Order):
-                            result = exchange.add_order(order, process_verbose)
-                        elif isinstance(order, Block_Indication):
-                            result = exchange.add_block_indication(order, process_verbose)
-                            match_block_indications_and_add_firm_orders_to_the_order_book(exchange, 50, traders)
-                        traders[tid].n_quotes = 1
-                        trades = exchange.uncross(time, 50)
-                        for trade in trades:
-                            # trade occurred,
-                            # so the counterparties update order lists and blotters
-                            traders[trade['buyer']].bookkeep(trade, bookkeep_verbose)
-                            traders[trade['seller']].bookkeep(trade, bookkeep_verbose)
-
-                time = time + timestep
-
-        # print the final order book
-        exchange.print_order_book()
-        exchange.print_block_indications()
-
-        # end of an experiment -- dump the tape
-        exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
-
-        # write trade_stats for this experiment NB end-of-session summary only
-        trade_stats(sess_id, traders, dumpfile, time)
-
-# one session in the market
-def market_session1(sess_id, starttime, endtime, trader_spec, order_schedule, dumpfile, dump_each_trade):
-
-        # variables which dictate what information is printed to the output
-        verbose = False
-        traders_verbose = False
-        orders_verbose = False
-        lob_verbose = False
-        process_verbose = False
-        respond_verbose = False
-        bookkeep_verbose = False
+        # if any newly-issued customer orders mean quotes on the LOB need to be cancelled, kill them
+        if len(kills) > 0 :
+            if verbose : print('Kills: %s' % (kills))
+            for kill in kills :
+                if verbose : print('lastquote=%s' % traders[kill].lastquote)
+                if traders[kill].lastquote != None :
+                    if verbose : print('Killing order %s' % (str(traders[kill].lastquote)))
+                    exchange.del_order(time, traders[kill].lastquote, verbose)
 
 
-        # initialise the exchange
-        exchange = Exchange()
+        # get a limit-order quote (or None) from a randomly chosen trader
+        tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
+        order = traders[tid].getorder(time)
 
+        if verbose: print('Trader Quote: %s' % (order))
 
-        # create a bunch of traders
-        traders = {}
-        trader_stats = populate_market(trader_spec, traders, True, traders_verbose)
+        # if the randomly selected trader gives us a quote, then add it to the exchange
+        if order != None:
+            # send order to exchange
+            if isinstance(order, Order):
+                result = exchange.add_order(order, process_verbose)
+            elif isinstance(order, Block_Indication):
+                result = exchange.add_block_indication(order, process_verbose)
+                match_block_indications_and_add_firm_orders_to_the_order_book(exchange, 50, traders)
+            traders[tid].n_quotes = 1
+            trades = exchange.uncross(time, 50)
+            for trade in trades:
+                # trade occurred,
+                # so the counterparties update order lists and blotters
+                traders[trade['buyer']].bookkeep(trade, bookkeep_verbose)
+                traders[trade['seller']].bookkeep(trade, bookkeep_verbose)
 
+        time = time + timestep
 
-        # timestep set so that can process all traders in one second
-        # NB minimum interarrival time of customer orders may be much less than this!! 
-        timestep = 1.0 / float(trader_stats['n_buyers'] + trader_stats['n_sellers'])
-        
-        duration = float(endtime - starttime)
+    # print the final order book
+    exchange.print_order_book()
+    exchange.print_block_indications()
 
-        last_update = -1.0
+    # end of an experiment -- dump the tape
+    exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
 
-        time = starttime
-
-        # this list contains all the pending customer orders that are yet to happen
-        pending_cust_orders = []
-
-        print('\n%s;  ' % (sess_id))
-
-        while time < endtime:
-
-                # how much time left, as a percentage?
-                time_left = (endtime - time) / duration
-
-                if verbose: print('%s; t=%08.2f (%4.1f/100) ' % (sess_id, time, time_left*100))
-
-                trade = None
-
-                # update the pending customer orders list by generating new orders if none remain and issue 
-                # any customer orders that were scheduled in the past. Note these are customer orders being
-                # issued to traders, quotes will not be put onto the exchange yet
-                [pending_cust_orders, kills] = customer_orders(time, last_update, traders, trader_stats,
-                                                 order_schedule, pending_cust_orders, orders_verbose)
-
-                # if any newly-issued customer orders mean quotes on the LOB need to be cancelled, kill them
-                if len(kills) > 0 :
-                        if verbose : print('Kills: %s' % (kills))
-                        for kill in kills :
-                                if verbose : print('lastquote=%s' % traders[kill].lastquote)
-                                if traders[kill].lastquote != None :
-                                        if verbose : print('Killing order %s' % (str(traders[kill].lastquote)))
-                                        exchange.del_order(time, traders[kill].lastquote, verbose)
-
-
-                # get a limit-order quote (or None) from a randomly chosen trader
-                tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
-                order = traders[tid].getorder(time)
-
-                if verbose: print('Trader Quote: %s' % (order))
-
-                # if the randomly selected trader gives us a quote, then add it to the exchange
-                if order != None:
-                        # send order to exchange
-                        if isinstance(order, Order):
-                            result = exchange.add_order(order, process_verbose)
-                        elif isinstance(order, Block_Indication):
-                            result = exchange.add_block_indication(order, process_verbose)
-                            match_block_indications_and_add_firm_orders_to_the_order_book(exchange, 50, traders)
-                        traders[tid].n_quotes = 1
-                        trades = exchange.uncross(time, 50)
-                        for trade in trades:
-                            # trade occurred,
-                            # so the counterparties update order lists and blotters
-                            traders[trade['buyer']].bookkeep(trade, bookkeep_verbose)
-                            traders[trade['seller']].bookkeep(trade, bookkeep_verbose)
-
-                time = time + timestep
-
-        # print the final order book
-        exchange.print_order_book()
-        exchange.print_block_indications()
-
-        # end of an experiment -- dump the tape
-        exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
-
-        # write trade_stats for this experiment NB end-of-session summary only
-        trade_stats(sess_id, traders, dumpfile, time)
-
-
+    # write trade_stats for this experiment NB end-of-session summary only
+    trade_stats(sess_id, traders, dumpfile, time)
 
 def experiment1():
 
@@ -1638,7 +1540,7 @@ def experiment1():
             
     while (trial<(n_trials+1)):
             trial_id = 'trial%04d' % trial
-            market_session1(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
+            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
             tdump.flush()
             trial = trial + 1
     tdump.close()

@@ -407,6 +407,8 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order: [ID=2 T=35.00 B00 Sell Q=15 QR=15 P=110 MES=3]")
         self.assertEqual(orderbook.sell_side.orders[1].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 QR=11 P=100 MES=6]")
 
+    def test_add_order_function_overwrite_across_books(self):
+        return
 
     def test_trader_has_order_function(self):
         
@@ -695,6 +697,50 @@ class Test_Block_Indication_Book(unittest.TestCase):
         # check that an entry was created in the events_reputational_scores dictionary for the traders
         self.assertEqual(block_indication_book.event_reputational_scores['B00'], [])
         self.assertEqual(block_indication_book.event_reputational_scores['S00'], [])
+
+    def test_add_block_indication_function_overwrite(self):
+
+        # create a block indication book
+        block_indication_book = dark_pool.Block_Indication_Book()
+
+        # create some block indications
+        block_indications = []
+        block_indications.append(dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 125, 500))
+        block_indications.append(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 999, None, None))
+        block_indications.append(dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1008, 333, 240))
+
+        # add the block indications
+        return_values = []
+        for block_indication in block_indications:
+            return_values.append(block_indication_book.add_block_indication(block_indication, False))
+
+        self.assertEqual(return_values, [[0, 'Addition'], [1, 'Addition'], [2, 'Overwrite']])
+        self.assertEqual(len(block_indication_book.buy_side.orders), 1)
+        self.assertEqual(len(block_indication_book.sell_side.orders), 1)
+        self.assertEqual(block_indication_book.buy_side.orders[0].__str__(), "BI: [ID=2 T=100.00 B00 Buy Q=1008 P=333 MES=240]")
+        self.assertEqual(block_indication_book.sell_side.orders[0].__str__(), "BI: [ID=1 T=100.00 S00 Sell Q=999 P=None MES=None]")
+
+    def test_add_block_indication_function_overwrite_across_sides(self):
+
+        # create a block indication book
+        block_indication_book = dark_pool.Block_Indication_Book()
+
+        # create some block indications
+        block_indications = []
+        block_indications.append(dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 125, 500))
+        block_indications.append(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 999, None, None))
+        block_indications.append(dark_pool.Block_Indication(100.0, 'B00', 'Sell', 1008, 333, 240))
+
+        # add the block indications
+        return_values = []
+        for block_indication in block_indications:
+            return_values.append(block_indication_book.add_block_indication(block_indication, False))
+
+        self.assertEqual(return_values, [[0, 'Addition'], [1, 'Addition'], [2, 'Overwrite']])
+        self.assertEqual(len(block_indication_book.buy_side.orders), 0)
+        self.assertEqual(len(block_indication_book.sell_side.orders), 2)
+        self.assertEqual(block_indication_book.sell_side.orders[0].__str__(), "BI: [ID=2 T=100.00 B00 Sell Q=1008 P=333 MES=240]")
+        self.assertEqual(block_indication_book.sell_side.orders[1].__str__(), "BI: [ID=1 T=100.00 S00 Sell Q=999 P=None MES=None]")
 
     def test_trader_has_block_indication_function(self):
 
@@ -1086,7 +1132,7 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(exchange.order_book.buy_side.traders, {})
         self.assertEqual(exchange.order_book.sell_side.traders, {})
 
-    def test_add_order_function(self):
+    def test_add_order_function_simple(self):
         
         # create an exchange
         exchange = dark_pool.Exchange()
@@ -1103,6 +1149,97 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
         self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
 
+    def test_add_order_function_overwrite_across_books(self):
+
+        # create an exchange
+        exchange = dark_pool.Exchange()
+        exchange.block_indication_book.MIV = 300
+
+        # create some block indications
+        block_indications = []
+        block_indications.append(dark_pool.Block_Indication(65.0, 'B00', 'Buy', 350, None, None))
+        block_indications.append(dark_pool.Block_Indication(75.0, 'S00', 'Sell', 400, None, None))
+
+        # add the block indications to the exchange
+        block_indication_return_values = []
+        for block_indication in block_indications:
+            block_indication_return_values.append(exchange.add_block_indication(block_indication, False))
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, None, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, None, 6))
+
+        # add the orders to the exchange
+        order_return_values = []
+        for order in orders:
+            order_return_values.append(exchange.add_order(order, False))
+
+        self.assertEqual(block_indication_return_values, [[0, 'Addition'], [1, 'Addition']])
+        self.assertEqual(order_return_values, [[0, 'Overwrite'], [1, 'Overwrite']])
+        self.assertEqual(len(exchange.block_indication_book.buy_side.orders), 0)
+        self.assertEqual(len(exchange.block_indication_book.sell_side.orders), 0)
+        self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
+        self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
+
+    def test_add_block_indication_function(self):
+        
+        # create an exchange
+        exchange = dark_pool.Exchange()
+        exchange.block_indication_book.MIV = 300
+
+        # create some block indications
+        block_indications = []
+        block_indications.append(dark_pool.Block_Indication(65.0, 'B00', 'Buy', 350, None, None))
+        block_indications.append(dark_pool.Block_Indication(75.0, 'S00', 'Sell', 400, None, None))
+
+        # add the block indications to the exchange
+        block_indication_return_values = []
+        for block_indication in block_indications:
+            block_indication_return_values.append(exchange.add_block_indication(block_indication, False))
+
+        self.assertEqual(block_indication_return_values, [[0, 'Addition'], [1, 'Addition']])
+        self.assertEqual(len(exchange.block_indication_book.buy_side.orders), 1)
+        self.assertEqual(len(exchange.block_indication_book.sell_side.orders), 1)
+
+    def test_add_block_indication_function_overwrite_across_books(self):
+
+        # create an exchange
+        exchange = dark_pool.Exchange()
+        exchange.block_indication_book.MIV = 300
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, None, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, None, 6))
+
+        # add the orders to the exchange
+        order_return_values = []
+        for order in orders:
+            order_return_values.append(exchange.add_order(order, False))
+
+        # create some block indications
+        block_indications = []
+        block_indications.append(dark_pool.Block_Indication(65.0, 'B00', 'Buy', 350, None, None))
+        block_indications.append(dark_pool.Block_Indication(75.0, 'S00', 'Sell', 400, None, None))
+
+        # add the block indications to the exchange
+        block_indication_return_values = []
+        for block_indication in block_indications:
+            block_indication_return_values.append(exchange.add_block_indication(block_indication, False))
+
+        self.assertEqual(order_return_values, [[0, 'Addition'], [1, 'Addition']])
+        self.assertEqual(block_indication_return_values, [[0, 'Overwrite'], [1, 'Overwrite']])
+        self.assertEqual(len(exchange.order_book.buy_side.orders), 0)
+        self.assertEqual(len(exchange.order_book.sell_side.orders), 0)
+        self.assertEqual(len(exchange.block_indication_book.buy_side.orders), 1)
+        self.assertEqual(len(exchange.block_indication_book.sell_side.orders), 1)
+
+    def test_add_qualifying_block_order_function(self):
+        return
+
+    def test_add_firm_orders_to_order_book(self):
+        return
 
     def test_del_order_function(self):
 

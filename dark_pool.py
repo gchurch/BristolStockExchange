@@ -875,37 +875,6 @@ class Exchange:
         else:
             return "Not a Qualifying Block Order."
 
-
-    # delete an order from the exchange
-    def del_order(self, time, order, verbose):
-        return self.order_book.del_order(time, order, verbose)
-
-    # this function executes the uncross event, trades occur at the given time at the given price
-    # keep making trades out of matching orders until no more matches can be found
-    def execute_trades(self, time, price):
-        return self.order_book.execute_trades(time, price)
-
-    def del_block_indication(self, time, order, verbose):
-        response = self.block_indication_book.del_block_indication(time, order, verbose)
-        return response
-
-    # write the order_book's tape to the output file
-    def tape_dump(self, fname, fmode, tmode):
-        self.order_book.tape_dump(fname, fmode, tmode)
-
-
-    def find_matching_block_indications(self, price):
-        return self.block_indication_book.find_matching_block_indications(price)
-
-    def get_block_indication_match(self, match_id):
-        return self.block_indication_book.get_block_indication_match(match_id)
-
-    def delete_block_indication_match(self, match_id):
-        return self.block_indication_book.delete_match(match_id)
-
-    def update_composite_reputational_scores(self, match_id):
-        return self.block_indication_book.update_composite_reputational_scores(match_id)
-
     def add_firm_orders_to_order_book(self, match_id):
         full_match = self.get_block_indication_match(match_id)
         buy_side_QBO = full_match["buy_side_QBO"]
@@ -928,6 +897,32 @@ class Exchange:
         sell_side_order.BDS = True
         self.add_order(buy_side_order, False)
         self.add_order(sell_side_order, False)
+
+    # write the order_book's tape to the output file
+    def tape_dump(self, fname, fmode, tmode):
+        self.order_book.tape_dump(fname, fmode, tmode)
+
+    # delete an order from the exchange
+    def del_order(self, time, order, verbose):
+        return self.order_book.del_order(time, order, verbose)
+
+    def del_block_indication(self, time, order, verbose):
+        return self.block_indication_book.del_block_indication(time, order, verbose)
+
+    def execute_trades(self, time, price):
+        return self.order_book.execute_trades(time, price)
+
+    def find_matching_block_indications(self, price):
+        return self.block_indication_book.find_matching_block_indications(price)
+
+    def get_block_indication_match(self, match_id):
+        return self.block_indication_book.get_block_indication_match(match_id)
+
+    def delete_block_indication_match(self, match_id):
+        return self.block_indication_book.delete_match(match_id)
+
+    def update_composite_reputational_scores(self, match_id):
+        return self.block_indication_book.update_composite_reputational_scores(match_id)
 
     def create_order_submission_requests(self, match_id):
         return self.block_indication_book.create_order_submission_requests(match_id)

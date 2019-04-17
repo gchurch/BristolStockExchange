@@ -438,12 +438,13 @@ class Test_Orderbook(unittest.TestCase):
         order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
         self.assertEqual(orderbook.check_price_match(order1, order2, 50), False)
 
-    def test_size_match_function(self):
+    def test_check_size_match_function(self):
 
         # create the orderbook
         orderbook = dark_pool.Orderbook()
 
-        # create some orders
+        # create some orders and test them
+
         order1 = dark_pool.Order(25.0, 'B00', 'Buy', 5, 56, 3)
         order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
         self.assertEqual(orderbook.check_size_match(order1, order2), False)
@@ -464,13 +465,18 @@ class Test_Orderbook(unittest.TestCase):
         order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, None)
         self.assertEqual(orderbook.check_size_match(order1, order2), True)
 
-        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
-        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 5, 56, 3)
+        order1 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
+        order2 = dark_pool.Order(25.0, 'B00', 'Buy', 5, 56, 3)
         self.assertEqual(orderbook.check_size_match(order1, order2), False)
 
-        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
-        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 7, 56, 3)
+        order1 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
+        order2 = dark_pool.Order(25.0, 'B00', 'Buy', 7, 56, 3)
         self.assertEqual(orderbook.check_size_match(order1, order2), True)
+
+        order1 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
+        order2 = dark_pool.Order(25.0, 'B00', 'Buy', 7, 56, 3)
+        order2.quantity_remaining = 5
+        self.assertEqual(orderbook.check_size_match(order1, order2), False)
 
     def test_check_match_function(self):
 
@@ -486,6 +492,12 @@ class Test_Orderbook(unittest.TestCase):
         order1 = dark_pool.Order(25.0, 'B00', 'Buy', 6, 50, 3)
         order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 50, 6)
         self.assertEqual(orderbook.check_match(order1, order2, 50), True)
+
+        # create some orders
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 6, 50, 3)
+        order1.quantity_remaining = 5
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 50, 6)
+        self.assertEqual(orderbook.check_match(order1, order2, 50), False)
 
         # create some orders
         order1 = dark_pool.Order(25.0, 'B00', 'Buy', 6, 49, 3)
@@ -607,12 +619,13 @@ class Test_Block_Indication_Book(unittest.TestCase):
         block_indication_book = dark_pool.Block_Indication_Book()
 
         self.assertEqual(block_indication_book.BI_id, 0)
-        self.assertEqual(block_indication_book.composite_reputational_scores, {})
-        self.assertEqual(block_indication_book.matches, {})
         self.assertEqual(block_indication_book.QBO_id, 0)
+        self.assertEqual(block_indication_book.OSR_id, 0)
+        self.assertEqual(block_indication_book.composite_reputational_scores, {})
+        self.assertEqual(block_indication_book.event_reputational_scores, {})
+        self.assertEqual(block_indication_book.matches, {})
         self.assertEqual(block_indication_book.match_id, 0)
         self.assertEqual(block_indication_book.tape, [])
-        self.assertEqual(block_indication_book.OSR_id, 0)
 
     def test_add_block_indication_function(self):
 
@@ -640,6 +653,59 @@ class Test_Block_Indication_Book(unittest.TestCase):
         self.assertEqual(block_indication_book.event_reputational_scores['B00'], [])
         self.assertEqual(block_indication_book.event_reputational_scores['S00'], [])
 
+    def test_trader_has_block_indication_function(self):
+
+        # create a block indication book
+        block_indication_book = dark_pool.Block_Indication_Book()
+
+        # create some block indications
+        block_indications = []
+        block_indications.append(dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 125, 500))
+        block_indications.append(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 999, None, None))
+
+        for block_indication in block_indications:
+            block_indication_book.add_block_indication(block_indication, False)
+
+        self.assertEqual(block_indication_book.trader_has_block_indication('B00'), True)
+        self.assertEqual(block_indication_book.trader_has_block_indication('S00'), True)
+        self.assertEqual(block_indication_book.trader_has_block_indication('B01'), False)
+        self.assertEqual(block_indication_book.trader_has_block_indication('S01'), False)
+        self.assertEqual(block_indication_book.trader_has_block_indication('B02'), False)
+        self.assertEqual(block_indication_book.trader_has_block_indication('S02'), False)
+
+    def test_book_del_function(self):
+        
+        # create a block indication book
+        block_indication_book = dark_pool.Block_Indication_Book()
+
+        # create some block indications
+        block_indications = []
+        block_indications.append(dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 125, 500))
+        block_indications.append(dark_pool.Block_Indication(100.0, 'S00', 'Sell', 999, None, None))
+
+        # add the block indications
+        for block_indication in block_indications:
+            block_indication_book.add_block_indication(block_indication, False)
+
+        # check the number of block indications
+        self.assertEqual(len(block_indication_book.buy_side.orders), 1)
+        self.assertEqual(len(block_indication_book.sell_side.orders), 1)
+
+        # delete block indication
+        block_indication_book.book_del('B00')
+
+        # check the number of block indications
+        self.assertEqual(len(block_indication_book.buy_side.orders), 0)
+        self.assertEqual(len(block_indication_book.sell_side.orders), 1)
+
+        # delete block indication
+        block_indication_book.book_del('S00')
+
+        # check the number of block indications
+        self.assertEqual(len(block_indication_book.buy_side.orders), 0)
+        self.assertEqual(len(block_indication_book.sell_side.orders), 0)
+
+
     def test_del_block_indication_function(self):
 
         # create the block indication book
@@ -662,63 +728,72 @@ class Test_Block_Indication_Book(unittest.TestCase):
         self.assertEqual(block_indication_book.buy_side.orders[0].__str__(), "BI: [ID=1 T=100.00 B01 Buy Q=900 P=112 MES=450]")
         self.assertEqual(block_indication_book.sell_side.orders[0].__str__(), "BI: [ID=2 T=100.00 S00 Sell Q=999 P=None MES=None]")
 
-    def test_tape_dump_function(self):
-        return
-
-###############################################################################
-# tests for Exchange class
-
-class Test_Exchange(unittest.TestCase):
-
-    def test_init_function(self):
-
-        # create an exchange
-        exchange = dark_pool.Exchange()
-
-        # check the initialisation
-        self.assertEqual(exchange.order_book.tape, [])
-        self.assertEqual(exchange.order_book.order_id, 0)
-        self.assertEqual(exchange.order_book.buy_side.traders, {})
-        self.assertEqual(exchange.order_book.sell_side.traders, {})
-
-    def test_add_order_function(self):
+    def test_check_price_match_function(self):
         
-        # create an exchange
-        exchange = dark_pool.Exchange()
+        # create the block_indication_book
+        block_indication_book = dark_pool.Block_Indication_Book()
 
-        # create some orders
-        orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, None, 3))
-        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, None, 6))
+        # create some BIs
+        BI1 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 5, 56, 3)
+        BI2 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(block_indication_book.check_price_match(BI1, BI2, 50), True)
 
-        # add the orders to the exchange
-        self.assertEqual(exchange.add_order(orders[0], False), [0, 'Addition'])
-        self.assertEqual(exchange.add_order(orders[1], False), [1, 'Addition'])
+        BI1 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 5, None, 3)
+        BI2 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(block_indication_book.check_price_match(BI1, BI2, 50), True)
 
-        self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
-        self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
+        BI1 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 5, 56, 3)
+        BI2 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, None, 6)
+        self.assertEqual(block_indication_book.check_price_match(BI1, BI2, 50), True)
 
+        BI1 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 5, None, 3)
+        BI2 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, None, 6)
+        self.assertEqual(block_indication_book.check_price_match(BI1, BI2, 50), True)
 
-    def test_del_order_function(self):
+        BI1 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 5, 56, 3)
+        BI2 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, 51, 6)
+        self.assertEqual(block_indication_book.check_price_match(BI1, BI2, 50), False)
 
-        # create an exchange
-        exchange = dark_pool.Exchange()
+        BI1 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 5, 49, 3)
+        BI2 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(block_indication_book.check_price_match(BI1, BI2, 50), False)
 
-        # create some orders
-        orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, None, 3))
-        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, None, 6))
-        orders.append(dark_pool.Order(55.0, 'B01', 'Buy', 31, None, 3))
+    def test_check_size_match_function(self):
+        
+        # create the block_indication_book
+        block_indication_book = dark_pool.Block_Indication_Book()
 
-        # add the orders to the exchange
-        return_values = []
-        for order in orders:
-            exchange.add_order(order, False)
+        # create some BIs and test them
+        BI1 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 5, 56, 3)
+        BI2 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(block_indication_book.check_size_match(BI1, BI2), False)
 
-        self.assertEqual(exchange.del_order(100.0, orders[0], False), None)
-        self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
-        self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
+        BI1 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 6, 56, 3)
+        BI2 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(block_indication_book.check_size_match(BI1, BI2), True)
 
+        BI1 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 5, 56, 3)
+        BI2 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, 46, None)
+        self.assertEqual(block_indication_book.check_size_match(BI1, BI2), True)
+
+        BI1 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 5, 56, None)
+        BI2 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(block_indication_book.check_size_match(BI1, BI2), False)
+
+        BI1 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 11, 56, None)
+        BI2 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, 46, None)
+        self.assertEqual(block_indication_book.check_size_match(BI1, BI2), True)
+
+        BI1 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, 46, 6)
+        BI2 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 5, 56, 3)
+        self.assertEqual(block_indication_book.check_size_match(BI1, BI2), False)
+
+        BI1 = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, 46, 6)
+        BI2 = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 7, 56, 3)
+        self.assertEqual(block_indication_book.check_size_match(BI1, BI2), True)
+
+    def test_check_match_function(self):
+        return
 
     def test_find_matching_block_indications_function(self):
 
@@ -750,6 +825,8 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(block_indication_book.matches[0]["buy_side_QBO"], None)
         self.assertEqual(block_indication_book.matches[0]["sell_side_QBO"], None)
 
+    def test_get_block_indication_match_function(self):
+        return
 
     def test_add_qualifying_block_order_function(self):
 
@@ -881,6 +958,63 @@ class Test_Exchange(unittest.TestCase):
 
         self.assertEqual(block_indication_book.create_order_submission_requests(0)["buy_side_OSR"].__str__(), "OSR: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500 MID=0 CRP=100]")
         self.assertEqual(block_indication_book.create_order_submission_requests(0)["sell_side_OSR"].__str__(), "OSR: [ID=3 T=100.00 S00 Sell Q=500 P=None MES=500 MID=0 CRP=100]")
+
+    def test_tape_dump_function(self):
+        return
+
+###############################################################################
+# tests for Exchange class
+
+class Test_Exchange(unittest.TestCase):
+
+    def test_init_function(self):
+
+        # create an exchange
+        exchange = dark_pool.Exchange()
+
+        # check the initialisation
+        self.assertEqual(exchange.order_book.tape, [])
+        self.assertEqual(exchange.order_book.order_id, 0)
+        self.assertEqual(exchange.order_book.buy_side.traders, {})
+        self.assertEqual(exchange.order_book.sell_side.traders, {})
+
+    def test_add_order_function(self):
+        
+        # create an exchange
+        exchange = dark_pool.Exchange()
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, None, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, None, 6))
+
+        # add the orders to the exchange
+        self.assertEqual(exchange.add_order(orders[0], False), [0, 'Addition'])
+        self.assertEqual(exchange.add_order(orders[1], False), [1, 'Addition'])
+
+        self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
+        self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
+
+
+    def test_del_order_function(self):
+
+        # create an exchange
+        exchange = dark_pool.Exchange()
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, None, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, None, 6))
+        orders.append(dark_pool.Order(55.0, 'B01', 'Buy', 31, None, 3))
+
+        # add the orders to the exchange
+        return_values = []
+        for order in orders:
+            exchange.add_order(order, False)
+
+        self.assertEqual(exchange.del_order(100.0, orders[0], False), None)
+        self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
+        self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
 
 ####################################################################################
 # testing general functions

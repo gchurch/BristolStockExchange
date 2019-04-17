@@ -37,11 +37,11 @@ class Order:
         self.time = time                # timestamp
         self.trader_id = trader_id      # trader i.d.
         self.otype = otype              # order type
-        self.quantity = quantity        # the quantity remaining on the order
+        self.quantity = quantity        # the original quantity of the order
         self.limit_price = limit_price  # limit price, None means no limit price
         self.MES = MES                  # minimum execution size, None means no MES
         self.BDS = False
-        self.quantity_remaining = quantity # the remaining on this order
+        self.quantity_remaining = quantity # the remaining on the order
 
     def __str__(self):
         return 'Order: [ID=%d T=%5.2f %s %s Q=%s QR=%s P=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.quantity_remaining, self.limit_price, self.MES)
@@ -443,31 +443,30 @@ class Block_Indication_Book:
         self.buy_side = Orderbook_half('Buy')
         # The sell side contains all of the block indications to sell
         self.sell_side = Orderbook_half('Sell')
+        # The minimum indication value (MIV) is the quantity that a block indication must be greater
+        # than in order to be accepted
+        self.MIV = 500
         # ID to be given to next block indication
         self.BI_id = 0
+        # ID to be given to next Qualifying Block Order received
+        self.QBO_id = 0
+        # ID to be given to the next OSR created
+        self.OSR_id = 0
         # The composite_reputational_scores dictionary contains the composite reputational score for each trader. 
         self.composite_reputational_scores = {}
         # The event_reputation_scores dictionary contains the last 50 event reputational scores for each trader.
         self.event_reputational_scores = {}
+        # the initial composite reputational score given to each trader
+        self.initial_composite_reputational_score = 100
         # the reputational score threshold (RST). All traders with a reputational score below this threshold
         # are no longer able to use the block discovery service
         self.RST = 55
-        # The minimum indication value (MIV) is the quantity that a block indication must be greater
-        # than in order to be accepted
-        self.MIV = 5
         # A dictionary to hold matched BIs and the corresponding QBOs
         self.matches = {}
-        # ID to be given to next Qualifying Block Order received
-        self.QBO_id = 0
         # ID to be given to the matching of two block indications
         self.match_id = 0
         # The tape contains the history of block indications sent to the exchange
         self.tape = []
-        # ID to be given to the next OSR created
-        self.OSR_id = 0
-        # the initial composite reputational score given to each trader
-        self.initial_composite_reputational_score = 100
-        # the number of block indications placed per trader
 
     
     # add block indication
@@ -508,6 +507,8 @@ class Block_Indication_Book:
     def trader_has_block_indication(self, trader_id):
         if self.buy_side.trader_has_order(trader_id) or self.sell_side.trader_has_order(trader_id):
             return True
+        else:
+            return False
 
     def book_del(self, trader_id):
         self.buy_side.book_del(trader_id)
@@ -526,8 +527,7 @@ class Block_Indication_Book:
             cancel_record = { 'type': 'Cancel', 'time': time, 'BI': BI }
             self.tape.append(cancel_record)
         else:
-            # neither bid nor ask?
-            sys.exit('bad order type in del_quote()')
+            sys.exit('bad order type in del_block_indication()')
 
     def check_price_match(self, buy_side, sell_side, price):
 

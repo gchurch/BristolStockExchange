@@ -1239,7 +1239,28 @@ class Test_Exchange(unittest.TestCase):
         return
 
     def test_add_firm_orders_to_order_book(self):
-        return
+        
+        # create an exchange
+        exchange = dark_pool.Exchange()
+        exchange.block_indication_book.MIV = 300
+
+        # create some BIs
+        buy_side_BI = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 300, None, None)
+        sell_side_BI = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 300, None, None)
+        buy_side_QBO = dark_pool.Qualifying_Block_Order(55.0, 'B00', 'Buy', 300, None, None, 0)
+        sell_side_QBO = dark_pool.Qualifying_Block_Order(65.0, 'S00', 'Sell', 300, None, None, 0)
+
+        exchange.block_indication_book.matches[0] = {   "buy_side_BI": buy_side_BI, 
+                                                        "sell_side_BI": sell_side_BI,
+                                                        "buy_side_QBO": buy_side_QBO,
+                                                        "sell_side_QBO": sell_side_QBO}
+
+        exchange.add_firm_orders_to_order_book(0)
+
+        self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
+        self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
+        self.assertEqual(exchange.order_book.buy_side.orders[0].__str__(), "Order: [ID=0 T=55.00 B00 Buy Q=300 QR=300 P=None MES=None]")
+        self.assertEqual(exchange.order_book.sell_side.orders[0].__str__(), "Order: [ID=1 T=65.00 S00 Sell Q=300 QR=300 P=None MES=None]")
 
     def test_del_order_function(self):
 

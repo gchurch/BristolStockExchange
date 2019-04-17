@@ -408,8 +408,104 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(len(orderbook.sell_side.orders), 1)
 
 
-    def test_check_price_match(self):
-        return
+    def test_check_price_match_function(self):
+        
+        # create the orderbook
+        orderbook = dark_pool.Orderbook()
+
+        # create some orders
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 5, 56, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(orderbook.check_price_match(order1, order2, 50), True)
+
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 5, None, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(orderbook.check_price_match(order1, order2, 50), True)
+
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 5, 56, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, None, 6)
+        self.assertEqual(orderbook.check_price_match(order1, order2, 50), True)
+
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 5, None, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, None, 6)
+        self.assertEqual(orderbook.check_price_match(order1, order2, 50), True)
+
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 5, 56, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 51, 6)
+        self.assertEqual(orderbook.check_price_match(order1, order2, 50), False)
+
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 5, 49, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(orderbook.check_price_match(order1, order2, 50), False)
+
+    def test_size_match_function(self):
+
+        # create the orderbook
+        orderbook = dark_pool.Orderbook()
+
+        # create some orders
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 5, 56, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(orderbook.check_size_match(order1, order2), False)
+
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 6, 56, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(orderbook.check_size_match(order1, order2), True)
+
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 5, 56, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, None)
+        self.assertEqual(orderbook.check_size_match(order1, order2), True)
+
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 5, 56, None)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(orderbook.check_size_match(order1, order2), False)
+
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 11, 56, None)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, None)
+        self.assertEqual(orderbook.check_size_match(order1, order2), True)
+
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 5, 56, 3)
+        self.assertEqual(orderbook.check_size_match(order1, order2), False)
+
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 7, 56, 3)
+        self.assertEqual(orderbook.check_size_match(order1, order2), True)
+
+    def test_check_match_function(self):
+
+        # create the orderbook
+        orderbook = dark_pool.Orderbook()
+
+        # create some orders
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 6, 56, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, 6)
+        self.assertEqual(orderbook.check_match(order1, order2, 50), True)
+
+        # create some orders
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 6, 50, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 50, 6)
+        self.assertEqual(orderbook.check_match(order1, order2, 50), True)
+
+        # create some orders
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 6, 49, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 51, 6)
+        self.assertEqual(orderbook.check_match(order1, order2, 50), False)
+
+        # create some orders
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 6, None, 3)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, 46, None)
+        self.assertEqual(orderbook.check_match(order1, order2, 50), True)
+
+        # create some orders
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 11, None, None)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, None, None)
+        self.assertEqual(orderbook.check_match(order1, order2, 50), True)
+
+        # create some orders
+        order1 = dark_pool.Order(25.0, 'B00', 'Buy', 6, 49, None)
+        order2 = dark_pool.Order(45.0, 'S00', 'Sell', 11, None, None)
+        self.assertEqual(orderbook.check_match(order1, order2, 50), False)
 
 
     def test_find_matching_orders_function(self):
@@ -465,6 +561,41 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order: [ID=0 T=25.00 B00 Buy Q=5 QR=5 P=56 MES=3]")
         self.assertEqual(len(orderbook.sell_side.orders), 1)
         self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 QR=3 P=46 MES=3]")
+
+
+    def test_execute_trades_function(self):
+        # initialise the exchange
+        exchange = dark_pool.Exchange()
+
+        # create some example orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, None, None))
+        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 50, 6))
+        orders.append(dark_pool.Order(55.0, 'B02', 'Buy', 3, 53, 1))
+        orders.append(dark_pool.Order(75.0, 'B03', 'Buy', 3, 59, 2))
+        orders.append(dark_pool.Order(65.0, 'B04', 'Buy', 3, 61, 2))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 49, 6))
+        orders.append(dark_pool.Order(55.0, 'S01', 'Sell', 4, 43, 2))
+        orders.append(dark_pool.Order(65.0, 'S02', 'Sell', 6, 48, 3))
+        orders.append(dark_pool.Order(55.0, 'S03', 'Sell', 6, 49, 4))
+
+        # add the orders to the exchange
+        for order in orders:
+            exchange.add_order(order, False)
+
+        # invoke an uncross event, setting the traders parameters to None to avID using traders
+        exchange.execute_trades(100.0, 50.0)
+
+        # test the buy side
+        self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
+        self.assertEqual(exchange.order_book.buy_side.orders[0].__str__(), "Order: [ID=2 T=55.00 B02 Buy Q=3 QR=1 P=53 MES=1]")
+
+        # test the sell side
+        self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
+        self.assertEqual(exchange.order_book.sell_side.orders[0].__str__(), "Order: [ID=6 T=55.00 S01 Sell Q=4 QR=4 P=43 MES=2]")
+
+        # test the tape
+        self.assertEqual(exchange.order_book.tape, [{'price': 50.0, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 10}, {'price': 50.0, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 1}, {'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 4}, {'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B02', 'type': 'Trade', 'quantity': 2}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B04', 'type': 'Trade', 'quantity': 3}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B03', 'type': 'Trade', 'quantity': 3}])
 
 ###############################################################################
 # tests for the Block_Indication_Book class
@@ -587,40 +718,6 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(exchange.del_order(100.0, orders[0], False), None)
         self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
         self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
-
-    def test_execute_trades_function(self):
-        # initialise the exchange
-        exchange = dark_pool.Exchange()
-
-        # create some example orders
-        orders = []
-        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, None, None))
-        orders.append(dark_pool.Order(35.0, 'B01', 'Buy', 10, 50, 6))
-        orders.append(dark_pool.Order(55.0, 'B02', 'Buy', 3, 53, 1))
-        orders.append(dark_pool.Order(75.0, 'B03', 'Buy', 3, 59, 2))
-        orders.append(dark_pool.Order(65.0, 'B04', 'Buy', 3, 61, 2))
-        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 49, 6))
-        orders.append(dark_pool.Order(55.0, 'S01', 'Sell', 4, 43, 2))
-        orders.append(dark_pool.Order(65.0, 'S02', 'Sell', 6, 48, 3))
-        orders.append(dark_pool.Order(55.0, 'S03', 'Sell', 6, 49, 4))
-
-        # add the orders to the exchange
-        for order in orders:
-            exchange.add_order(order, False)
-
-        # invoke an uncross event, setting the traders parameters to None to avID using traders
-        exchange.execute_trades(100.0, 50.0)
-
-        # test the buy side
-        self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
-        self.assertEqual(exchange.order_book.buy_side.orders[0].__str__(), "Order: [ID=2 T=55.00 B02 Buy Q=3 QR=1 P=53 MES=1]")
-
-        # test the sell side
-        self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
-        self.assertEqual(exchange.order_book.sell_side.orders[0].__str__(), "Order: [ID=6 T=55.00 S01 Sell Q=4 QR=4 P=43 MES=2]")
-
-        # test the tape
-        self.assertEqual(exchange.order_book.tape, [{'price': 50.0, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 10}, {'price': 50.0, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 1}, {'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 4}, {'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B02', 'type': 'Trade', 'quantity': 2}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B04', 'type': 'Trade', 'quantity': 3}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B03', 'type': 'Trade', 'quantity': 3}])
 
 
     def test_find_matching_block_indications_function(self):

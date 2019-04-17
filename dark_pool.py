@@ -975,6 +975,7 @@ class Trader:
         self.n_trades = 0              # how many trades has this trader done?
         self.lastquote = None          # record of what its last quote was
         self.quantity_traded = 0       # the quantity that has currently been traded from the last quote
+        self.BI_threshold = 1000
 
 
     def __str__(self):
@@ -1042,10 +1043,9 @@ class Trader:
 class Trader_Giveaway(Trader):
 
     def getorder(self, time):
-        BI_threshold = 950
         if self.customer_order == None:
             order = None
-        elif self.customer_order.quantity - self.quantity_traded >= BI_threshold:
+        elif self.customer_order.quantity - self.quantity_traded >= self.BI_threshold:
             # create a block indication
             MES = None
             block_indication = Block_Indication(time,
@@ -1685,7 +1685,7 @@ def match_block_indications_and_add_firm_orders_to_the_order_book(exchange, pric
         # add the firm orders to the order book.
         exchange.add_firm_orders_to_order_book(match_id)
         # delete the block indication match
-        exchange.delete_block_indication_match(match_id)
+        #exchange.delete_block_indication_match(match_id)
 
         return True
     return False
@@ -1695,6 +1695,7 @@ def test():
 
     # initialise the exchange
     exchange = Exchange()
+    exchange.block_indication_book.MIV = 100
 
     # create the trader specs
     buyers_spec = [('GVWY',12)]
@@ -1741,6 +1742,7 @@ def test():
 
     # add each trader's order to the exchange
     for tid in sorted(traders.keys()):
+        traders[tid].BI_threshold = 100
         order = traders[tid].getorder(20.0)
         if order != None:
             if isinstance(order, Order):
@@ -1748,7 +1750,7 @@ def test():
             elif isinstance(order, Block_Indication):
                 exchange.add_block_indication(order, False)
                 # check if there is a match between block indications
-                if match_block_indications_and_add_firm_orders_to_the_order_book(exchange, price, traders) == "Match found.":
+                if match_block_indications_and_add_firm_orders_to_the_order_book(exchange, price, traders):
                     print("before:")
                     exchange.print_order_book()
                     # if there is a match then start trading
@@ -1834,4 +1836,4 @@ def test2():
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    experiment1()
+    test()

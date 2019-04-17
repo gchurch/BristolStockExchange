@@ -1283,6 +1283,43 @@ class Test_Exchange(unittest.TestCase):
         self.assertEqual(len(exchange.order_book.sell_side.orders), 1)
 
 ####################################################################################
+# tests for the Trader class
+
+class Test_Trader(unittest.TestCase):
+
+    def test_init_function(self):
+        ttype = 'GVWY'
+        tid = 'B00'
+        balance = 1000
+        time = 55.0
+
+        trader = dark_pool.Trader(ttype, tid, balance, time)
+
+        self.assertEqual(trader.ttype, ttype)
+        self.assertEqual(trader.trader_id, tid)
+        self.assertEqual(trader.balance, balance)
+        self.assertEqual(trader.blotter, [])
+        self.assertEqual(trader.customer_order, None)
+        self.assertEqual(trader.n_quotes, 0)
+        self.assertEqual(trader.willing, 1)
+        self.assertEqual(trader.able, 1)
+        self.assertEqual(trader.birthtime, time)
+        self.assertEqual(trader.profitpertime, 0)
+        self.assertEqual(trader.n_trades, 0)
+        self.assertEqual(trader.lastquote, None)
+        self.assertEqual(trader.quantity_traded, 0)
+
+    def test_str_function(self):
+        ttype = 'GVWY'
+        tid = 'B00'
+        balance = 1000
+        time = 55.0
+
+        trader = dark_pool.Trader(ttype, tid, balance, time)
+
+        self.assertEqual(trader.__str__(), "[TID B00 type GVWY balance 1000 blotter [] customer order None n_trades 0 profitpertime 0]")
+
+####################################################################################
 # testing general functions
 
 class Test_Functions(unittest.TestCase):

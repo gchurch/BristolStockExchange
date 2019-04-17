@@ -344,7 +344,7 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(orderbook.buy_side.orders, [])
         self.assertEqual(orderbook.sell_side.orders, [])
 
-    def test_add_order_function(self):
+    def test_add_order_function_simple(self):
 
         # create the order book
         orderbook = dark_pool.Orderbook()
@@ -364,6 +364,49 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(len(orderbook.buy_side.orders), 1)
         self.assertEqual(len(orderbook.sell_side.orders), 1)
         self.assertEqual(orderbook.order_id, 2)
+
+    def test_add_order_function_overwrite(self):
+        # create the order book
+        orderbook = dark_pool.Orderbook()
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 100, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 100, 6))
+        orders.append(dark_pool.Order(35.0, 'B00', 'Buy', 15, 110, 3))
+
+        return_values = []
+
+        for order in orders:
+            return_values.append(orderbook.add_order(order, False))
+
+        self.assertEqual(return_values, [[0, 'Addition'], [1, 'Addition'], [2, 'Overwrite']])
+        self.assertEqual(len(orderbook.buy_side.orders), 1)
+        self.assertEqual(len(orderbook.sell_side.orders), 1)
+        self.assertEqual(orderbook.buy_side.orders[0].__str__(), "Order: [ID=2 T=35.00 B00 Buy Q=15 QR=15 P=110 MES=3]")
+        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 QR=11 P=100 MES=6]")
+
+    def test_add_order_function_overwrite_across_sides(self):
+        # create the order book
+        orderbook = dark_pool.Orderbook()
+
+        # create some orders
+        orders = []
+        orders.append(dark_pool.Order(25.0, 'B00', 'Buy', 5, 100, 3))
+        orders.append(dark_pool.Order(45.0, 'S00', 'Sell', 11, 100, 6))
+        orders.append(dark_pool.Order(35.0, 'B00', 'Sell', 15, 110, 3))
+
+        return_values = []
+
+        for order in orders:
+            return_values.append(orderbook.add_order(order, False))
+
+        self.assertEqual(return_values, [[0, 'Addition'], [1, 'Addition'], [2, 'Overwrite']])
+        self.assertEqual(len(orderbook.buy_side.orders), 0)
+        self.assertEqual(len(orderbook.sell_side.orders), 2)
+        self.assertEqual(orderbook.sell_side.orders[0].__str__(), "Order: [ID=2 T=35.00 B00 Sell Q=15 QR=15 P=110 MES=3]")
+        self.assertEqual(orderbook.sell_side.orders[1].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 QR=11 P=100 MES=6]")
+
 
     def test_trader_has_order_function(self):
         

@@ -963,7 +963,7 @@ class Trader:
 
     def __init__(self, ttype, tid, balance, time):
         self.ttype = ttype             # what type / strategy this trader is
-        self.trader_id = tid                 # trader unique ID code
+        self.trader_id = tid           # trader unique ID code
         self.balance = balance         # money in the bank
         self.blotter = []              # record of trades executed
         self.customer_order = None     # customer orders currently being worked (fixed at 1)
@@ -975,7 +975,8 @@ class Trader:
         self.n_trades = 0              # how many trades has this trader done?
         self.lastquote = None          # record of what its last quote was
         self.quantity_traded = 0       # the quantity that has currently been traded from the last quote
-        self.BI_threshold = 1000
+        self.BI_threshold = 1000       # the threshold on the order quantity that determines when a BI should be used
+        self.test = False              # whether or not we are running a test with the trader
 
 
     def __str__(self):
@@ -1043,29 +1044,66 @@ class Trader:
 class Trader_Giveaway(Trader):
 
     def getorder(self, time):
+        # if the trader has no customer order then return None
         if self.customer_order == None:
             order = None
+
+        # if the quantity remaining is above the BI threshold then issue a block indication
         elif self.customer_order.quantity - self.quantity_traded >= self.BI_threshold:
-            # create a block indication
-            MES = None
+            
+            # configure options for when we are testing
+            if self.test == True:
+                quantity = self.customer_order.quantity - self.quantity_traded
+                price = self.customer_order.price
+                MES = 20
+            # configure the options for normal activity
+            else:
+                quantity = self.customer_order.quantity - self.quantity_traded
+                price = self.customer_order.price
+                MES = self.BI_threshold
+
+            # create the block indication
             block_indication = Block_Indication(time,
                                                 self.trader_id,
                                                 self.customer_order.otype,
-                                                self.customer_order.quantity - self.quantity_traded,
-                                                self.customer_order.price,
+                                                quantity,
+                                                price,
                                                 MES)
+
+            # update the lastquote member variable
             self.lastquote = block_indication
+
+            # return the block indication
             return block_indication
+
+        # otherwise issue a normal order
         else:
             # create a normal order
             MES = None
+
+            # configuration for when testing
+            if self.test == True:
+                quantity = self.customer_order.quantity - self.quantity_traded
+                price = self.customer_order.price
+                MES = 2
+            # configuration for normal activity
+            else:
+                quantity = self.customer_order.quantity - self.quantity_traded
+                price = self.customer_order.price
+                MES = None
+
+            # create the order
             order = Order(time, 
                           self.trader_id, 
                           self.customer_order.otype, 
-                          self.customer_order.quantity - self.quantity_traded,
-                          self.customer_order.price,
+                          quantity,
+                          price,
                           MES)
+
+            # update the last quote member variable
             self.lastquote=order
+
+            #return the order
             return order
 
     # the trader recieves an Order Submission Request (OSR). The trader needs to respond with a
@@ -1076,16 +1114,25 @@ class Trader_Giveaway(Trader):
         # The composite reputational score for this trader
         CRP = OSR.CRP
         
-        # create a small quantity discrepency half of the time
-        quantity_discrepency = random.randint(0,1) * random.randint(1,100)
+        # If we are testing then use a deterministic quantity
+        if self.test == True:
+            quantity = OSR.quantity - 10
+            limit_price = OSR.limit_price
+            MES = OSR.MES
+        else:
+            # create a small quantity discrepency half of the time
+            quantity_discrepency = random.randint(0,1) * random.randint(1,100)
+            quantity = OSR.quantity - quantity_discrepency
+            limit_price = OSR.limit_price
+            MES = OSR.MES
 
         # create a QOB from the received OSR
         QOB = Qualifying_Block_Order(time, 
                                      OSR.trader_id, 
                                      OSR.otype, 
-                                     OSR.quantity - quantity_discrepency,
-                                     OSR.limit_price,
-                                     OSR.MES, 
+                                     quantity,
+                                     limit_price,
+                                     MES, 
                                      OSR.match_id)
         # return the created QOB
         return QOB

@@ -71,7 +71,7 @@ class Block_Indication:
 # a Order Submission Request (OSR) sent to a trader when their block indication is matched
 class Order_Submission_Request:
 
-    def __init__(self, time, trader_id, otype, quantity, limit_price, MES, match_id, CRP):
+    def __init__(self, time, trader_id, otype, quantity, limit_price, MES, match_id, reputational_score):
         self.id = -1
         self.time = time
         self.trader_id = trader_id
@@ -80,10 +80,10 @@ class Order_Submission_Request:
         self.limit_price = limit_price
         self.MES = MES
         self.match_id = match_id
-        self.CRP = CRP
+        self.reputational_score = reputational_score
 
     def __str__(self):
-        return 'OSR: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s MID=%d CRP=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.limit_price, self.MES, self.match_id, self.CRP)
+        return 'OSR: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s MID=%d CRP=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.limit_price, self.MES, self.match_id, self.reputational_score)
 
 
 #########################-Qualifying_Block_Order Class-###############################
@@ -899,7 +899,7 @@ class Exchange:
         self.add_order(sell_side_order, False)
 
 
-    # match block indications and then convert those block indication into firm orders
+    # match block indications and then convert those block indications into firm orders
     def match_block_indications_and_get_firm_orders(self, exchange, price, traders):
         # check if there is a match between any two block indications
         match_id = self.find_matching_block_indications(price)
@@ -914,19 +914,29 @@ class Exchange:
 
             # send OSR to the traders and get back QBOs for the matched BIs
             OSRs = self.create_order_submission_requests(match_id)
-            buy_side_qbo = traders[buy_side_BI.trader_id].order_submission_request(100.0, OSRs["buy_side_OSR"])
-            sell_side_qbo = traders[sell_side_BI.trader_id].order_submission_request(100.0, OSRs["sell_side_OSR"])
+            buy_side_QBO = traders[buy_side_BI.trader_id].order_submission_request(100.0, OSRs["buy_side_OSR"])
+            sell_side_QBO = traders[sell_side_BI.trader_id].order_submission_request(100.0, OSRs["sell_side_OSR"])
 
             # add the QBOs to the exchange
-            self.add_qualifying_block_order(buy_side_qbo, False)
-            self.add_qualifying_block_order(sell_side_qbo, False)
+            self.add_qualifying_block_order(buy_side_QBO, False)
+            self.add_qualifying_block_order(sell_side_QBO, False)
 
             # update the reputational scores of the traders in the match
             self.update_composite_reputational_scores(match_id)
+
+            # check if one or both of the QBOs was not marketable
+            if not(self.block_indication_book.marketable(buy_side_BI, buy_side_QBO) and self.block_indication_book.marketable(sell_side_BI, sell_side_QBO)):
+                # re-add the BI if the QBO was marketable
+                if self.marketable(buy_side_BI, buy_side_QBO):
+                    self.add_block_indication(buy_side_QBO)
+
+                if self.marketable(sell_side_BI, sell_side_QBO):
+                    self.add_block_indication(sell_side_BI)
+            
             # add the firm orders to the order book.
             self.add_firm_orders_to_order_book(match_id)
             # delete the block indication match
-            #exchange.delete_block_indication_match(match_id)
+            self.delete_block_indication_match(match_id)
 
             return True
         return False
@@ -1010,6 +1020,7 @@ class Trader:
         self.quantity_traded = 0       # the quantity that has currently been traded from the last quote
         self.BI_threshold = 1000       # the threshold on the order quantity that determines when a BI should be used
         self.test = False              # whether or not we are running a test with the trader
+        self.reputational_score = None # the last notified reputational score of the trader.
 
 
     def __str__(self):
@@ -1144,8 +1155,8 @@ class Trader_Giveaway(Trader):
     # Currently we are sending a QBO with the same quantity as in the BI
     def order_submission_request(self, time, OSR):
 
-        # The composite reputational score for this trader
-        CRP = OSR.CRP
+        # Update the traders reputationa score
+        self.reputational_score = OSR.reputational_score
         
         # If we are testing then use a deterministic quantity
         if self.test == True:
@@ -1170,6 +1181,8 @@ class Trader_Giveaway(Trader):
         # return the created QOB
         return QOB
 
+    def BDS_failure(self, info):
+        return
 
 
 ##########################---Below lies the experiment/test-rig---##################

@@ -110,7 +110,7 @@ class Test_Order_Submission_Request(unittest.TestCase):
         self.assertEqual(OSR.limit_price, limit_price)
         self.assertEqual(OSR.MES, MES)
         self.assertEqual(OSR.match_id, match_id)
-        self.assertEqual(OSR.CRP, CRP)
+        self.assertEqual(OSR.reputational_score, CRP)
 
     # test the __str__ function
     def test_str_function(self):

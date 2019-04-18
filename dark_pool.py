@@ -898,6 +898,39 @@ class Exchange:
         self.add_order(buy_side_order, False)
         self.add_order(sell_side_order, False)
 
+
+    # match block indications and then convert those block indication into firm orders
+    def match_block_indications_and_get_firm_orders(self, exchange, price, traders):
+        # check if there is a match between any two block indications
+        match_id = self.find_matching_block_indications(price)
+
+        # if there is a match then go through all of the necessary steps
+        if match_id != None:
+
+            # get the block indications that were matched
+            full_match = self.get_block_indication_match(match_id)
+            buy_side_BI = full_match["buy_side_BI"]
+            sell_side_BI = full_match["sell_side_BI"]
+
+            # send OSR to the traders and get back QBOs for the matched BIs
+            OSRs = self.create_order_submission_requests(match_id)
+            buy_side_qbo = traders[buy_side_BI.trader_id].order_submission_request(100.0, OSRs["buy_side_OSR"])
+            sell_side_qbo = traders[sell_side_BI.trader_id].order_submission_request(100.0, OSRs["sell_side_OSR"])
+
+            # add the QBOs to the exchange
+            self.add_qualifying_block_order(buy_side_qbo, False)
+            self.add_qualifying_block_order(sell_side_qbo, False)
+
+            # update the reputational scores of the traders in the match
+            self.update_composite_reputational_scores(match_id)
+            # add the firm orders to the order book.
+            self.add_firm_orders_to_order_book(match_id)
+            # delete the block indication match
+            #exchange.delete_block_indication_match(match_id)
+
+            return True
+        return False
+
     # write the order_book's tape to the output file
     def tape_dump(self, fname, fmode, tmode):
         self.order_book.tape_dump(fname, fmode, tmode)
@@ -1536,7 +1569,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
                 result = exchange.add_order(order, process_verbose)
             elif isinstance(order, Block_Indication):
                 result = exchange.add_block_indication(order, process_verbose)
-                match_block_indications_and_add_firm_orders_to_the_order_book(exchange, 50, traders)
+                exchange.match_block_indications_and_get_firm_orders(exchange, 50, traders)
             traders[tid].n_quotes = 1
             trades = exchange.execute_trades(time, 50)
             for trade in trades:
@@ -1705,116 +1738,11 @@ def experiment1():
 
     sys.exit('Done Now')
 
-# match block indications and then convert those block indication into firm orders
-def match_block_indications_and_add_firm_orders_to_the_order_book(exchange, price, traders):
-    # check if there is a match between any two block indications
-    match_id = exchange.find_matching_block_indications(price)
-
-    # if there is a match then go through all of the necessary steps
-    if match_id != None:
-
-        # get the block indications that were matched
-        full_match = exchange.get_block_indication_match(match_id)
-        buy_side_BI = full_match["buy_side_BI"]
-        sell_side_BI = full_match["sell_side_BI"]
-
-        # send OSR to the traders and get back QBOs for the matched BIs
-        OSRs = exchange.create_order_submission_requests(match_id)
-        buy_side_qbo = traders[buy_side_BI.trader_id].order_submission_request(100.0, OSRs["buy_side_OSR"])
-        sell_side_qbo = traders[sell_side_BI.trader_id].order_submission_request(100.0, OSRs["sell_side_OSR"])
-
-        # add the QBOs to the exchange
-        exchange.add_qualifying_block_order(buy_side_qbo, False)
-        exchange.add_qualifying_block_order(sell_side_qbo, False)
-
-        # update the reputational scores of the traders in the match
-        exchange.update_composite_reputational_scores(match_id)
-        # add the firm orders to the order book.
-        exchange.add_firm_orders_to_order_book(match_id)
-        # delete the block indication match
-        #exchange.delete_block_indication_match(match_id)
-
-        return True
-    return False
-
-# perform a test with the dark pool
-def test():
-
-    # initialise the exchange
-    exchange = Exchange()
-    exchange.block_indication_book.MIV = 100
-
-    # create the trader specs
-    buyers_spec = [('GVWY',12)]
-    sellers_spec = buyers_spec
-    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
-
-    # create a bunch of traders
-    traders = {}
-    trader_stats = populate_market(traders_spec, traders, True, False)
-
-    # create some customer orders
-    customer_orders = []
-    customer_orders.append(Customer_Order(25.0, 'B00', 'Buy', 100, 5,))
-    customer_orders.append(Customer_Order(35.0, 'B01', 'Buy', 100, 10))
-    customer_orders.append(Customer_Order(55.0, 'B02', 'Buy', 100, 3))
-    customer_orders.append(Customer_Order(75.0, 'B03', 'Buy', 100, 352))
-    customer_orders.append(Customer_Order(25.0, 'B04', 'Buy', 100, 5,))
-    customer_orders.append(Customer_Order(35.0, 'B05', 'Buy', 100, 10))
-    customer_orders.append(Customer_Order(55.0, 'B06', 'Buy', 100, 3))
-    customer_orders.append(Customer_Order(65.0, 'B07', 'Buy', 100, 515))
-    customer_orders.append(Customer_Order(25.0, 'B08', 'Buy', 100, 5,))
-    customer_orders.append(Customer_Order(35.0, 'B09', 'Buy', 100, 10))
-    customer_orders.append(Customer_Order(55.0, 'B10', 'Buy', 100, 3))
-    customer_orders.append(Customer_Order(45.0, 'B11', 'Buy', 100, 284))
-    customer_orders.append(Customer_Order(45.0, 'S00', 'Sell', 0, 11))
-    customer_orders.append(Customer_Order(55.0, 'S01', 'Sell', 0, 4))
-    customer_orders.append(Customer_Order(60.0, 'S02', 'Sell', 0, 12))
-    customer_orders.append(Customer_Order(65.0, 'S03', 'Sell', 0, 445))
-    customer_orders.append(Customer_Order(45.0, 'S04', 'Sell', 0, 11))
-    customer_orders.append(Customer_Order(55.0, 'S05', 'Sell', 0, 4))
-    customer_orders.append(Customer_Order(60.0, 'S06', 'Sell', 0, 12))
-    customer_orders.append(Customer_Order(55.0, 'S07', 'Sell', 0, 533))
-    customer_orders.append(Customer_Order(45.0, 'S08', 'Sell', 0, 11))
-    customer_orders.append(Customer_Order(55.0, 'S09', 'Sell', 0, 4))
-    customer_orders.append(Customer_Order(60.0, 'S10', 'Sell', 0, 12))
-    customer_orders.append(Customer_Order(75.0, 'S11', 'Sell', 0, 311))
-
-    # assign customer orders to traders
-    for customer_order in customer_orders:
-        traders[customer_order.trader_id].add_order(customer_order, False)
-
-    # The price for all traders. In the future this will be equal to the PMP
-    price = 50.0
-
-    # add each trader's order to the exchange
-    for tid in sorted(traders.keys()):
-        traders[tid].BI_threshold = 100
-        order = traders[tid].getorder(20.0)
-        if order != None:
-            if isinstance(order, Order):
-                exchange.add_order(order, False)
-            elif isinstance(order, Block_Indication):
-                exchange.add_block_indication(order, False)
-                # check if there is a match between block indications
-                if match_block_indications_and_add_firm_orders_to_the_order_book(exchange, price, traders):
-                    print("before:")
-                    exchange.print_order_book()
-                    # if there is a match then start trading
-                    exchange.execute_trades(100.0, price)
-                    print("after:")
-                    exchange.print_order_book()
-
-    exchange.print_matches()
-    exchange.print_composite_reputational_scores()
-
-    # dump the trading data
-    exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
-
 def test1():
 
     # initialise the exchange
     exchange = Exchange()
+    exchange.block_indication_book.MIV = 300
 
     # create some example orders
     orders = []
@@ -1883,4 +1811,4 @@ def test2():
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    test()
+    test1()

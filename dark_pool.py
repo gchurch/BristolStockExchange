@@ -1522,11 +1522,14 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
     # initialise the exchange
     exchange = Exchange()
+    exchange.MIV = 700
 
 
     # create a bunch of traders
     traders = {}
     trader_stats = populate_market(trader_spec, traders, True, traders_verbose)
+    for tid in traders.keys():
+        traders[tid].BI_threshold = 950
 
 
     # timestep set so that can process all traders in one second
@@ -1824,4 +1827,4 @@ def test2():
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    test1()
+    experiment1()

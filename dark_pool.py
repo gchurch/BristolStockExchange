@@ -687,7 +687,8 @@ class Block_Indication_Book:
                 if QBO.limit_price <= BI.limit_price:
                     return True
 
-        return False
+        else:
+            return False
 
     # Compare a QBO with a BI to see whether or not its size is marketable
     def marketable_size(self, BI, QBO):
@@ -702,7 +703,8 @@ class Block_Indication_Book:
             if QBO.MES <= BI.MES:
                 return True
 
-        return False
+        else:
+            return False
 
 
     # compare a QBO with its BI to see whether it is marketable
@@ -754,10 +756,7 @@ class Block_Indication_Book:
             w -= 1
 
         # return the composite reputational score (int() rounds down)
-        if w_total == 0:
-            return total
-        else:
-            return int(total / w_total)
+        return int(total / w_total)
         
 
     # update both traders' reputation score given this matching event

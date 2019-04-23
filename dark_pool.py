@@ -287,7 +287,8 @@ class Orderbook:
                 return True
 
         elif buy_side.MES != None and sell_side.MES != None:
-            if buy_side.quantity_remaining >= sell_side.MES and sell_side.quantity_remaining >= buy_side.MES:
+            if buy_side.quantity_remaining >= sell_side.MES and \
+            sell_side.quantity_remaining >= buy_side.MES:
                 return True
 
         return False
@@ -610,6 +611,40 @@ class Block_Indication_Book:
     def get_block_indication_match(self, match_id):
         return self.matches.get(match_id)
 
+    def create_order_submission_requests(self, match_id):
+        # Get the block indications.
+        buy_side_BI = self.matches[match_id]["buy_side_BI"]
+        sell_side_BI = self.matches[match_id]["sell_side_BI"]
+
+        # Get the composite reputational scores.
+        buy_side_CRP = self.composite_reputational_scores[buy_side_BI.trader_id]
+        sell_side_CRP = self.composite_reputational_scores[sell_side_BI.trader_id]
+        
+        # create the OSRs
+        buy_side_OSR = Order_Submission_Request(buy_side_BI.time,
+                                                buy_side_BI.trader_id,
+                                                buy_side_BI.otype,
+                                                buy_side_BI.quantity,
+                                                buy_side_BI.limit_price,
+                                                buy_side_BI.MES,
+                                                match_id,
+                                                buy_side_CRP)
+        buy_side_OSR.id = self.OSR_id
+        self.OSR_id += 1
+        sell_side_OSR = Order_Submission_Request(sell_side_BI.time,
+                                                 sell_side_BI.trader_id,
+                                                 sell_side_BI.otype,
+                                                 sell_side_BI.quantity,
+                                                 sell_side_BI.limit_price,
+                                                 sell_side_BI.MES,
+                                                 match_id,
+                                                 sell_side_CRP)
+        sell_side_OSR.id = self.OSR_id
+        self.OSR_id += 1
+
+        # return both OSRs
+        return {"buy_side_OSR": buy_side_OSR, "sell_side_OSR": sell_side_OSR}
+
     # add a Qualifying Block Order (QBO). QBOs are added to the appropriate entry in the matches dictionary.
     def add_qualifying_block_order(self, QBO, verbose):
 
@@ -635,45 +670,44 @@ class Block_Indication_Book:
         else:
             return "First QBO received."
 
-
-    # compare a QBO with its BI to see whether it is marketable
-    def marketable(self, BI, QBO):
-
-        # check if the QBO is marketable in relation to price
-        price_marketable = False
+    # Compare a QBO with a BI to see whether or not its price is marketable
+    def marketable_price(self, BI, QBO):
 
         if BI.limit_price == None and QBO.limit_price == None:
-            price_marketable = True
+            return True
 
         elif BI.limit_price != None and QBO.limit_price == None:
-            price_marketable = True
+            return True
 
         elif BI.limit_price != None and QBO.limit_price != None:
             if BI.otype == 'Buy':
                 if QBO.limit_price >= BI.limit_price:
-                    price_marketable = True
+                    return True
             if BI.otype == 'Sell':
                 if QBO.limit_price <= BI.limit_price:
-                    price_marketable = True
+                    return True
 
-        # check if the QBO is marketable in relation to the MES
-        MES_marketable = False
+        return False
+
+    # Compare a QBO with a BI to see whether or not its size is marketable
+    def marketable_size(self, BI, QBO):
 
         if BI.MES == None and QBO.MES == None:
-            MES_marketable = True
+            return True
 
         elif BI.MES != None and QBO.MES == None:
-            MES_marketable = True
+            return True
 
         elif BI.MES != None and QBO.MES != None:
             if QBO.MES <= BI.MES:
-                MES_marketable = True
+                return True
 
-        # check if the QBO is marketable in relation to both the price and the MES
-        marketable = price_marketable and MES_marketable
+        return False
 
-        # return the result
-        return marketable
+
+    # compare a QBO with its BI to see whether it is marketable
+    def marketable(self, BI, QBO):
+        return (self.marketable_price(BI, QBO) and self.marketable_size(BI, QBO))
 
     # calculate the reputational score of a trader for a single event. If the QBO is not marketable, then the
     # event reputation score is 0. If the QBO is marketable then score will be between 50 and 100
@@ -745,40 +779,6 @@ class Block_Indication_Book:
 
     def delete_match(self, match_id):
         del(self.matches[match_id])
-
-    def create_order_submission_requests(self, match_id):
-        # Get the block indications.
-        buy_side_BI = self.matches[match_id]["buy_side_BI"]
-        sell_side_BI = self.matches[match_id]["sell_side_BI"]
-
-        # Get the composite reputational scores.
-        buy_side_CRP = self.composite_reputational_scores[buy_side_BI.trader_id]
-        sell_side_CRP = self.composite_reputational_scores[sell_side_BI.trader_id]
-        
-        # create the OSRs
-        buy_side_OSR = Order_Submission_Request(buy_side_BI.time,
-                                                buy_side_BI.trader_id,
-                                                buy_side_BI.otype,
-                                                buy_side_BI.quantity,
-                                                buy_side_BI.limit_price,
-                                                buy_side_BI.MES,
-                                                match_id,
-                                                buy_side_CRP)
-        buy_side_OSR.id = self.OSR_id
-        self.OSR_id += 1
-        sell_side_OSR = Order_Submission_Request(sell_side_BI.time,
-                                                 sell_side_BI.trader_id,
-                                                 sell_side_BI.otype,
-                                                 sell_side_BI.quantity,
-                                                 sell_side_BI.limit_price,
-                                                 sell_side_BI.MES,
-                                                 match_id,
-                                                 sell_side_CRP)
-        sell_side_OSR.id = self.OSR_id
-        self.OSR_id += 1
-
-        # return both OSRs
-        return {"buy_side_OSR": buy_side_OSR, "sell_side_OSR": sell_side_OSR}
 
     # print the reputational score of all known traders
     def print_composite_reputational_scores(self):

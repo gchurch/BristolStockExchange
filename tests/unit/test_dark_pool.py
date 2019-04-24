@@ -1048,9 +1048,12 @@ class Test_Block_Indication_Book(unittest.TestCase):
         
         block_indication_book = dark_pool.Block_Indication_Book()
         block_indication_book.event_reputational_scores['B00'] = [100,90,80,70,60,50,0]
-        self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 65)
+        self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 66)
         block_indication_book.event_reputational_scores['B00'] = [0,50,60,70,80,90,100]
         self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 63)
+        block_indication_book.event_reputational_scores['B00'] = [100,85,0,50,100]
+        self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 67)
+
 
     def test_update_composite_reputational_scores_function(self):
         

@@ -745,18 +745,22 @@ class Block_Indication_Book:
 
         # The current weighting
         w = 50
-        # The running sum of the event reputational scores multiplied by the weights
+        # The sum of the event reputational scores multiplied by their weighting
         total = 0.0
-        # The running sum of the weights
+        # The sum of the weightings
         w_total = 0
 
+        # Each trader has at most 50 event reputational scores
         for i in range(0, len(self.event_reputational_scores[tid])):
             total += w * self.event_reputational_scores[tid][i]
             w_total += w
             w -= 1
 
-        # return the composite reputational score (int() rounds down)
-        return int(total / w_total)
+        # Calculate the composite reputational score and round to the nearest integer
+        composite_reputational_score = int(round(total / w_total))
+
+        # return the composite reputational score
+        return composite_reputational_score
         
 
     # update both traders' reputation score given this matching event
@@ -1598,6 +1602,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
     # print the final order book
     exchange.print_order_book()
     exchange.print_block_indications()
+    exchange.print_composite_reputational_scores()
 
     # end of an experiment -- dump the tape
     exchange.tape_dump('transactions_dark.csv', 'w', 'keep')

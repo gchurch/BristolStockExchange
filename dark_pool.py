@@ -400,7 +400,7 @@ class Orderbook:
         for tapeitem in self.tape:
             if tapeitem['type'] == 'Trade' :
                 if tapeitem['BDS']:
-                    BDS = "BDS"
+                    BDS = "Yes"
                 else:
                     BDS = ""
                 dumpfile.write('%.2f, %s, %s, %s, %s, %s\n' % (tapeitem['time'], tapeitem['buyer'], tapeitem['seller'], tapeitem['quantity'], tapeitem['price'], BDS))

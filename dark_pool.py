@@ -254,6 +254,7 @@ class Orderbook:
             # neither bid nor ask?
             sys.exit('bad order type in del_quote()')
 
+    # Check that the two orders match in terms of their price
     def check_price_match(self, buy_side, sell_side, price):
 
         if buy_side.limit_price == None and sell_side.limit_price == None:
@@ -273,6 +274,7 @@ class Orderbook:
 
         return False
 
+    # Check that the two orders match in terms of their size
     def check_size_match(self, buy_side, sell_side):
 
         if buy_side.MES == None and sell_side.MES == None:
@@ -293,12 +295,9 @@ class Orderbook:
 
         return False
 
+    # check that both the order size and the price match between the two given orders
     def check_match(self, buy_side, sell_side, price):
-        # check that both the order size and the price match
-        if self.check_price_match(buy_side, sell_side, price) and self.check_size_match(buy_side, sell_side):
-            return True
-        else:
-            return False
+        return self.check_price_match(buy_side, sell_side, price) and self.check_size_match(buy_side, sell_side)
 
 
 
@@ -570,10 +569,7 @@ class Block_Indication_Book:
 
     def check_match(self, buy_side, sell_side, price):
         # check that both the order size and the price match
-        if self.check_price_match(buy_side, sell_side, price) and self.check_size_match(buy_side, sell_side):
-            return True
-        else:
-            return False
+        return self.check_price_match(buy_side, sell_side, price) and self.check_size_match(buy_side, sell_side)
 
     # attempt to find two matching block indications
     def find_matching_block_indications(self, price):
@@ -687,8 +683,7 @@ class Block_Indication_Book:
                 if QBO.limit_price <= BI.limit_price:
                     return True
 
-        else:
-            return False
+        return False
 
     # Compare a QBO with a BI to see whether or not its size is marketable
     def marketable_size(self, BI, QBO):
@@ -703,8 +698,7 @@ class Block_Indication_Book:
             if QBO.MES <= BI.MES:
                 return True
 
-        else:
-            return False
+        return False
 
 
     # compare a QBO with its BI to see whether it is marketable

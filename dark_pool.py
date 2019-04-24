@@ -297,7 +297,8 @@ class Orderbook:
 
     # check that both the order size and the price match between the two given orders
     def check_match(self, buy_side, sell_side, price):
-        return self.check_price_match(buy_side, sell_side, price) and self.check_size_match(buy_side, sell_side)
+        return self.check_price_match(buy_side, sell_side, price) and \
+        self.check_size_match(buy_side, sell_side)
 
 
 
@@ -703,7 +704,7 @@ class Block_Indication_Book:
 
     # compare a QBO with its BI to see whether it is marketable
     def marketable(self, BI, QBO):
-        return (self.marketable_price(BI, QBO) and self.marketable_size(BI, QBO))
+        return self.marketable_price(BI, QBO) and self.marketable_size(BI, QBO)
 
     # calculate the reputational score of a trader for a single event. If the QBO is not marketable, then the
     # event reputation score is 0. If the QBO is marketable then score will be between 50 and 100

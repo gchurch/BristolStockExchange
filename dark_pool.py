@@ -1016,7 +1016,7 @@ class Trader:
         self.n_trades = 0              # how many trades has this trader done?
         self.lastquote = None          # record of what its last quote was
         self.quantity_traded = 0       # the quantity that has currently been traded from the last quote
-        self.BI_threshold = 1000       # the threshold on the order quantity that determines when a BI should be used
+        self.BI_threshold = 1          # the threshold on the order quantity that determines when a BI should be used
         self.test = False              # whether or not we are running a test with the trader
         self.reputational_score = None # the last notified reputational score of the trader.
 
@@ -1090,63 +1090,65 @@ class Trader_Giveaway(Trader):
         if self.customer_order == None:
             order = None
 
-        # if the quantity remaining is above the BI threshold then issue a block indication
-        elif self.customer_order.quantity - self.quantity_traded >= self.BI_threshold:
+        elif self.customer_order.quantity - self.quantity_traded > 0:
+
+            # if the quantity remaining is above the BI threshold then issue a block indication
+            if self.customer_order.quantity - self.quantity_traded >= self.BI_threshold:
             
-            # configure options for when we are testing
-            if self.test == True:
-                quantity = self.customer_order.quantity - self.quantity_traded
-                price = self.customer_order.price
-                MES = 20
-            # configure the options for normal activity
+                # configure options for when we are testing
+                if self.test == True:
+                    quantity = self.customer_order.quantity - self.quantity_traded
+                    price = self.customer_order.price
+                    MES = 20
+                # configure the options for normal activity
+                else:
+                    quantity = self.customer_order.quantity - self.quantity_traded
+                    price = self.customer_order.price
+                    MES = self.BI_threshold
+
+                # create the block indication
+                block_indication = Block_Indication(time,
+                                                    self.trader_id,
+                                                    self.customer_order.otype,
+                                                    quantity,
+                                                    price,
+                                                    MES)
+
+                # update the lastquote member variable
+                self.lastquote = block_indication
+
+                # return the block indication
+                return block_indication
+
+            # otherwise issue a normal order
             else:
-                quantity = self.customer_order.quantity - self.quantity_traded
-                price = self.customer_order.price
-                MES = self.BI_threshold
-
-            # create the block indication
-            block_indication = Block_Indication(time,
-                                                self.trader_id,
-                                                self.customer_order.otype,
-                                                quantity,
-                                                price,
-                                                MES)
-
-            # update the lastquote member variable
-            self.lastquote = block_indication
-
-            # return the block indication
-            return block_indication
-
-        # otherwise issue a normal order
-        else:
-            # create a normal order
-            MES = None
-
-            # configuration for when testing
-            if self.test == True:
-                quantity = self.customer_order.quantity - self.quantity_traded
-                price = self.customer_order.price
-                MES = 2
-            # configuration for normal activity
-            else:
-                quantity = self.customer_order.quantity - self.quantity_traded
-                price = self.customer_order.price
+                # create a normal order
                 MES = None
 
-            # create the order
-            order = Order(time, 
-                          self.trader_id, 
-                          self.customer_order.otype, 
-                          quantity,
-                          price,
-                          MES)
+                # configuration for when testing
+                if self.test == True:
+                    quantity = self.customer_order.quantity - self.quantity_traded
+                    price = self.customer_order.price
+                    MES = 2
+                # configuration for normal activity
+                else:
+                    quantity = self.customer_order.quantity - self.quantity_traded
+                    price = self.customer_order.price
+                    MES = None
 
-            # update the last quote member variable
-            self.lastquote=order
+                # create the order
+                order = Order(time, 
+                              self.trader_id, 
+                              self.customer_order.otype, 
+                              quantity,
+                              price,
+                              MES)
 
-            #return the order
-            return order
+                # update the last quote member variable
+                self.lastquote=order
+
+                #return the order
+                return order
 
     # the trader recieves an Order Submission Request (OSR). The trader needs to respond with a
     # Qualifying Block Order (QBO) in order to confirm their block indication
@@ -1266,6 +1268,7 @@ def populate_market(traders_spec, traders, shuffle, verbose):
                 for b in range(bs[1]):
                         tname = 'B%02d' % n_buyers  # buyer i.d. string
                         traders[tname] = trader_type(ttype, tname)
+                        traders[tname].BI_threshold = traders_spec['BI_threshold']
                         n_buyers = n_buyers + 1
 
         if n_buyers < 1:
@@ -1280,6 +1283,7 @@ def populate_market(traders_spec, traders, shuffle, verbose):
                 for s in range(ss[1]):
                         tname = 'S%02d' % n_sellers  # buyer i.d. string
                         traders[tname] = trader_type(ttype, tname)
+                        traders[tname].BI_threshold = traders_spec['BI_threshold']
                         n_sellers = n_sellers + 1
 
         if n_sellers < 1:
@@ -1437,7 +1441,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                 for sched in os:
                         if (sched['from'] <= time) and (time < sched['to']) :
                                 # within the timezone for this schedule
-                                schedrange = sched['ranges']
+                                schedrange = sched['price_ranges']
                                 mode = sched['stepmode']
                                 got_one = True
                                 exit  # jump out the loop -- so the first matching timezone has priority over any others
@@ -1467,7 +1471,9 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         tname = 'B%02d' % t
                         orderprice = getorderprice(t, sched, n_buyers, mode, issuetime)
                         # generating a random order quantity
-                        quantity = random.randint(1,1000)
+                        quantity_min = os['quantity_range'][0]
+                        quantity_max = os['quantity_range'][1]
+                        quantity = random.randint(quantity_min,quantity_max)
                         customer_order = Customer_Order(issuetime, tname, ordertype, orderprice, quantity)
                         new_pending.append(customer_order)
                         
@@ -1480,7 +1486,9 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
                         tname = 'S%02d' % t
                         orderprice = getorderprice(t, sched, n_sellers, mode, issuetime)
                         # generating a random order quantity
-                        quantity = random.randint(1,1000)
+                        quantity_min = os['quantity_range'][0]
+                        quantity_max = os['quantity_range'][1]
+                        quantity = random.randint(quantity_min,quantity_max)
                         customer_order = Customer_Order(issuetime, tname, ordertype, orderprice, quantity)
                         new_pending.append(customer_order)
         # if there are some pending orders
@@ -1520,14 +1528,12 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
     # initialise the exchange
     exchange = Exchange()
-    exchange.MIV = 700
+    exchange.block_indication_book.MIV = 600
 
 
     # create a bunch of traders
     traders = {}
     trader_stats = populate_market(trader_spec, traders, True, traders_verbose)
-    for tid in traders.keys():
-        traders[tid].BI_threshold = 950
 
 
     # timestep set so that can process all traders in one second
@@ -1597,7 +1603,6 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
     # print the final order book
     exchange.print_order_book()
     exchange.print_block_indications()
-    exchange.print_composite_reputational_scores()
 
     # end of an experiment -- dump the tape
     exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
@@ -1605,115 +1610,6 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
     # write trade_stats for this experiment NB end-of-session summary only
     trade_stats(sess_id, traders, dumpfile, time)
 
-# one session in the market
-def market_session_with_uncross_events(sess_id, starttime, endtime, trader_spec, order_schedule, dumpfile, dump_each_trade):
-
-    # variables which dictate what information is printed to the output
-    verbose = False
-    traders_verbose = False
-    orders_verbose = False
-    lob_verbose = False
-    process_verbose = False
-    respond_verbose = False
-    bookkeep_verbose = False
-
-
-    # initialise the exchange
-    exchange = Exchange()
-
-
-    # create a bunch of traders
-    traders = {}
-    trader_stats = populate_market(trader_spec, traders, True, traders_verbose)
-
-
-    # timestep set so that can process all traders in one second
-    # NB minimum interarrival time of customer orders may be much less than this!! 
-    timestep = 1.0 / float(trader_stats['n_buyers'] + trader_stats['n_sellers'])
-    
-    duration = float(endtime - starttime)
-
-    last_update = -1.0
-
-    time = starttime
-
-    # this list contains all the pending customer orders that are yet to happen
-    pending_cust_orders = []
-
-    print('\n%s;  ' % (sess_id))
-
-    # the amount of time for the submission of orders to the uncross event
-    order_submission_interval = 0.01
-    # the time of the next uncross event
-    next_uncross_event_time = 0.0
-
-    while time < endtime:
-
-        # how much time left, as a percentage?
-        time_left = (endtime - time) / duration
-
-        if verbose: print('%s; t=%08.2f (%4.1f/100) ' % (sess_id, time, time_left*100))
-
-        # update the pending customer orders list by generating new orders if none remain and issue 
-        # any customer orders that were scheduled in the past. Note these are customer orders being
-        # issued to traders, quotes will not be put onto the exchange yet
-        [pending_cust_orders, kills] = customer_orders(time, last_update, traders, trader_stats,
-                                         order_schedule, pending_cust_orders, orders_verbose)
-
-        # if any newly-issued customer orders mean quotes on the LOB need to be cancelled, kill them
-        if len(kills) > 0 :
-            if verbose : print('Kills: %s' % (kills))
-            for kill in kills :
-                if verbose : print('lastquote=%s' % traders[kill].lastquote)
-                if traders[kill].lastquote != None :
-                    if verbose : print('Killing order %s' % (str(traders[kill].lastquote)))
-                    exchange.del_order(time, traders[kill].lastquote, verbose)
-
-
-        # get a limit-order quote (or None) from a randomly chosen trader
-        tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
-        order = traders[tid].getorder(time)
-
-        if verbose: print('Trader Quote: %s' % (order))
-
-        # if the randomly selected trader gives us a quote, then add it to the exchange
-        if order != None:
-
-            traders[tid].n_quotes = 1
-
-            # add an order to the exchange
-            if isinstance(order, Order):
-                result = exchange.add_order(order, process_verbose)
-
-            # add a block indication to the exchange
-            elif isinstance(order, Block_Indication):
-                result = exchange.add_block_indication(order, process_verbose)
-            
-            # execute all possible trades
-            trades = exchange.execute_trades(time, 50)
-
-            # for each trade, notify the traders
-            for trade in trades:
-                traders[trade['buyer']].bookkeep(trade, bookkeep_verbose)
-                traders[trade['seller']].bookkeep(trade, bookkeep_verbose)
-
-            # check for block indication matches and add then to the order book
-            if match_block_indications_and_add_firm_orders_to_the_order_book(exchange, 50, traders):
-                next_uncross_event_time = time + order_submission_interval
-                print(time, next_uncross_event_time)
-
-        # update the time
-        time = time + timestep
-
-    # print the final order book
-    exchange.print_order_book()
-    exchange.print_block_indications()
-
-    # end of an experiment -- dump the tape
-    exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
-
-    # write trade_stats for this experiment NB end-of-session summary only
-    trade_stats(sess_id, traders, dumpfile, time)
 
 def experiment1():
 
@@ -1721,20 +1617,20 @@ def experiment1():
     end_time = 600.0
     duration = end_time - start_time
 
-    range1 = (25, 45)
-    supply_schedule = [ {'from':start_time, 'to':end_time, 'ranges':[range1], 'stepmode':'fixed'}
+    price_range1 = (25, 45)
+    supply_schedule = [ {'from':start_time, 'to':end_time, 'price_ranges':[price_range1], 'stepmode':'fixed'}
                       ]
 
-    range1 = (55, 75)
-    demand_schedule = [ {'from':start_time, 'to':end_time, 'ranges':[range1], 'stepmode':'fixed'}
+    price_range1 = (55, 75)
+    demand_schedule = [ {'from':start_time, 'to':end_time, 'price_ranges':[price_range1], 'stepmode':'fixed'}
                       ]
 
     order_sched = {'sup':supply_schedule, 'dem':demand_schedule,
-                   'interval':30, 'timemode':'drip-fixed'}
+                   'interval':30, 'timemode':'drip-fixed', 'quantity_range':[1,1000]}
 
     buyers_spec = [('GVWY',20)]
     sellers_spec = buyers_spec
-    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
+    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec, 'BI_threshold':900}
 
     n_trials = 1
     tdump=open('avg_balance_dark.csv','w')

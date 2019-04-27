@@ -15,7 +15,7 @@ class Test_Integration(unittest.TestCase):
         # create the trader specs
         buyers_spec = [('GVWY',12)]
         sellers_spec = buyers_spec
-        traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
+        traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec, 'BI_threshold':600}
 
         # create a bunch of traders
         traders = {}

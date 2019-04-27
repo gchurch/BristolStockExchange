@@ -1332,7 +1332,7 @@ class Test_Functions(unittest.TestCase):
         # create the trader specs
         buyers_spec = [('GVWY',2),('GVWY',1),('GVWY',2),('GVWY',3)]
         sellers_spec =[('GVWY',3),('GVWY',2),('GVWY',1),('GVWY',2)]
-        traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
+        traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec, 'BI_threshold': 0}
 
         # create an empty traders dict
         traders = {}

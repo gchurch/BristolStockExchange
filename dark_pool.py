@@ -924,7 +924,7 @@ class Exchange:
 
             # check if one or both of the QBOs was not marketable
             if not(self.block_indication_book.marketable(buy_side_BI, buy_side_QBO) and self.block_indication_book.marketable(sell_side_BI, sell_side_QBO)):
-                # re-add the BI if the QBO was marketable
+                # re-add the BI if the QBO was marketable, do not re-add the BI for the unmarketable QBO
                 if self.marketable(buy_side_BI, buy_side_QBO):
                     self.add_block_indication(buy_side_QBO)
 
@@ -1015,7 +1015,7 @@ class Trader:
         self.profitpertime = 0         # profit per unit time
         self.n_trades = 0              # how many trades has this trader done?
         self.lastquote = None          # record of what its last quote was
-        self.quantity_traded = 0       # the quantity that has currently been traded from the last quote
+        self.quantity_remaining = 0       # the quantity that has currently been traded from the last quote
         self.BI_threshold = 1          # the threshold on the order quantity that determines when a BI should be used
         self.test = False              # whether or not we are running a test with the trader
         self.reputational_score = None # the last notified reputational score of the trader.
@@ -1037,7 +1037,7 @@ class Trader:
             response = 'Proceed'
         self.customer_order = customer_order
         if verbose : print('add_order < response=%s' % response)
-        self.quantity_traded = 0
+        self.quantity_remaining = customer_order.quantity
         return response
 
 
@@ -1064,8 +1064,8 @@ class Trader:
 
         if verbose: print('%s profit=%d balance=%d profit/time=%d' % (outstr, profit, self.balance, self.profitpertime))
 
-        self.quantity_traded += trade['quantity']
-        if self.quantity_traded == self.customer_order.quantity:
+        self.quantity_remaining -= trade['quantity']
+        if self.quantity_remaining == 0:
             self.del_order()
 
 
@@ -1090,19 +1090,19 @@ class Trader_Giveaway(Trader):
         if self.customer_order == None:
             order = None
 
-        elif self.customer_order.quantity - self.quantity_traded > 0:
+        elif self.quantity_remaining > 0:
 
             # if the quantity remaining is above the BI threshold then issue a block indication
-            if self.customer_order.quantity - self.quantity_traded >= self.BI_threshold:
+            if self.quantity_remaining >= self.BI_threshold:
             
                 # configure options for when we are testing
                 if self.test == True:
-                    quantity = self.customer_order.quantity - self.quantity_traded
+                    quantity = self.quantity_remaining
                     price = self.customer_order.price
                     MES = 20
                 # configure the options for normal activity
                 else:
-                    quantity = self.customer_order.quantity - self.quantity_traded
+                    quantity = self.quantity_remaining
                     price = self.customer_order.price
                     MES = self.BI_threshold
 
@@ -1127,12 +1127,12 @@ class Trader_Giveaway(Trader):
 
                 # configuration for when testing
                 if self.test == True:
-                    quantity = self.customer_order.quantity - self.quantity_traded
+                    quantity = self.quantity_remaining
                     price = self.customer_order.price
                     MES = 2
                 # configuration for normal activity
                 else:
-                    quantity = self.customer_order.quantity - self.quantity_traded
+                    quantity = self.quantity_remaining
                     price = self.customer_order.price
                     MES = None
 

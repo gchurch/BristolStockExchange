@@ -1310,7 +1310,7 @@ class Test_Trader(unittest.TestCase):
         self.assertEqual(trader.profitpertime, 0)
         self.assertEqual(trader.n_trades, 0)
         self.assertEqual(trader.lastquote, None)
-        self.assertEqual(trader.quantity_traded, 0)
+        self.assertEqual(trader.quantity_remaining, 0)
 
     def test_str_function(self):
         ttype = 'GVWY'

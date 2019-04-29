@@ -92,6 +92,7 @@ class Test_Order_Submission_Request(unittest.TestCase):
     def test_init_function(self):
 
         # create an Order Submission Request
+        OSR_id = 1
         time = 25.0
         tid = 'B5'
         otype = 'Bid'
@@ -100,9 +101,10 @@ class Test_Order_Submission_Request(unittest.TestCase):
         MES = 1
         match_id = 0
         CRP = 80
-        OSR = dark_pool.Order_Submission_Request(time, tid, otype, qty, limit_price, MES, match_id, CRP)
+        OSR = dark_pool.Order_Submission_Request(OSR_id, time, tid, otype, qty, limit_price, MES, match_id, CRP)
 
         # test that the intialized values are as expected
+        self.assertEqual(OSR.id, OSR_id)
         self.assertEqual(OSR.time, time)
         self.assertEqual(OSR.trader_id, tid)
         self.assertEqual(OSR.otype, otype)
@@ -116,6 +118,7 @@ class Test_Order_Submission_Request(unittest.TestCase):
     def test_str_function(self):
 
         # create a Order Submission Request
+        OSR_id = 2
         time = 25.0
         tid = 'B5'
         otype = 'Bid'
@@ -124,10 +127,10 @@ class Test_Order_Submission_Request(unittest.TestCase):
         MES = 1
         match_id = 0
         CRP = 80
-        OSR = dark_pool.Order_Submission_Request(time, tid, otype, qty, limit_price, MES, match_id, CRP)
+        OSR = dark_pool.Order_Submission_Request(OSR_id, time, tid, otype, qty, limit_price, MES, match_id, CRP)
 
         # test that the string is as expected
-        self.assertEqual(OSR.__str__(), "OSR: [ID=-1 T=25.00 B5 Bid Q=1 P=100 MES=1 MID=0 CRP=80]")
+        self.assertEqual(OSR.__str__(), "OSR: [ID=2 T=25.00 B5 Bid Q=1 P=100 MES=1 MID=0 CRP=80]")
 
 
 #################################################################################

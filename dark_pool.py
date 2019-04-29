@@ -71,8 +71,8 @@ class Block_Indication:
 # a Order Submission Request (OSR) sent to a trader when their block indication is matched
 class Order_Submission_Request:
 
-    def __init__(self, time, trader_id, otype, quantity, limit_price, MES, match_id, reputational_score):
-        self.id = -1
+    def __init__(self, OSR_id, time, trader_id, otype, quantity, limit_price, MES, match_id, reputational_score):
+        self.id = OSR_id
         self.time = time
         self.trader_id = trader_id
         self.otype = otype
@@ -302,7 +302,7 @@ class Orderbook:
 
 
 
-    # match two orders and perform the trade
+    # Find a match between a buy order and a sell order
     def find_matching_orders(self, price):
 
         #get the buy orders and sell orders
@@ -319,10 +319,15 @@ class Orderbook:
                         trade_size = sell_order.quantity_remaining
                     else:
                         trade_size = buy_order.quantity_remaining
-                    # return a dictionary containing the trade info
+                    # return a dictionary containing the match info
                     # Note. Here we are returning references to the orders, so changing the returned orders will
                     # change the orders in the order_book
-                    return {"buy_order": buy_order, "sell_order": sell_order, "trade_size": trade_size, "price": price}
+                    return {
+                        "buy_order": buy_order, 
+                        "sell_order": sell_order, 
+                        "trade_size": trade_size, 
+                        "price": price
+                    }
 
         # if no match can be found, return None
         return None
@@ -338,7 +343,7 @@ class Orderbook:
         self.buy_side.book_del(trade_info["buy_order"].trader_id)
         self.sell_side.book_del(trade_info["sell_order"].trader_id)
 
-        # re-add the the residual
+        # re-add the residual
         if trade_info["buy_order"].quantity_remaining > 0:
             # update the MES if necessary
             if trade_info["buy_order"].MES > trade_info["buy_order"].quantity_remaining:
@@ -355,13 +360,15 @@ class Orderbook:
             self.sell_side.book_add(trade_info["sell_order"])
 
         # create a record of the transaction to the tape
-        transaction_record = {  'type': 'Trade',
-                                'time': time,
-                                'price': trade_info["price"],
-                                'quantity': trade_info["trade_size"],
-                                'buyer': trade_info["buy_order"].trader_id,
-                                'seller': trade_info["sell_order"].trader_id,
-                                'BDS': trade_info["buy_order"].BDS and trade_info["sell_order"].BDS}
+        transaction_record = {  
+            'type': 'Trade',
+            'time': time,
+            'price': trade_info["price"],
+            'quantity': trade_info["trade_size"],
+            'buyer': trade_info["buy_order"].trader_id,
+            'seller': trade_info["sell_order"].trader_id,
+            'BDS': trade_info["buy_order"].BDS and trade_info["sell_order"].BDS
+        }
 
         # add a record to the tape
         self.tape.append(transaction_record)
@@ -374,7 +381,7 @@ class Orderbook:
     # keep making trades out of matching orders until no more matches can be found
     def execute_trades(self, time, price):
 
-        # a list of all the trades made in the uncross function call
+        # a list of all the trades made
         trades = []
 
         # find a match between a buy order a sell order
@@ -389,6 +396,7 @@ class Orderbook:
             # find another match
             match_info = self.find_matching_orders(price)
 
+        # return the list of trades
         return trades
 
     # write the tape to an output file
@@ -586,22 +594,24 @@ class Block_Indication_Book:
                 if self.check_match(buy_side_BI, sell_side_BI, price):
                     
                     # Add the matched BIs to the matches dictionary
-                    self.matches[self.match_id] = {"buy_side_BI": buy_side_BI, 
-                                                   "sell_side_BI": sell_side_BI,
-                                                   "buy_side_QBO": None,
-                                                   "sell_side_QBO": None}
+                    self.matches[self.match_id] = {
+                        "buy_side_BI": buy_side_BI, 
+                        "sell_side_BI": sell_side_BI,
+                        "buy_side_QBO": None,
+                        "sell_side_QBO": None
+                    }
                     # get the current match id
-                    response = self.match_id
+                    match_id = self.match_id
 
                     # increment the book's match_id counter
                     self.match_id += 1
 
                     # delete these block indications from the book
-                    self.del_block_indication(100.0, buy_side_BI, False)
-                    self.del_block_indication(100.0, sell_side_BI, False)
+                    self.del_block_indication(0, buy_side_BI, False)
+                    self.del_block_indication(0, sell_side_BI, False)
 
                     # return the match id
-                    return response
+                    return match_id
         # if no match was found then return None
         return None
 
@@ -617,8 +627,9 @@ class Block_Indication_Book:
         buy_side_CRP = self.composite_reputational_scores[buy_side_BI.trader_id]
         sell_side_CRP = self.composite_reputational_scores[sell_side_BI.trader_id]
         
-        # create the OSRs
-        buy_side_OSR = Order_Submission_Request(buy_side_BI.time,
+        # create the buy side OSR
+        buy_side_OSR = Order_Submission_Request(self.OSR_id,
+                                                buy_side_BI.time,
                                                 buy_side_BI.trader_id,
                                                 buy_side_BI.otype,
                                                 buy_side_BI.quantity,
@@ -626,9 +637,13 @@ class Block_Indication_Book:
                                                 buy_side_BI.MES,
                                                 match_id,
                                                 buy_side_CRP)
-        buy_side_OSR.id = self.OSR_id
+
+        # increment the OSR id counter
         self.OSR_id += 1
-        sell_side_OSR = Order_Submission_Request(sell_side_BI.time,
+
+        # create the sell side OSR
+        sell_side_OSR = Order_Submission_Request(self.OSR_id,
+                                                 sell_side_BI.time,
                                                  sell_side_BI.trader_id,
                                                  sell_side_BI.otype,
                                                  sell_side_BI.quantity,
@@ -636,10 +651,11 @@ class Block_Indication_Book:
                                                  sell_side_BI.MES,
                                                  match_id,
                                                  sell_side_CRP)
-        sell_side_OSR.id = self.OSR_id
+
+        # increment the OSR id counter
         self.OSR_id += 1
 
-        # return both OSRs
+        # return both OSRs in a dicitionary
         return {"buy_side_OSR": buy_side_OSR, "sell_side_OSR": sell_side_OSR}
 
     # add a Qualifying Block Order (QBO). QBOs are added to the appropriate entry in the matches dictionary.
@@ -1015,7 +1031,7 @@ class Trader:
         self.profitpertime = 0         # profit per unit time
         self.n_trades = 0              # how many trades has this trader done?
         self.lastquote = None          # record of what its last quote was
-        self.quantity_remaining = 0       # the quantity that has currently been traded from the last quote
+        self.quantity_remaining = 0    # the quantity that has currently been traded from the last quote
         self.BI_threshold = 1          # the threshold on the order quantity that determines when a BI should be used
         self.test = False              # whether or not we are running a test with the trader
         self.reputational_score = None # the last notified reputational score of the trader.

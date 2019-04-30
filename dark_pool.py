@@ -335,15 +335,15 @@ class Orderbook:
     # given a buy order, a sell order and a trade size, perform the trade
     def execute_trade(self, time, trade_info):
 
-        # subtract the trade quantity from the orders' quantity remaining
-        trade_info["buy_order"].quantity_remaining -= trade_info["trade_size"]
-        trade_info["sell_order"].quantity_remaining -= trade_info["trade_size"]
-
         # remove orders from the order_book
         self.buy_side.book_del(trade_info["buy_order"].trader_id)
         self.sell_side.book_del(trade_info["sell_order"].trader_id)
 
-        # re-add the residual
+        # subtract the trade quantity from the orders' quantity remaining
+        trade_info["buy_order"].quantity_remaining -= trade_info["trade_size"]
+        trade_info["sell_order"].quantity_remaining -= trade_info["trade_size"]
+
+        # re-add the the order with the leftover quantity
         if trade_info["buy_order"].quantity_remaining > 0:
             # update the MES if necessary
             if trade_info["buy_order"].MES > trade_info["buy_order"].quantity_remaining:
@@ -351,7 +351,7 @@ class Orderbook:
             # add the order to the order_book list
             self.buy_side.book_add(trade_info["buy_order"])
 
-        # re-add the residual
+        # re-add the order with the leftover quantity
         if trade_info["sell_order"].quantity_remaining > 0:
             # update the MES if necessary
             if trade_info["sell_order"].MES > trade_info["sell_order"].quantity_remaining:
@@ -359,7 +359,7 @@ class Orderbook:
             # add the order to the order_book list
             self.sell_side.book_add(trade_info["sell_order"])
 
-        # create a record of the transaction to the tape
+        # create a record of the transaction
         transaction_record = {  
             'type': 'Trade',
             'time': time,
@@ -370,7 +370,7 @@ class Orderbook:
             'BDS': trade_info["buy_order"].BDS and trade_info["sell_order"].BDS
         }
 
-        # add a record to the tape
+        # add the record to the tape
         self.tape.append(transaction_record)
 
         # return the transaction

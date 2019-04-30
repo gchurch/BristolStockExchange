@@ -255,50 +255,50 @@ class Orderbook:
             sys.exit('bad order type in del_quote()')
 
     # Check that the two orders match in terms of their price
-    def check_price_match(self, buy_side, sell_side, price):
+    def check_price_match(self, buy_order, sell_order, price):
 
-        if buy_side.limit_price == None and sell_side.limit_price == None:
+        if buy_order.limit_price == None and sell_order.limit_price == None:
             return True
 
-        elif buy_side.limit_price != None and sell_side.limit_price == None:
-            if buy_side.limit_price >= price:
+        elif buy_order.limit_price != None and sell_order.limit_price == None:
+            if buy_order.limit_price >= price:
                 return True
 
-        elif buy_side.limit_price == None and sell_side.limit_price != None:
-            if sell_side.limit_price <= price:
+        elif buy_order.limit_price == None and sell_order.limit_price != None:
+            if sell_order.limit_price <= price:
                 return True
 
-        elif buy_side.limit_price != None and sell_side.limit_price != None:
-            if buy_side.limit_price >= price and sell_side.limit_price <= price:
+        elif buy_order.limit_price != None and sell_order.limit_price != None:
+            if buy_order.limit_price >= price and sell_order.limit_price <= price:
                 return True
 
         return False
 
     # Check that the two orders match in terms of their size
-    def check_size_match(self, buy_side, sell_side):
+    def check_size_match(self, buy_order, sell_order):
 
-        if buy_side.MES == None and sell_side.MES == None:
+        if buy_order.MES == None and sell_order.MES == None:
             return True
 
-        elif buy_side.MES != None and sell_side.MES == None:
-            if sell_side.quantity_remaining >= buy_side.MES:
+        elif buy_order.MES != None and sell_order.MES == None:
+            if sell_order.quantity_remaining >= buy_order.MES:
                 return True
 
-        elif buy_side.MES == None and sell_side.MES != None:
-            if buy_side.quantity_remaining >= sell_side.MES:
+        elif buy_order.MES == None and sell_order.MES != None:
+            if buy_order.quantity_remaining >= sell_order.MES:
                 return True
 
-        elif buy_side.MES != None and sell_side.MES != None:
-            if buy_side.quantity_remaining >= sell_side.MES and \
-            sell_side.quantity_remaining >= buy_side.MES:
+        elif buy_order.MES != None and sell_order.MES != None:
+            if buy_order.quantity_remaining >= sell_order.MES and \
+            sell_order.quantity_remaining >= buy_order.MES:
                 return True
 
         return False
 
     # check that both the order size and the price match between the two given orders
-    def check_match(self, buy_side, sell_side, price):
-        return self.check_price_match(buy_side, sell_side, price) and \
-        self.check_size_match(buy_side, sell_side)
+    def check_match(self, buy_order, sell_order, price):
+        return self.check_price_match(buy_order, sell_order, price) and \
+        self.check_size_match(buy_order, sell_order)
 
 
 
@@ -538,47 +538,47 @@ class Block_Indication_Book:
         else:
             sys.exit('bad order type in del_block_indication()')
 
-    def check_price_match(self, buy_side, sell_side, price):
+    def check_price_match(self, buy_BI, sell_BI, price):
 
-        if buy_side.limit_price == None and sell_side.limit_price == None:
+        if buy_BI.limit_price == None and sell_BI.limit_price == None:
             return True
 
-        elif buy_side.limit_price != None and sell_side.limit_price == None:
-            if buy_side.limit_price >= price:
+        elif buy_BI.limit_price != None and sell_BI.limit_price == None:
+            if buy_BI.limit_price >= price:
                 return True
 
-        elif buy_side.limit_price == None and sell_side.limit_price != None:
-            if sell_side.limit_price <= price:
+        elif buy_BI.limit_price == None and sell_BI.limit_price != None:
+            if sell_BI.limit_price <= price:
                 return True
 
-        elif buy_side.limit_price != None and sell_side.limit_price != None:
-            if buy_side.limit_price >= price and sell_side.limit_price <= price:
+        elif buy_BI.limit_price != None and sell_BI.limit_price != None:
+            if buy_BI.limit_price >= price and sell_BI.limit_price <= price:
                 return True
 
         return False
 
-    def check_size_match(self, buy_side, sell_side):
+    def check_size_match(self, buy_BI, sell_BI):
 
-        if buy_side.MES == None and sell_side.MES == None:
+        if buy_BI.MES == None and sell_BI.MES == None:
             return True
 
-        elif buy_side.MES != None and sell_side.MES == None:
-            if sell_side.quantity >= buy_side.MES:
+        elif buy_BI.MES != None and sell_BI.MES == None:
+            if sell_BI.quantity >= buy_BI.MES:
                 return True
 
-        elif buy_side.MES == None and sell_side.MES != None:
-            if buy_side.quantity >= sell_side.MES:
+        elif buy_BI.MES == None and sell_BI.MES != None:
+            if buy_BI.quantity >= sell_BI.MES:
                 return True
 
-        elif buy_side.MES != None and sell_side.MES != None:
-            if buy_side.quantity >= sell_side.MES and sell_side.quantity >= buy_side.MES:
+        elif buy_BI.MES != None and sell_BI.MES != None:
+            if buy_BI.quantity >= sell_BI.MES and sell_BI.quantity >= buy_BI.MES:
                 return True
 
         return False
 
-    def check_match(self, buy_side, sell_side, price):
+    def check_match(self, buy_BI, sell_BI, price):
         # check that both the order size and the price match
-        return self.check_price_match(buy_side, sell_side, price) and self.check_size_match(buy_side, sell_side)
+        return self.check_price_match(buy_BI, sell_BI, price) and self.check_size_match(buy_BI, sell_BI)
 
     # attempt to find two matching block indications
     def find_matching_block_indications(self, price):
@@ -778,18 +778,18 @@ class Block_Indication_Book:
     def update_composite_reputational_scores(self, match_id):
 
         # the QBO and BI for the buy side
-        buy_side_BI = self.matches[match_id]["buy_side_BI"]
-        sell_side_BI = self.matches[match_id]["sell_side_BI"]
-        buy_side_QBO = self.matches[match_id]["buy_side_QBO"]
-        sell_side_QBO = self.matches[match_id]["sell_side_QBO"]
+        buy_BI = self.matches[match_id]["buy_side_BI"]
+        sell_BI = self.matches[match_id]["sell_side_BI"]
+        buy_QBO = self.matches[match_id]["buy_side_QBO"]
+        sell_QBO = self.matches[match_id]["sell_side_QBO"]
 
         # calculate the event reputation scores (they will be added to list of event reputational scores for each trader)
-        self.calculate_event_reputational_score(buy_side_BI, buy_side_QBO)
-        self.calculate_event_reputational_score(sell_side_BI, sell_side_QBO)
+        self.calculate_event_reputational_score(buy_BI, buy_QBO)
+        self.calculate_event_reputational_score(sell_BI, sell_QBO)
 
         # update the traders' reputational score
-        self.composite_reputational_scores[buy_side_BI.trader_id] = self.calculate_composite_reputational_score(buy_side_BI.trader_id)
-        self.composite_reputational_scores[sell_side_BI.trader_id] = self.calculate_composite_reputational_score(sell_side_BI.trader_id)
+        self.composite_reputational_scores[buy_BI.trader_id] = self.calculate_composite_reputational_score(buy_BI.trader_id)
+        self.composite_reputational_scores[sell_BI.trader_id] = self.calculate_composite_reputational_score(sell_BI.trader_id)
 
     def delete_match(self, match_id):
         del(self.matches[match_id])
@@ -1186,16 +1186,16 @@ class Trader_Giveaway(Trader):
             limit_price = OSR.limit_price
             MES = OSR.MES
 
-        # create a QOB from the received OSR
-        QOB = Qualifying_Block_Order(time, 
+        # create a QBO from the received OSR
+        QBO = Qualifying_Block_Order(time, 
                                      OSR.trader_id, 
                                      OSR.otype, 
                                      quantity,
                                      limit_price,
                                      MES, 
                                      OSR.match_id)
-        # return the created QOB
-        return QOB
+        # return the created QBO
+        return QBO
 
     # the trader recieves an Order Submission Request (OSR). The trader needs to respond with a
     # Qualifying Block Order (QBO) in order to confirm their block indication
@@ -1205,16 +1205,16 @@ class Trader_Giveaway(Trader):
         # Update the traders reputationa score
         self.reputational_score = OSR.reputational_score
 
-        # create a QOB from the received OSR
-        QOB = Qualifying_Block_Order(time, 
-                                     OSR.trader_id, 
+        # create a QBO from the received OSR
+        QBO = Qualifying_Block_Order(time,
+                                     OSR.trader_id,
                                      OSR.otype,
                                      OSR.quantity,
                                      OSR.limit_price,
-                                     OSR.MES, 
+                                     OSR.MES,
                                      OSR.match_id)
-        # return the created QOB
-        return QOB
+        # return the created QBO
+        return QBO
 
     def BDS_failure(self, info):
         return

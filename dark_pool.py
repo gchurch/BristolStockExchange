@@ -928,8 +928,8 @@ class Exchange:
 
             # send OSR to the traders and get back QBOs for the matched BIs
             OSRs = self.create_order_submission_requests(match_id)
-            buy_side_QBO = traders[buy_side_BI.trader_id].get_qualifying_block_order(100.0, OSRs["buy_side_OSR"])
-            sell_side_QBO = traders[sell_side_BI.trader_id].get_qualifying_block_order(100.0, OSRs["sell_side_OSR"])
+            buy_side_QBO = traders[buy_side_BI.trader_id].get_qualifying_block_order(100, OSRs["buy_side_OSR"])
+            sell_side_QBO = traders[sell_side_BI.trader_id].get_qualifying_block_order(100, OSRs["sell_side_OSR"])
 
             # add the QBOs to the exchange
             self.add_qualifying_block_order(buy_side_QBO, False)
@@ -1193,6 +1193,25 @@ class Trader_Giveaway(Trader):
                                      quantity,
                                      limit_price,
                                      MES, 
+                                     OSR.match_id)
+        # return the created QOB
+        return QOB
+
+    # the trader recieves an Order Submission Request (OSR). The trader needs to respond with a
+    # Qualifying Block Order (QBO) in order to confirm their block indication
+    # Currently we are sending a QBO with the same quantity as in the BI
+    def get_qualifying_block_order1(self, time, OSR):
+
+        # Update the traders reputationa score
+        self.reputational_score = OSR.reputational_score
+
+        # create a QOB from the received OSR
+        QOB = Qualifying_Block_Order(time, 
+                                     OSR.trader_id, 
+                                     OSR.otype,
+                                     OSR.quantity,
+                                     OSR.limit_price,
+                                     OSR.MES, 
                                      OSR.match_id)
         # return the created QOB
         return QOB

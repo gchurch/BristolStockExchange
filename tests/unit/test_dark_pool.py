@@ -592,7 +592,7 @@ class Test_Orderbook(unittest.TestCase):
         match = orderbook.find_matching_orders(50)
 
         # test that the match is as expected
-        self.assertEqual(match["trade_size"], 8)
+        self.assertEqual(match["price"], 50)
         self.assertEqual(match["sell_order"].__str__(), "Order: [ID=1 T=45.00 S00 Sell Q=11 QR=11 P=49 MES=6]")
         self.assertEqual(match["buy_order"].__str__(), "Order: [ID=2 T=25.00 B01 Buy Q=8 QR=8 P=53 MES=7]")
 

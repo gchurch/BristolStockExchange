@@ -41,6 +41,7 @@ class Order:
         self.limit_price = limit_price  # limit price, None means no limit price
         self.MES = MES                  # minimum execution size, None means no MES
         self.BDS = False
+        self.BDS_match_id = None
         self.quantity_remaining = quantity # the remaining on the order
 
     def __str__(self):
@@ -314,18 +315,13 @@ class Orderbook:
             for sell_order in sell_orders:
                 # find two matching orders in the order_book list
                 if self.check_match(buy_order, sell_order, price):
-                    # calculate the trade size
-                    if buy_order.quantity_remaining >= sell_order.quantity_remaining:
-                        trade_size = sell_order.quantity_remaining
-                    else:
-                        trade_size = buy_order.quantity_remaining
+
                     # return a dictionary containing the match info
                     # Note. Here we are returning references to the orders, so changing the returned orders will
                     # change the orders in the order_book
                     return {
                         "buy_order": buy_order, 
-                        "sell_order": sell_order, 
-                        "trade_size": trade_size, 
+                        "sell_order": sell_order,
                         "price": price
                     }
 
@@ -339,9 +335,15 @@ class Orderbook:
         self.buy_side.book_del(trade_info["buy_order"].trader_id)
         self.sell_side.book_del(trade_info["sell_order"].trader_id)
 
+        # calculate the trade size
+        if trade_info["buy_order"].quantity_remaining >= trade_info["sell_order"].quantity_remaining:
+            trade_size = trade_info["sell_order"].quantity_remaining
+        else:
+            trade_size = trade_info["buy_order"].quantity_remaining
+
         # subtract the trade quantity from the orders' quantity remaining
-        trade_info["buy_order"].quantity_remaining -= trade_info["trade_size"]
-        trade_info["sell_order"].quantity_remaining -= trade_info["trade_size"]
+        trade_info["buy_order"].quantity_remaining -= trade_size
+        trade_info["sell_order"].quantity_remaining -= trade_size
 
         # re-add the the order with the leftover quantity
         if trade_info["buy_order"].quantity_remaining > 0:
@@ -364,7 +366,7 @@ class Orderbook:
             'type': 'Trade',
             'time': time,
             'price': trade_info["price"],
-            'quantity': trade_info["trade_size"],
+            'quantity': trade_size,
             'buyer': trade_info["buy_order"].trader_id,
             'seller': trade_info["sell_order"].trader_id,
             'BDS': trade_info["buy_order"].BDS and trade_info["sell_order"].BDS
@@ -398,6 +400,52 @@ class Orderbook:
 
         # return the list of trades
         return trades
+
+    def execute_BDS_trades(self, time, price):
+
+        # find new buy orders that were created using the BDS
+        buy_orders = []
+        for buy_order in self.buy_side.get_orders():
+            if buy_order.BDS_match_id != None:
+                buy_orders.append(buy_order)
+
+        # find new sell orders that were created using the BDS
+        sell_orders = []
+        for sell_order in self.sell_side.get_orders():
+            if sell_order.BDS_match_id != None:
+                sell_orders.append(sell_order)
+
+        # if we have found orders then match them and execute the trade
+        if len(buy_orders) != 0 or len(sell_orders) != 0:
+            print(buy_orders)
+            print(sell_orders)
+            self.print_order_book()
+
+            for buy_order in buy_orders:
+                for sell_order in sell_orders:
+                    if buy_order.BDS_match_id != None and sell_order.BDS_match_id != None and buy_order.BDS_match_id  == sell_order.BDS_match_id:
+
+                        buy_order.BDS_match_id = None
+                        sell_order.BDS_match_id = None
+
+                        # calculate the trade size
+                        if buy_order.quantity_remaining >= sell_order.quantity_remaining:
+                            trade_size = sell_order.quantity_remaining
+                        else:
+                            trade_size = buy_order.quantity_remaining
+
+                        trade_info = {
+                            "buy_order": buy_order, 
+                            "sell_order": sell_order, 
+                            "trade_size": trade_size, 
+                            "price": price
+                        }
+                        print(trade_info)
+
+                        self.execute_trade(time, trade_info)
+
+
+
 
     # write the tape to an output file
     def tape_dump(self, fname, fmode, tmode):
@@ -908,7 +956,9 @@ class Exchange:
                                 sell_QBO.limit_price,
                                 sell_QBO.MES)
         buy_order.BDS = True
+        buy_order.BDS_match_id = match_id
         sell_order.BDS = True
+        sell_order.BDS_match_id = match_id
         self.add_order(buy_order, False)
         self.add_order(sell_order, False)
 
@@ -967,6 +1017,7 @@ class Exchange:
         return self.block_indication_book.del_block_indication(time, order, verbose)
 
     def execute_trades(self, time, price):
+        #self.order_book.execute_BDS_trades(time, price)
         return self.order_book.execute_trades(time, price)
 
     def find_matching_block_indications(self, price):
@@ -1755,6 +1806,36 @@ def test2():
     exchange.print_order_book()
 
 
+def test3():
+
+    # initialise the exchange
+    exchange = Exchange()
+
+    # create some example orders
+    orders = []
+    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
+    orders.append(Order(35.0, 'B01', 'Buy', 10, None, None))
+    orders.append(Order(55.0, 'B02', 'Buy', 3, None, None))
+    orders.append(Order(75.0, 'B03', 'Buy', 3, None, None))
+    orders.append(Order(65.0, 'B04', 'Buy', 3, None, None))
+    orders.append(Order(45.0, 'S00', 'Sell', 11, None, None))
+    orders.append(Order(55.0, 'S01', 'Sell', 4, None, None))
+    orders.append(Order(65.0, 'S02', 'Sell', 6, None, None))
+    orders.append(Order(55.0, 'S03', 'Sell', 6, None, None))
+    orders.append(Order(75.0, 'B00', 'Sell', 8, None, None))
+    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
+
+    
+    for order in orders:
+        exchange.add_order(order, False)
+
+    exchange.print_order_book()
+
+    exchange.execute_trades(100, 50)
+
+    exchange.print_order_book()
+
+
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    experiment1()
+    test3()

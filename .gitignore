@@ -1,5 +1,5 @@
 .DS_Store
-*.csv
 .~lock.*
+*.csv
 *.pyc
 test.py

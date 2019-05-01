@@ -944,10 +944,10 @@ class Test_Block_Indication_Book(unittest.TestCase):
         self.assertEqual(block_indication_book.find_matching_block_indications(50.0), 0)
 
         # check that the match is as expected
-        self.assertEqual(block_indication_book.matches[0]["buy_side_BI"].__str__(), "BI: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500]")
-        self.assertEqual(block_indication_book.matches[0]["sell_side_BI"].__str__(), "BI: [ID=2 T=100.00 S00 Sell Q=500 P=None MES=None]")
-        self.assertEqual(block_indication_book.matches[0]["buy_side_QBO"], None)
-        self.assertEqual(block_indication_book.matches[0]["sell_side_QBO"], None)
+        self.assertEqual(block_indication_book.matches[0]["buy_BI"].__str__(), "BI: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500]")
+        self.assertEqual(block_indication_book.matches[0]["sell_BI"].__str__(), "BI: [ID=2 T=100.00 S00 Sell Q=500 P=None MES=None]")
+        self.assertEqual(block_indication_book.matches[0]["buy_QBO"], None)
+        self.assertEqual(block_indication_book.matches[0]["sell_QBO"], None)
 
     def test_get_block_indication_match_function(self):
         
@@ -958,17 +958,17 @@ class Test_Block_Indication_Book(unittest.TestCase):
         buy_side_BI = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 11, None, None)
         sell_side_BI = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, None, None)
 
-        block_indication_book.matches[0] = {"buy_side_BI": buy_side_BI, 
-                                            "sell_side_BI": sell_side_BI,
-                                            "buy_side_QBO": None,
-                                            "sell_side_QBO": None}
+        block_indication_book.matches[0] = {"buy_BI": buy_side_BI, 
+                                            "sell_BI": sell_side_BI,
+                                            "buy_QBO": None,
+                                            "sell_QBO": None}
 
         returned_match = block_indication_book.get_block_indication_match(0)
 
-        self.assertEqual(returned_match["buy_side_BI"].__str__(), "BI: [ID=-1 T=25.00 B00 Buy Q=11 P=None MES=None]")
-        self.assertEqual(returned_match["sell_side_BI"].__str__(), "BI: [ID=-1 T=45.00 S00 Sell Q=11 P=None MES=None]")
-        self.assertEqual(returned_match["buy_side_QBO"], None)
-        self.assertEqual(returned_match["sell_side_QBO"], None)
+        self.assertEqual(returned_match["buy_BI"].__str__(), "BI: [ID=-1 T=25.00 B00 Buy Q=11 P=None MES=None]")
+        self.assertEqual(returned_match["sell_BI"].__str__(), "BI: [ID=-1 T=45.00 S00 Sell Q=11 P=None MES=None]")
+        self.assertEqual(returned_match["buy_QBO"], None)
+        self.assertEqual(returned_match["sell_QBO"], None)
 
     def test_add_qualifying_block_order_function(self):
 
@@ -996,10 +996,10 @@ class Test_Block_Indication_Book(unittest.TestCase):
         self.assertEqual(block_indication_book.add_qualifying_block_order(QBO1, False), "First QBO received.")
         self.assertEqual(block_indication_book.add_qualifying_block_order(QBO2, False), "Both QBOs have been received.")
 
-        self.assertEqual(block_indication_book.matches[0]["buy_side_BI"].__str__(), "BI: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500]")
-        self.assertEqual(block_indication_book.matches[0]["sell_side_BI"].__str__(), "BI: [ID=1 T=100.00 S00 Sell Q=500 P=None MES=500]")
-        self.assertEqual(block_indication_book.matches[0]["buy_side_QBO"].__str__(), "QBO: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500 MID=0]")
-        self.assertEqual(block_indication_book.matches[0]["sell_side_QBO"].__str__(), "QBO: [ID=1 T=100.00 S00 Sell Q=500 P=None MES=500 MID=0]")
+        self.assertEqual(block_indication_book.matches[0]["buy_BI"].__str__(), "BI: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500]")
+        self.assertEqual(block_indication_book.matches[0]["sell_BI"].__str__(), "BI: [ID=1 T=100.00 S00 Sell Q=500 P=None MES=500]")
+        self.assertEqual(block_indication_book.matches[0]["buy_QBO"].__str__(), "QBO: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500 MID=0]")
+        self.assertEqual(block_indication_book.matches[0]["sell_QBO"].__str__(), "QBO: [ID=1 T=100.00 S00 Sell Q=500 P=None MES=500 MID=0]")
 
     def test_marketable_function(self):
 
@@ -1065,10 +1065,10 @@ class Test_Block_Indication_Book(unittest.TestCase):
 
         # create a match
         block_indication_book.matches[0] = {}
-        block_indication_book.matches[0]["buy_side_BI"] = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 75, 500)
-        block_indication_book.matches[0]["sell_side_BI"] = dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, None, 500)
-        block_indication_book.matches[0]["buy_side_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'B00', 'Buy', 1000, 75, 500, 0)
-        block_indication_book.matches[0]["sell_side_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 495, None, 500, 0)
+        block_indication_book.matches[0]["buy_BI"] = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 75, 500)
+        block_indication_book.matches[0]["sell_BI"] = dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, None, 500)
+        block_indication_book.matches[0]["buy_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'B00', 'Buy', 1000, 75, 500, 0)
+        block_indication_book.matches[0]["sell_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 495, None, 500, 0)
 
         # create event reputational scores to traders
         block_indication_book.event_reputational_scores['B00'] = []
@@ -1092,10 +1092,10 @@ class Test_Block_Indication_Book(unittest.TestCase):
         buy_side_BI = dark_pool.Block_Indication(25.0, 'B00', 'Buy', 11, None, None)
         sell_side_BI = dark_pool.Block_Indication(45.0, 'S00', 'Sell', 11, None, None)
 
-        block_indication_book.matches[0] = {"buy_side_BI": buy_side_BI, 
-                                            "sell_side_BI": sell_side_BI,
-                                            "buy_side_QBO": None,
-                                            "sell_side_QBO": None}
+        block_indication_book.matches[0] = {"buy_BI": buy_side_BI, 
+                                            "sell_BI": sell_side_BI,
+                                            "buy_QBO": None,
+                                            "sell_QBO": None}
 
         self.assertNotEqual(block_indication_book.matches.get(0), None)
         block_indication_book.delete_match(0)
@@ -1108,16 +1108,16 @@ class Test_Block_Indication_Book(unittest.TestCase):
 
         # create a match
         block_indication_book.matches[0] = {}
-        block_indication_book.matches[0]["buy_side_BI"] = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 75, 500)
-        block_indication_book.matches[0]["sell_side_BI"] = dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, None, 500)
-        block_indication_book.matches[0]["buy_side_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'B00', 'Buy', 1000, 75, 500, 0)
-        block_indication_book.matches[0]["sell_side_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 495, None, 500, 0)
+        block_indication_book.matches[0]["buy_BI"] = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 1024, 75, 500)
+        block_indication_book.matches[0]["sell_BI"] = dark_pool.Block_Indication(100.0, 'S00', 'Sell', 500, None, 500)
+        block_indication_book.matches[0]["buy_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'B00', 'Buy', 1000, 75, 500, 0)
+        block_indication_book.matches[0]["sell_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 495, None, 500, 0)
 
         block_indication_book.composite_reputational_scores['B00'] = 100
         block_indication_book.composite_reputational_scores['S00'] = 100
 
-        self.assertEqual(block_indication_book.create_order_submission_requests(0)["buy_side_OSR"].__str__(), "OSR: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500 MID=0 CRP=100]")
-        self.assertEqual(block_indication_book.create_order_submission_requests(0)["sell_side_OSR"].__str__(), "OSR: [ID=3 T=100.00 S00 Sell Q=500 P=None MES=500 MID=0 CRP=100]")
+        self.assertEqual(block_indication_book.create_order_submission_requests(0)["buy_OSR"].__str__(), "OSR: [ID=0 T=100.00 B00 Buy Q=1024 P=75 MES=500 MID=0 CRP=100]")
+        self.assertEqual(block_indication_book.create_order_submission_requests(0)["sell_OSR"].__str__(), "OSR: [ID=3 T=100.00 S00 Sell Q=500 P=None MES=500 MID=0 CRP=100]")
 
     def test_tape_dump_function(self):
         return
@@ -1256,10 +1256,10 @@ class Test_Exchange(unittest.TestCase):
         buy_side_QBO = dark_pool.Qualifying_Block_Order(55.0, 'B00', 'Buy', 300, None, None, 0)
         sell_side_QBO = dark_pool.Qualifying_Block_Order(65.0, 'S00', 'Sell', 300, None, None, 0)
 
-        exchange.block_indication_book.matches[0] = {   "buy_side_BI": buy_side_BI, 
-                                                        "sell_side_BI": sell_side_BI,
-                                                        "buy_side_QBO": buy_side_QBO,
-                                                        "sell_side_QBO": sell_side_QBO}
+        exchange.block_indication_book.matches[0] = {   "buy_BI": buy_side_BI, 
+                                                        "sell_BI": sell_side_BI,
+                                                        "buy_QBO": buy_side_QBO,
+                                                        "sell_QBO": sell_side_QBO}
 
         exchange.add_firm_orders_to_order_book(0)
 

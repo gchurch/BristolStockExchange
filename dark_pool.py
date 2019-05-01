@@ -584,21 +584,21 @@ class Block_Indication_Book:
     def find_matching_block_indications(self, price):
         
         # get the buy side orders and sell side orders
-        buy_side_BIs = self.buy_side.get_orders()
-        sell_side_BIs = self.sell_side.get_orders()
+        buy_BIs = self.buy_side.get_orders()
+        sell_BIs = self.sell_side.get_orders()
 
         # starting with the buy side first
-        for buy_side_BI in buy_side_BIs:
-            for sell_side_BI in sell_side_BIs:
+        for buy_BI in buy_BIs:
+            for sell_BI in sell_BIs:
                 # check if the two block indications match
-                if self.check_match(buy_side_BI, sell_side_BI, price):
+                if self.check_match(buy_BI, sell_BI, price):
                     
                     # Add the matched BIs to the matches dictionary
                     self.matches[self.match_id] = {
-                        "buy_side_BI": buy_side_BI, 
-                        "sell_side_BI": sell_side_BI,
-                        "buy_side_QBO": None,
-                        "sell_side_QBO": None
+                        "buy_BI": buy_BI, 
+                        "sell_BI": sell_BI,
+                        "buy_QBO": None,
+                        "sell_QBO": None
                     }
                     # get the current match id
                     match_id = self.match_id
@@ -607,8 +607,8 @@ class Block_Indication_Book:
                     self.match_id += 1
 
                     # delete these block indications from the book
-                    self.del_block_indication(0, buy_side_BI, False)
-                    self.del_block_indication(0, sell_side_BI, False)
+                    self.del_block_indication(0, buy_BI, False)
+                    self.del_block_indication(0, sell_BI, False)
 
                     # return the match id
                     return match_id
@@ -620,43 +620,43 @@ class Block_Indication_Book:
 
     def create_order_submission_requests(self, match_id):
         # Get the block indications.
-        buy_side_BI = self.matches[match_id]["buy_side_BI"]
-        sell_side_BI = self.matches[match_id]["sell_side_BI"]
+        buy_BI = self.matches[match_id]["buy_BI"]
+        sell_BI = self.matches[match_id]["sell_BI"]
 
         # Get the composite reputational scores.
-        buy_side_CRP = self.composite_reputational_scores[buy_side_BI.trader_id]
-        sell_side_CRP = self.composite_reputational_scores[sell_side_BI.trader_id]
+        buy_CRP = self.composite_reputational_scores[buy_BI.trader_id]
+        sell_CRP = self.composite_reputational_scores[sell_BI.trader_id]
         
         # create the buy side OSR
-        buy_side_OSR = Order_Submission_Request(self.OSR_id,
-                                                buy_side_BI.time,
-                                                buy_side_BI.trader_id,
-                                                buy_side_BI.otype,
-                                                buy_side_BI.quantity,
-                                                buy_side_BI.limit_price,
-                                                buy_side_BI.MES,
+        buy_OSR = Order_Submission_Request(self.OSR_id,
+                                                buy_BI.time,
+                                                buy_BI.trader_id,
+                                                buy_BI.otype,
+                                                buy_BI.quantity,
+                                                buy_BI.limit_price,
+                                                buy_BI.MES,
                                                 match_id,
-                                                buy_side_CRP)
+                                                buy_CRP)
 
         # increment the OSR id counter
         self.OSR_id += 1
 
         # create the sell side OSR
-        sell_side_OSR = Order_Submission_Request(self.OSR_id,
-                                                 sell_side_BI.time,
-                                                 sell_side_BI.trader_id,
-                                                 sell_side_BI.otype,
-                                                 sell_side_BI.quantity,
-                                                 sell_side_BI.limit_price,
-                                                 sell_side_BI.MES,
+        sell_OSR = Order_Submission_Request(self.OSR_id,
+                                                 sell_BI.time,
+                                                 sell_BI.trader_id,
+                                                 sell_BI.otype,
+                                                 sell_BI.quantity,
+                                                 sell_BI.limit_price,
+                                                 sell_BI.MES,
                                                  match_id,
-                                                 sell_side_CRP)
+                                                 sell_CRP)
 
         # increment the OSR id counter
         self.OSR_id += 1
 
         # return both OSRs in a dicitionary
-        return {"buy_side_OSR": buy_side_OSR, "sell_side_OSR": sell_side_OSR}
+        return {"buy_OSR": buy_OSR, "sell_OSR": sell_OSR}
 
     # add a Qualifying Block Order (QBO). QBOs are added to the appropriate entry in the matches dictionary.
     def add_qualifying_block_order(self, QBO, verbose):
@@ -671,14 +671,14 @@ class Block_Indication_Book:
         # add the qualifying block order to the match in the matches dictionary
         if self.matches.get(match_id) != None:
             if QBO.otype == 'Buy':
-                self.matches[match_id]["buy_side_QBO"] = QBO
+                self.matches[match_id]["buy_QBO"] = QBO
             elif QBO.otype == "Sell":
-                self.matches[match_id]["sell_side_QBO"] = QBO
+                self.matches[match_id]["sell_QBO"] = QBO
         else:
             return "Incorrect match id."
         
         # check if both QBOs have been received
-        if self.matches[match_id]["buy_side_QBO"] and self.matches[match_id]["sell_side_QBO"]:
+        if self.matches[match_id]["buy_QBO"] and self.matches[match_id]["sell_QBO"]:
             return "Both QBOs have been received."
         else:
             return "First QBO received."
@@ -778,10 +778,10 @@ class Block_Indication_Book:
     def update_composite_reputational_scores(self, match_id):
 
         # the QBO and BI for the buy side
-        buy_BI = self.matches[match_id]["buy_side_BI"]
-        sell_BI = self.matches[match_id]["sell_side_BI"]
-        buy_QBO = self.matches[match_id]["buy_side_QBO"]
-        sell_QBO = self.matches[match_id]["sell_side_QBO"]
+        buy_BI = self.matches[match_id]["buy_BI"]
+        sell_BI = self.matches[match_id]["sell_BI"]
+        buy_QBO = self.matches[match_id]["buy_QBO"]
+        sell_QBO = self.matches[match_id]["sell_QBO"]
 
         # calculate the event reputation scores (they will be added to list of event reputational scores for each trader)
         self.calculate_event_reputational_score(buy_BI, buy_QBO)
@@ -830,12 +830,12 @@ class Block_Indication_Book:
         print("Matches:")
         for key in self.matches.keys():
             print("Match id: %d" % key)
-            print(self.matches[key]["buy_side_BI"])
-            print(self.matches[key]["sell_side_BI"])
-            if self.matches[key]["buy_side_QBO"]:
-                print(self.matches[key]["buy_side_QBO"])
-            if self.matches[key]["sell_side_QBO"]:
-                print(self.matches[key]["sell_side_QBO"])
+            print(self.matches[key]["buy_BI"])
+            print(self.matches[key]["sell_BI"])
+            if self.matches[key]["buy_QBO"]:
+                print(self.matches[key]["buy_QBO"])
+            if self.matches[key]["sell_QBO"]:
+                print(self.matches[key]["sell_QBO"])
         print("")
 
 
@@ -891,26 +891,26 @@ class Exchange:
 
     def add_firm_orders_to_order_book(self, match_id):
         full_match = self.get_block_indication_match(match_id)
-        buy_side_QBO = full_match["buy_side_QBO"]
-        sell_side_QBO = full_match["sell_side_QBO"]
+        buy_QBO = full_match["buy_QBO"]
+        sell_QBO = full_match["sell_QBO"]
 
         # create orders out of the QBOs
-        buy_side_order = Order(buy_side_QBO.time,
-                               buy_side_QBO.trader_id,
-                               buy_side_QBO.otype,
-                               buy_side_QBO.quantity,
-                               buy_side_QBO.limit_price,
-                               buy_side_QBO.MES)
-        sell_side_order = Order(sell_side_QBO.time,
-                                sell_side_QBO.trader_id,
-                                sell_side_QBO.otype,
-                                sell_side_QBO.quantity,
-                                sell_side_QBO.limit_price,
-                                sell_side_QBO.MES)
-        buy_side_order.BDS = True
-        sell_side_order.BDS = True
-        self.add_order(buy_side_order, False)
-        self.add_order(sell_side_order, False)
+        buy_order = Order(buy_QBO.time,
+                               buy_QBO.trader_id,
+                               buy_QBO.otype,
+                               buy_QBO.quantity,
+                               buy_QBO.limit_price,
+                               buy_QBO.MES)
+        sell_order = Order(sell_QBO.time,
+                                sell_QBO.trader_id,
+                                sell_QBO.otype,
+                                sell_QBO.quantity,
+                                sell_QBO.limit_price,
+                                sell_QBO.MES)
+        buy_order.BDS = True
+        sell_order.BDS = True
+        self.add_order(buy_order, False)
+        self.add_order(sell_order, False)
 
 
     # match block indications and then convert those block indications into firm orders
@@ -923,29 +923,29 @@ class Exchange:
 
             # get the block indications that were matched
             full_match = self.get_block_indication_match(match_id)
-            buy_side_BI = full_match["buy_side_BI"]
-            sell_side_BI = full_match["sell_side_BI"]
+            buy_BI = full_match["buy_BI"]
+            sell_BI = full_match["sell_BI"]
 
             # send OSR to the traders and get back QBOs for the matched BIs
             OSRs = self.create_order_submission_requests(match_id)
-            buy_side_QBO = traders[buy_side_BI.trader_id].get_qualifying_block_order(100, OSRs["buy_side_OSR"])
-            sell_side_QBO = traders[sell_side_BI.trader_id].get_qualifying_block_order(100, OSRs["sell_side_OSR"])
+            buy_QBO = traders[buy_BI.trader_id].get_qualifying_block_order(100, OSRs["buy_OSR"])
+            sell_QBO = traders[sell_BI.trader_id].get_qualifying_block_order(100, OSRs["sell_OSR"])
 
             # add the QBOs to the exchange
-            self.add_qualifying_block_order(buy_side_QBO, False)
-            self.add_qualifying_block_order(sell_side_QBO, False)
+            self.add_qualifying_block_order(buy_QBO, False)
+            self.add_qualifying_block_order(sell_QBO, False)
 
             # update the reputational scores of the traders in the match
             self.update_composite_reputational_scores(match_id)
 
             # check if one or both of the QBOs was not marketable
-            if not(self.block_indication_book.marketable(buy_side_BI, buy_side_QBO) and self.block_indication_book.marketable(sell_side_BI, sell_side_QBO)):
+            if not(self.block_indication_book.marketable(buy_BI, buy_QBO) and self.block_indication_book.marketable(sell_BI, sell_QBO)):
                 # re-add the BI if the QBO was marketable, do not re-add the BI for the unmarketable QBO
-                if self.marketable(buy_side_BI, buy_side_QBO):
-                    self.add_block_indication(buy_side_QBO)
+                if self.marketable(buy_BI, buy_QBO):
+                    self.add_block_indication(buy_QBO)
 
-                if self.marketable(sell_side_BI, sell_side_QBO):
-                    self.add_block_indication(sell_side_BI)
+                if self.marketable(sell_BI, sell_QBO):
+                    self.add_block_indication(sell_BI)
             
             # add the firm orders to the order book.
             self.add_firm_orders_to_order_book(match_id)

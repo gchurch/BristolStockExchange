@@ -57,7 +57,7 @@ class Test_Integration(unittest.TestCase):
                 elif isinstance(order, dark_pool.Block_Indication):
                     exchange.add_block_indication(order, False)
                     # check if there is a match between block indications
-                    exchange.match_block_indications_and_get_firm_orders(exchange, price, traders)
+                    exchange.match_block_indications_and_get_firm_orders(traders, price)
             
                 # perform all trades possible after each order/BI is added
                 exchange.execute_trades(100.0, price)

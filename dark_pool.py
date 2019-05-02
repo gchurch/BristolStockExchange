@@ -397,7 +397,7 @@ class Orderbook:
 
             # find another match
             match_info = self.find_matching_orders(price)
-
+            
         # return the list of trades
         return trades
 
@@ -919,7 +919,7 @@ class Exchange:
 
 
     # match block indications and then convert those block indications into firm orders
-    def match_block_indications_and_get_firm_orders(self, exchange, price, traders):
+    def match_block_indications_and_get_firm_orders(self, traders, price):
         # check if there is a match between any two block indications
         match_id = self.find_matching_block_indications(price)
 
@@ -1629,7 +1629,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
                 result = exchange.add_order(order, process_verbose)
             elif isinstance(order, Block_Indication):
                 result = exchange.add_block_indication(order, process_verbose)
-                exchange.match_block_indications_and_get_firm_orders(exchange, 50, traders)
+                exchange.match_block_indications_and_get_firm_orders(traders, 50)
             traders[tid].n_quotes = 1
             trades = exchange.execute_trades(time, 50)
             for trade in trades:

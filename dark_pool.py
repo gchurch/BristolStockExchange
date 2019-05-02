@@ -331,15 +331,15 @@ class Orderbook:
     # given a buy order, a sell order and a trade size, perform the trade
     def execute_trade(self, time, trade_info):
 
-        # remove orders from the order_book
-        self.buy_side.book_del(trade_info["buy_order"].trader_id)
-        self.sell_side.book_del(trade_info["sell_order"].trader_id)
-
         # calculate the trade size
         if trade_info["buy_order"].quantity_remaining >= trade_info["sell_order"].quantity_remaining:
             trade_size = trade_info["sell_order"].quantity_remaining
         else:
             trade_size = trade_info["buy_order"].quantity_remaining
+
+        # remove orders from the order_book
+        self.buy_side.book_del(trade_info["buy_order"].trader_id)
+        self.sell_side.book_del(trade_info["sell_order"].trader_id)
 
         # subtract the trade quantity from the orders' quantity remaining
         trade_info["buy_order"].quantity_remaining -= trade_size
@@ -400,51 +400,6 @@ class Orderbook:
 
         # return the list of trades
         return trades
-
-    def execute_BDS_trades(self, time, price):
-
-        # find new buy orders that were created using the BDS
-        buy_orders = []
-        for buy_order in self.buy_side.get_orders():
-            if buy_order.BDS_match_id != None:
-                buy_orders.append(buy_order)
-
-        # find new sell orders that were created using the BDS
-        sell_orders = []
-        for sell_order in self.sell_side.get_orders():
-            if sell_order.BDS_match_id != None:
-                sell_orders.append(sell_order)
-
-        # if we have found orders then match them and execute the trade
-        if len(buy_orders) != 0 or len(sell_orders) != 0:
-            print(buy_orders)
-            print(sell_orders)
-            self.print_order_book()
-
-            for buy_order in buy_orders:
-                for sell_order in sell_orders:
-                    if buy_order.BDS_match_id != None and sell_order.BDS_match_id != None and buy_order.BDS_match_id  == sell_order.BDS_match_id:
-
-                        buy_order.BDS_match_id = None
-                        sell_order.BDS_match_id = None
-
-                        # calculate the trade size
-                        if buy_order.quantity_remaining >= sell_order.quantity_remaining:
-                            trade_size = sell_order.quantity_remaining
-                        else:
-                            trade_size = buy_order.quantity_remaining
-
-                        trade_info = {
-                            "buy_order": buy_order, 
-                            "sell_order": sell_order, 
-                            "trade_size": trade_size, 
-                            "price": price
-                        }
-                        print(trade_info)
-
-                        self.execute_trade(time, trade_info)
-
-
 
 
     # write the tape to an output file
@@ -1017,7 +972,6 @@ class Exchange:
         return self.block_indication_book.del_block_indication(time, order, verbose)
 
     def execute_trades(self, time, price):
-        #self.order_book.execute_BDS_trades(time, price)
         return self.order_book.execute_trades(time, price)
 
     def find_matching_block_indications(self, price):
@@ -1838,4 +1792,4 @@ def test3():
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    test3()
+    experiment1()

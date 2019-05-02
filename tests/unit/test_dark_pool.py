@@ -644,7 +644,7 @@ class Test_Orderbook(unittest.TestCase):
             exchange.add_order(order, False)
 
         # invoke an uncross event, setting the traders parameters to None to avID using traders
-        exchange.execute_trades(100.0, 50.0)
+        trades = exchange.execute_trades(100.0, 50.0)
 
         # test the buy side
         self.assertEqual(len(exchange.order_book.buy_side.orders), 1)
@@ -655,6 +655,7 @@ class Test_Orderbook(unittest.TestCase):
         self.assertEqual(exchange.order_book.sell_side.orders[0].__str__(), "Order: [ID=6 T=55.00 S01 Sell Q=4 QR=4 P=43 MES=2]")
 
         # test the tape
+        self.assertEqual(trades, [{'price': 50.0, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 10}, {'price': 50.0, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 1}, {'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 4}, {'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B02', 'type': 'Trade', 'quantity': 2}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B04', 'type': 'Trade', 'quantity': 3}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B03', 'type': 'Trade', 'quantity': 3}])
         self.assertEqual(exchange.order_book.tape, [{'price': 50.0, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B01', 'type': 'Trade', 'quantity': 10}, {'price': 50.0, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 1}, {'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B00', 'type': 'Trade', 'quantity': 4}, {'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B02', 'type': 'Trade', 'quantity': 2}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B04', 'type': 'Trade', 'quantity': 3}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B03', 'type': 'Trade', 'quantity': 3}])
 
 ###############################################################################

@@ -1074,6 +1074,8 @@ class Test_Block_Indication_Book(unittest.TestCase):
         # create event reputational scores to traders
         block_indication_book.event_reputational_scores['B00'] = []
         block_indication_book.event_reputational_scores['S00'] = []
+        block_indication_book.composite_reputational_scores_history['B00'] = []
+        block_indication_book.composite_reputational_scores_history['S00'] = []
 
         # update the composite reputational scores for the traders based on this match
         block_indication_book.update_composite_reputational_scores(0)

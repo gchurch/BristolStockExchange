@@ -479,6 +479,8 @@ class Block_Indication_Book:
         self.match_id = 0
         # The tape contains the history of block indications sent to the exchange
         self.tape = []
+        # The entire history of each trader's score
+        self.composite_reputational_scores_history = {}
 
     
     # add block indication
@@ -488,9 +490,10 @@ class Block_Indication_Book:
         if self.composite_reputational_scores.get(BI.trader_id) == None:
             self.composite_reputational_scores[BI.trader_id] = self.initial_composite_reputational_score
             self.event_reputational_scores[BI.trader_id] = []
+            self.composite_reputational_scores_history[BI.trader_id] = []
 
         # the quantity of the order must be greater than the MIV
-        if BI.quantity > self.MIV and self.composite_reputational_scores.get(BI.trader_id) > self.RST:
+        if BI.quantity >= self.MIV and self.composite_reputational_scores.get(BI.trader_id) >= self.RST:
 
             # set the block indications' id
             BI.id = self.BI_id
@@ -791,8 +794,14 @@ class Block_Indication_Book:
         self.calculate_event_reputational_score(sell_BI, sell_QBO)
 
         # update the traders' reputational score
-        self.composite_reputational_scores[buy_BI.trader_id] = self.calculate_composite_reputational_score(buy_BI.trader_id)
-        self.composite_reputational_scores[sell_BI.trader_id] = self.calculate_composite_reputational_score(sell_BI.trader_id)
+        buyer_composite_reputational_score = self.calculate_composite_reputational_score(buy_BI.trader_id)
+        seller_composite_reputational_score = self.calculate_composite_reputational_score(sell_BI.trader_id)
+        self.composite_reputational_scores[buy_BI.trader_id] = buyer_composite_reputational_score
+        self.composite_reputational_scores[sell_BI.trader_id] = seller_composite_reputational_score
+
+        # add the scores to the trader history
+        self.composite_reputational_scores_history[buy_BI.trader_id].append(buyer_composite_reputational_score)
+        self.composite_reputational_scores_history[sell_BI.trader_id].append(seller_composite_reputational_score)
 
     def delete_match(self, match_id):
         del(self.matches[match_id])
@@ -1643,6 +1652,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
     # print the final order book
     exchange.print_order_book()
     exchange.print_block_indications()
+    print(exchange.block_indication_book.composite_reputational_scores_history)
 
     # end of an experiment -- dump the tape
     exchange.tape_dump('transactions_dark.csv', 'w', 'keep')

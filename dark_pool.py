@@ -361,7 +361,8 @@ class Orderbook:
             # add the order to the order_book list
             self.sell_side.book_add(trade_info["sell_order"])
 
-        # create a record of the transaction
+        # create a record of the transaction 
+        # BDS specifies whether the orders orginated from the block discovery service
         transaction_record = {  
             'type': 'Trade',
             'time': time,
@@ -781,7 +782,7 @@ class Block_Indication_Book:
         
 
     # update both traders' reputation score given this matching event
-    def update_composite_reputational_scores(self, match_id):
+    def update_composite_reputational_scores(self, time, match_id):
 
         # the QBO and BI for the buy side
         buy_BI = self.matches[match_id]["buy_BI"]
@@ -800,11 +801,29 @@ class Block_Indication_Book:
         self.composite_reputational_scores[sell_BI.trader_id] = seller_composite_reputational_score
 
         # add the scores to the trader history
-        self.composite_reputational_scores_history[buy_BI.trader_id].append(buyer_composite_reputational_score)
-        self.composite_reputational_scores_history[sell_BI.trader_id].append(seller_composite_reputational_score)
+        self.composite_reputational_scores_history[buy_BI.trader_id].append((time, buyer_composite_reputational_score))
+        self.composite_reputational_scores_history[sell_BI.trader_id].append((time, seller_composite_reputational_score))
 
     def delete_match(self, match_id):
         del(self.matches[match_id])
+
+    # write the composite reputational scores history to an output file
+    def composite_reputational_scores_history_dump(self, fname, fmode, tmode):
+        dumpfile = open(fname, fmode)
+        
+        # write the information for each trade
+        for trader in self.composite_reputational_scores_history.keys():
+            dumpfile.write('trader: %s\n' % trader)
+            dumpfile.write('time, ')
+            for (time, score) in self.composite_reputational_scores_history[trader]:
+                dumpfile.write('%.2f, ' % time)
+            dumpfile.write('\nscore,')
+            for (time, score) in self.composite_reputational_scores_history[trader]:
+                dumpfile.write('%d, ' % score)
+            dumpfile.write('\n\n')
+        dumpfile.close()
+        if tmode == 'wipe':
+            self.tape = []
 
     # print the reputational score of all known traders
     def print_composite_reputational_scores(self):
@@ -928,7 +947,7 @@ class Exchange:
 
 
     # match block indications and then convert those block indications into firm orders
-    def match_block_indications_and_get_firm_orders(self, traders, price):
+    def match_block_indications_and_get_firm_orders(self, time, traders, price):
         # check if there is a match between any two block indications
         match_id = self.find_matching_block_indications(price)
 
@@ -950,7 +969,7 @@ class Exchange:
             self.add_qualifying_block_order(sell_QBO, False)
 
             # update the reputational scores of the traders in the match
-            self.update_composite_reputational_scores(match_id)
+            self.update_composite_reputational_scores(time, match_id)
 
             # check if one or both of the QBOs was not marketable
             if not(self.block_indication_book.marketable(buy_BI, buy_QBO) and self.block_indication_book.marketable(sell_BI, sell_QBO)):
@@ -973,6 +992,10 @@ class Exchange:
     def tape_dump(self, fname, fmode, tmode):
         self.order_book.tape_dump(fname, fmode, tmode)
 
+    # write the order_book's tape to the output file
+    def composite_reputational_scores_history_dump(self, fname, fmode, tmode):
+        self.block_indication_book.composite_reputational_scores_history_dump(fname, fmode, tmode)
+
     # delete an order from the exchange
     def del_order(self, time, order, verbose):
         return self.order_book.del_order(time, order, verbose)
@@ -992,8 +1015,8 @@ class Exchange:
     def delete_block_indication_match(self, match_id):
         return self.block_indication_book.delete_match(match_id)
 
-    def update_composite_reputational_scores(self, match_id):
-        return self.block_indication_book.update_composite_reputational_scores(match_id)
+    def update_composite_reputational_scores(self, time, match_id):
+        return self.block_indication_book.update_composite_reputational_scores(time, match_id)
 
     def create_order_submission_requests(self, match_id):
         return self.block_indication_book.create_order_submission_requests(match_id)
@@ -1638,7 +1661,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
                 result = exchange.add_order(order, process_verbose)
             elif isinstance(order, Block_Indication):
                 result = exchange.add_block_indication(order, process_verbose)
-                exchange.match_block_indications_and_get_firm_orders(traders, 50)
+                exchange.match_block_indications_and_get_firm_orders(time, traders, 50)
             traders[tid].n_quotes = 1
             trades = exchange.execute_trades(time, 50)
             for trade in trades:
@@ -1656,6 +1679,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
     # end of an experiment -- dump the tape
     exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
+    exchange.composite_reputational_scores_history_dump('scores.csv', 'w', 'keep')
 
     # write trade_stats for this experiment NB end-of-session summary only
     trade_stats(sess_id, traders, dumpfile, time)

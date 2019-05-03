@@ -23,7 +23,8 @@ class Customer_Order:
         self.quantity = qty        # the quantity to buy/sell
 
     def __str__(self):
-        return 'Customer Order [T=%5.2f %s %s P=%s Q=%s]' % (self.time, self.trader_id, self.otype, self.price, self.quantity)
+        return 'Customer Order [T=%5.2f %s %s P=%s Q=%s]' % (self.time, self.trader_id, self.otype, self.price, 
+            self.quantity)
 
 
 #######################-Order Class-################################
@@ -45,13 +46,14 @@ class Order:
         self.quantity_remaining = quantity # the remaining on the order
 
     def __str__(self):
-        return 'Order: [ID=%d T=%5.2f %s %s Q=%s QR=%s P=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.quantity_remaining, self.limit_price, self.MES)
+        return 'Order: [ID=%d T=%5.2f %s %s Q=%s QR=%s P=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, 
+            self.quantity, self.quantity_remaining, self.limit_price, self.MES)
 
 
 ######################-Block_Indication Class-#######################################
 
 
-# a block indication created by a trader for the exchange
+# A block indication created by a trader for the exchange
 class Block_Indication:
 
     def __init__(self, time, trader_id, otype, quantity, limit_price, MES):
@@ -64,12 +66,13 @@ class Block_Indication:
         self.MES = MES
 
     def __str__(self):
-        return 'BI: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.limit_price, self.MES)
+        return 'BI: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s]' % (self.id, self.time, self.trader_id, 
+            self.otype, self.quantity, self.limit_price, self.MES)
 
 
 #########################-Order Submission Request Class-############################
 
-# a Order Submission Request (OSR) sent to a trader when their block indication is matched
+# An Order Submission Request (OSR) sent to a trader when their block indication is matched
 class Order_Submission_Request:
 
     def __init__(self, OSR_id, time, trader_id, otype, quantity, limit_price, MES, match_id, reputational_score):
@@ -84,12 +87,13 @@ class Order_Submission_Request:
         self.reputational_score = reputational_score
 
     def __str__(self):
-        return 'OSR: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s MID=%d CRP=%s]' % (self.id, self.time, self.trader_id, self.otype, self.quantity, self.limit_price, self.MES, self.match_id, self.reputational_score)
+        return 'OSR: [ID=%d T=%5.2f %s %s Q=%s P=%s MES=%s MID=%d CRP=%s]' % (self.id, self.time, self.trader_id, 
+            self.otype, self.quantity, self.limit_price, self.MES, self.match_id, self.reputational_score)
 
 
 #########################-Qualifying_Block_Order Class-###############################
 
-# a Qualifying Block Order (QBO) created by a trader for the exchange
+# A Qualifying Block Order (QBO) created by a trader for the exchange
 class Qualifying_Block_Order:
 
     def __init__(self, time, trader_id, otype, quantity, limit_price, MES, match_id):
@@ -134,18 +138,16 @@ class Orderbook_half:
                 position += 1
         return position
 
-    # add the order to the orders dictionary and to the order_book list
+    # add the order to the order_book list
     def book_add(self, order):
 
         # if the trader with this tid already has an order in the order_book, then remove it
-        # also set the write reponse to return
+        # also set the reponse to return
         if self.traders.get(order.trader_id) != None:
             self.book_del(order.trader_id)
             response = 'Overwrite'
         else:
             response = 'Addition'
-
-        # Note. changing the order in the order_book list will also change the order in the orders dictonary
         
         # add the trader to the traders dictionary
         self.traders[order.trader_id] = 1
@@ -160,9 +162,8 @@ class Orderbook_half:
     # delete all orders made by the trader with the given tid
     def book_del(self, tid):
         if self.traders.get(tid) != None:
-            del(self.traders[tid])
-        
-            # calling pop changes the length of order_book so we have to break afterwards
+            
+            # delete all orders made by the trader
             i = 0
             while i < len(self.orders):
                 if self.orders[i].trader_id == tid:
@@ -170,6 +171,10 @@ class Orderbook_half:
                     i -= 1
                 i += 1
 
+            # delete the trader from the traders dictinary
+            del(self.traders[tid])
+
+    # check whether a given trader has an order in this half of the order book
     def trader_has_order(self, trader_id):
         if self.traders.get(trader_id) != None:
             return True
@@ -180,6 +185,7 @@ class Orderbook_half:
     def get_orders(self):
         return self.orders
 
+    # return the dictionary of traders
     def get_traders(self):
         return self.traders
 
@@ -210,31 +216,36 @@ class Orderbook:
     # add an order to the order book
     def add_order(self, order, verbose):
 
-        # add a order to the exchange and update all internal records; return unique i.d.
+        # give the order a unique ID
         order.id = self.order_id
         self.order_id = order.id + 1
 
-        # if verbose : print('QUID: order.quid=%d self.quote.id=%d' % (order.id, self.order_id))
+        # add the order to the correct side of the order book
         if order.otype == 'Buy':
             response=self.buy_side.book_add(order)
             # If the trader already has an order on the sell side then delete it
             if self.sell_side.trader_has_order(order.trader_id):
                 self.sell_side.book_del(order.trader_id)
                 response='Overwrite'
+
         elif order.otype == 'Sell':
             response=self.sell_side.book_add(order)
             # If the trader already has an order on the buy side then delete it
             if self.buy_side.trader_has_order(order.trader_id):
                 self.buy_side.book_del(order.trader_id)
                 response = 'Overwrite'
+
+        # return the order ID and whether or not the order was an addition or an overwrite
         return [order.id, response]
 
+    # check whether a given trader currently has an order in the order book
     def trader_has_order(self, trader_id):
         if self.buy_side.trader_has_order(trader_id) or self.sell_side.trader_has_order(trader_id):
             return True
         else:
             return False
 
+    # delete all orders made by a trader
     def book_del(self, trader_id):
         self.buy_side.book_del(trader_id)
         self.sell_side.book_del(trader_id)
@@ -255,7 +266,7 @@ class Orderbook:
             # neither bid nor ask?
             sys.exit('bad order type in del_quote()')
 
-    # Check that the two orders match in terms of their price
+    # Check that two orders match in terms of their price
     def check_price_match(self, buy_order, sell_order, price):
 
         if buy_order.limit_price == None and sell_order.limit_price == None:
@@ -275,7 +286,7 @@ class Orderbook:
 
         return False
 
-    # Check that the two orders match in terms of their size
+    # Check that two orders match in terms of their size
     def check_size_match(self, buy_order, sell_order):
 
         if buy_order.MES == None and sell_order.MES == None:
@@ -306,14 +317,14 @@ class Orderbook:
     # Find a match between a buy order and a sell order
     def find_matching_orders(self, price):
 
-        #get the buy orders and sell orders
+        # get the list of buy orders and sell orders
         buy_orders = self.buy_side.get_orders()
         sell_orders = self.sell_side.get_orders()
 
         # matching is buy-side friendly, so start with buys first
         for buy_order in buy_orders:
             for sell_order in sell_orders:
-                # find two matching orders in the order_book list
+                # check that the two orders match with eachother
                 if self.check_match(buy_order, sell_order, price):
 
                     # return a dictionary containing the match info
@@ -328,7 +339,7 @@ class Orderbook:
         # if no match can be found, return None
         return None
 
-    # given a buy order, a sell order and a trade size, perform the trade
+    # perform the trade specified in the trade_info dictionary
     def execute_trade(self, time, trade_info):
 
         # calculate the trade size
@@ -337,11 +348,11 @@ class Orderbook:
         else:
             trade_size = trade_info["buy_order"].quantity_remaining
 
-        # remove orders from the order_book
+        # remove the orders from the order_book
         self.buy_side.book_del(trade_info["buy_order"].trader_id)
         self.sell_side.book_del(trade_info["sell_order"].trader_id)
 
-        # subtract the trade quantity from the orders' quantity remaining
+        # subtract the trade quantity from each orders' quantity remaining
         trade_info["buy_order"].quantity_remaining -= trade_size
         trade_info["sell_order"].quantity_remaining -= trade_size
 
@@ -381,7 +392,7 @@ class Orderbook:
 
 
     # trades occur at the given time at the given price
-    # keep making trades out of matching orders until no more matches can be found
+    # keep making trades out of matched orders until no more matches can be found
     def execute_trades(self, time, price):
 
         # a list of all the trades made
@@ -394,7 +405,10 @@ class Orderbook:
         while match_info != None:
 
             # execute the trade with the matched orders
-            trades.append(self.execute_trade(time, match_info))
+            trade = self.execute_trade(time, match_info)
+
+            # add the trade information to the list of trades
+            trades.append(trade)
 
             # find another match
             match_info = self.find_matching_orders(price)
@@ -436,6 +450,7 @@ class Orderbook:
         self.sell_side.print_orders()
         print("")
 
+    # print the tape
     def print_tape(self):
         print("Tape:")
         for trade in self.tape:
@@ -456,10 +471,10 @@ class Block_Indication_Book:
         self.buy_side = Orderbook_half('Buy')
         # The sell side contains all of the block indications to sell
         self.sell_side = Orderbook_half('Sell')
-        # The minimum indication value (MIV) is the quantity that a block indication must be greater
+        # The Minimum Indication Value (MIV) is the quantity that a block indication must be greater
         # than in order to be accepted
         self.MIV = 500
-        # ID to be given to next block indication
+        # ID to be given to next Block Indication
         self.BI_id = 0
         # ID to be given to next Qualifying Block Order received
         self.QBO_id = 0
@@ -471,7 +486,7 @@ class Block_Indication_Book:
         self.event_reputational_scores = {}
         # the initial composite reputational score given to each trader
         self.initial_composite_reputational_score = 100
-        # the reputational score threshold (RST). All traders with a reputational score below this threshold
+        # the Reputational Score Threshold (RST). All traders with a reputational score below this threshold
         # are no longer able to use the block discovery service
         self.RST = 55
         # A dictionary to hold matched BIs and the corresponding QBOs
@@ -484,7 +499,7 @@ class Block_Indication_Book:
         self.composite_reputational_scores_history = {}
 
     
-    # add block indication
+    # Add a block indication to the exchange
     def add_block_indication(self, BI, verbose):
 
         # if a new trader, then give it an initial reputational score
@@ -494,9 +509,10 @@ class Block_Indication_Book:
             self.composite_reputational_scores_history[BI.trader_id] = []
 
         # the quantity of the order must be greater than the MIV
+        # the trader must also have a composite reputational score lower than the RST
         if BI.quantity >= self.MIV and self.composite_reputational_scores.get(BI.trader_id) >= self.RST:
 
-            # set the block indications' id
+            # give an ID to the block indication
             BI.id = self.BI_id
             self.BI_id = BI.id + 1
 
@@ -507,6 +523,7 @@ class Block_Indication_Book:
                 if self.sell_side.trader_has_order(BI.trader_id):
                     self.sell_side.book_del(BI.trader_id)
                     response = 'Overwrite'
+
             elif BI.otype == 'Sell':
                 response=self.sell_side.book_add(BI)
                 # If the trader already has a block indication on the buy side, then delete it
@@ -514,18 +531,20 @@ class Block_Indication_Book:
                     self.buy_side.book_del(BI.trader_id)
                     response = 'Overwrite'
 
-            # return the order id and the response
+            # return the block indication id and the response
             return [BI.id, response]
 
-        # if the quantity of the order was not greater than the MIV then return a message
+        # if the block indication was rejected then return the message
         return [-1, "Block Indication Rejected"]
 
+    # check whether a given trader currently has a block indication
     def trader_has_block_indication(self, trader_id):
         if self.buy_side.trader_has_order(trader_id) or self.sell_side.trader_has_order(trader_id):
             return True
         else:
             return False
 
+    # detete all block indications made by a given trader
     def book_del(self, trader_id):
         self.buy_side.book_del(trader_id)
         self.sell_side.book_del(trader_id)
@@ -545,6 +564,7 @@ class Block_Indication_Book:
         else:
             sys.exit('bad order type in del_block_indication()')
 
+    # check that two block indications match in terms of their price
     def check_price_match(self, buy_BI, sell_BI, price):
 
         if buy_BI.limit_price == None and sell_BI.limit_price == None:
@@ -564,6 +584,7 @@ class Block_Indication_Book:
 
         return False
 
+    # check that two block indications match in terms of their size
     def check_size_match(self, buy_BI, sell_BI):
 
         if buy_BI.MES == None and sell_BI.MES == None:
@@ -583,6 +604,7 @@ class Block_Indication_Book:
 
         return False
 
+    # check that two block indications match
     def check_match(self, buy_BI, sell_BI, price):
         # check that both the order size and the price match
         return self.check_price_match(buy_BI, sell_BI, price) and self.check_size_match(buy_BI, sell_BI)
@@ -590,7 +612,7 @@ class Block_Indication_Book:
     # attempt to find two matching block indications
     def find_matching_block_indications(self, price):
         
-        # get the buy side orders and sell side orders
+        # get the buy block indications list and sell block indications list
         buy_BIs = self.buy_side.get_orders()
         sell_BIs = self.sell_side.get_orders()
 
@@ -607,24 +629,28 @@ class Block_Indication_Book:
                         "buy_QBO": None,
                         "sell_QBO": None
                     }
+
                     # get the current match id
                     match_id = self.match_id
 
                     # increment the book's match_id counter
                     self.match_id += 1
 
-                    # delete these block indications from the book
+                    # delete these block indications from the block indication book
                     self.del_block_indication(0, buy_BI, False)
                     self.del_block_indication(0, sell_BI, False)
 
                     # return the match id
                     return match_id
+
         # if no match was found then return None
         return None
 
+    # return a match given the ID
     def get_block_indication_match(self, match_id):
         return self.matches.get(match_id)
 
+    # create the order submissions requests given a match between two block indications
     def create_order_submission_requests(self, match_id):
         # Get the block indications.
         buy_BI = self.matches[match_id]["buy_BI"]
@@ -736,7 +762,7 @@ class Block_Indication_Book:
         # Check that the QBO is marketable
         if self.marketable(BI, QBO):
 
-            # Calculate the event reputatioanl score based on the percentage difference in the quantity 
+            # Calculate the event reputational score based on the percentage difference in the quantity 
             # size of the BI and the QBO
             quantity_percent_diff = 100 * (QBO.quantity - BI.quantity) / BI.quantity
             event_reputational_score = 100 + 3 * quantity_percent_diff
@@ -747,12 +773,13 @@ class Block_Indication_Book:
 
         # If the QBO is not marketable then the event reputational score is 0
         else:
-
             event_reputational_score = 0
 
         # Add this event reputational score to the dictionary containing the last 50 event reputational scores
         # for each trader
         self.event_reputational_scores[BI.trader_id].insert(0,event_reputational_score)
+        # make sure that the list only contains the last 50 event reputational scores
+        self.event_reputational_scores[BI.trader_id] = self.event_reputational_scores[BI.trader_id][:50]
 
         # return the score
         return event_reputational_score
@@ -784,7 +811,7 @@ class Block_Indication_Book:
     # update both traders' reputation score given this matching event
     def update_composite_reputational_scores(self, time, match_id):
 
-        # the QBO and BI for the buy side
+        # get the BIs and the QBOs from the matches dictionary item
         buy_BI = self.matches[match_id]["buy_BI"]
         sell_BI = self.matches[match_id]["sell_BI"]
         buy_QBO = self.matches[match_id]["buy_QBO"]
@@ -804,25 +831,13 @@ class Block_Indication_Book:
         self.composite_reputational_scores_history[buy_BI.trader_id].append((time, buyer_composite_reputational_score))
         self.composite_reputational_scores_history[sell_BI.trader_id].append((time, seller_composite_reputational_score))
 
+    # delete a match from the matches dictonary given the match ID
     def delete_match(self, match_id):
         del(self.matches[match_id])
 
     # write the composite reputational scores history to an output file
     def composite_reputational_scores_history_dump(self, fname, fmode, tmode):
         dumpfile = open(fname, fmode)
-        
-        '''
-        # write the information for each trade
-        for trader in self.composite_reputational_scores_history.keys():
-            dumpfile.write('trader: %s\n' % trader)
-            dumpfile.write('time, ')
-            for (time, score) in self.composite_reputational_scores_history[trader]:
-                dumpfile.write('%.2f, ' % time)
-            dumpfile.write('\nscore,')
-            for (time, score) in self.composite_reputational_scores_history[trader]:
-                dumpfile.write('%d, ' % score)
-            dumpfile.write('\n\n')
-        '''
 
         # find the length of the longest list of scores
         highest_length = 0
@@ -833,35 +848,36 @@ class Block_Indication_Book:
 
         # write the column names
         for trader in sorted(self.composite_reputational_scores_history.keys()):
-            dumpfile.write('%s: %d scores,,,' % (trader, len(self.composite_reputational_scores_history[trader])))
+            dumpfile.write('%s: %d scores,,' % (trader, len(self.composite_reputational_scores_history[trader])))
         dumpfile.write('\n')
         for i in range(0, len(self.composite_reputational_scores_history)):
-            dumpfile.write('time,score,,')
+            dumpfile.write('time,score,')
         dumpfile.write('\n')
-
-        print("highest length: %d" % highest_length)
 
         # write each row containing a time and score for each trader
         for i in range(0, highest_length):
             for trader in sorted(self.composite_reputational_scores_history.keys()):
                 if i < len(self.composite_reputational_scores_history[trader]):
                     (time, score) = self.composite_reputational_scores_history[trader][i]
-                    dumpfile.write('%.2f, %d,,' % (time, score))
+                    dumpfile.write('%.2f, %d,' % (time, score))
                 else:
-                    dumpfile.write(',,,')
+                    dumpfile.write(',,')
             dumpfile.write('\n')
 
+        # clost the file
         dumpfile.close()
+
         if tmode == 'wipe':
             self.tape = []
 
-    # print the reputational score of all known traders
+    # print the composite reputational score of all known traders
     def print_composite_reputational_scores(self):
         print("Reputational scores:")
         for key in self.composite_reputational_scores:
             print("%s : %d" % (key, self.composite_reputational_scores[key]))
         print("")
 
+    # print the event reputational scores of all known traders
     def print_event_reputational_scores(self):
         print("Event reputational scores:")
         for key in self.event_reputational_scores:
@@ -870,7 +886,7 @@ class Block_Indication_Book:
                 print "%d" % score,
             print("")
 
-    # print the current traders with block indications
+    # print all traders that currently have block indications
     def print_traders(self):
         print("Buy orders:")
         self.buy_side.print_traders()
@@ -903,7 +919,7 @@ class Block_Indication_Book:
 ####################-Exchange Class-################################
 
 
-# Exchange class
+# Exchange class. This class is used to bring together the Orderbook class and the Block_Indication_Book class.
 class Exchange:
 
     # constructor method
@@ -912,8 +928,6 @@ class Exchange:
         self.order_book = Orderbook()
         # block_indication_book will hold all of the block indications made by traders 
         self.block_indication_book = Block_Indication_Book()
-        # the traders dictionary will contain how many orders are currently placed by each trader
-        self.traders = {}
 
     # add an order to the exchange
     def add_order(self, order, verbose):
@@ -930,6 +944,7 @@ class Exchange:
         else:
             return [-1, "Not an Order."]
     
+    # add a block indication to the exchange
     def add_block_indication(self, BI, verbose):
         # Make sure that what is being added is actually a block indication
         if(isinstance(BI, Block_Indication)):
@@ -944,13 +959,17 @@ class Exchange:
         else:
             return [-1, "Not a Block Indication."]
 
+    # add a qualifying block order to the exchange
     def add_qualifying_block_order(self, QBO, verbose):
         if(isinstance(QBO, Qualifying_Block_Order)):
             return self.block_indication_book.add_qualifying_block_order(QBO, verbose)
         else:
             return "Not a Qualifying Block Order."
 
+    # convert Qualifying Block Orders into firm orders
     def add_firm_orders_to_order_book(self, match_id):
+
+        # get the QBOs from the match
         full_match = self.get_block_indication_match(match_id)
         buy_QBO = full_match["buy_QBO"]
         sell_QBO = full_match["sell_QBO"]
@@ -968,6 +987,8 @@ class Exchange:
                                 sell_QBO.quantity,
                                 sell_QBO.limit_price,
                                 sell_QBO.MES)
+
+        # add the orders to the order book
         buy_order.BDS = True
         buy_order.BDS_match_id = match_id
         sell_order.BDS = True
@@ -976,7 +997,8 @@ class Exchange:
         self.add_order(sell_order, False)
 
 
-    # match block indications and then convert those block indications into firm orders
+    # match block indications that are lying in the exchange and then convert those block indications 
+    # into firm orders
     def match_block_indications_and_get_firm_orders(self, time, traders, price):
         # check if there is a match between any two block indications
         match_id = self.find_matching_block_indications(price)
@@ -989,7 +1011,7 @@ class Exchange:
             buy_BI = full_match["buy_BI"]
             sell_BI = full_match["sell_BI"]
 
-            # send OSR to the traders and get back QBOs for the matched BIs
+            # send an OSR to each traders and get back a QBO
             OSRs = self.create_order_submission_requests(match_id)
             buy_QBO = traders[buy_BI.trader_id].get_qualifying_block_order(100, OSRs["buy_OSR"])
             sell_QBO = traders[sell_BI.trader_id].get_qualifying_block_order(100, OSRs["sell_OSR"])
@@ -1001,20 +1023,17 @@ class Exchange:
             # update the reputational scores of the traders in the match
             self.update_composite_reputational_scores(time, match_id)
 
-
             # check if one or both of the QBOs was not marketable
             if not(self.block_indication_book.marketable(buy_BI, buy_QBO) and self.block_indication_book.marketable(sell_BI, sell_QBO)):
                 # re-add the BI if the QBO was marketable, do not re-add the BI for the unmarketable QBO
                 if self.marketable(buy_BI, buy_QBO):
                     self.add_block_indication(buy_QBO)
-
                 if self.marketable(sell_BI, sell_QBO):
                     self.add_block_indication(sell_BI)
 
-
             # add the firm orders to the order book.
             self.add_firm_orders_to_order_book(match_id)
-            # delete the block indication match
+            # delete the block indication match from the matches dictionary
             self.delete_block_indication_match(match_id)
 
             return True
@@ -1101,7 +1120,7 @@ class Trader:
         self.n_trades = 0              # how many trades has this trader done?
         self.lastquote = None          # record of what its last quote was
         self.quantity_remaining = 0    # the quantity that has currently been traded from the last quote
-        self.BI_threshold = 1          # the threshold on the order quantity that determines when a BI should be used
+        self.BI_threshold = 1          # the quantity threshold which determines when a BI should be used
         self.test = False              # whether or not we are running a test with the trader
         self.reputational_score = None # the last notified reputational score of the trader.
 
@@ -1149,6 +1168,7 @@ class Trader:
 
         if verbose: print('%s profit=%d balance=%d profit/time=%d' % (outstr, profit, self.balance, self.profitpertime))
 
+        # update the quantity remaining
         self.quantity_remaining -= trade['quantity']
         if self.quantity_remaining == 0:
             self.del_order()
@@ -1236,8 +1256,7 @@ class Trader_Giveaway(Trader):
                 return order
 
     # the trader recieves an Order Submission Request (OSR). The trader needs to respond with a
-    # Qualifying Block Order (QBO) in order to confirm their block indication
-    # Currently we are sending a QBO with the same quantity as in the BI
+    # Qualifying Block Order (QBO) in order to confirm their block indication. 
     def get_qualifying_block_order(self, time, OSR):
 
         # Update the traders reputationa score
@@ -1266,9 +1285,7 @@ class Trader_Giveaway(Trader):
         # return the created QBO
         return QBO
 
-    # the trader recieves an Order Submission Request (OSR). The trader needs to respond with a
-    # Qualifying Block Order (QBO) in order to confirm their block indication
-    # Currently we are sending a QBO with the same quantity as in the BI
+    # simpler get_qualifying_block_order function
     def get_qualifying_block_order1(self, time, OSR):
 
         # Update the traders reputationa score
@@ -1285,6 +1302,7 @@ class Trader_Giveaway(Trader):
         # return the created QBO
         return QBO
 
+    # if the block indication or the qualifying block order failed
     def BDS_failure(self, info):
         return
 
@@ -1432,7 +1450,7 @@ def populate_market(traders_spec, traders, shuffle, verbose):
 #
 # the interface on this is a bit of a mess... could do with refactoring
 
-
+# the os dictionary parameter now contains a 'quantity_range' item
 def customer_orders(time, last_update, traders, trader_stats, os, pending, verbose):
 
 
@@ -1618,6 +1636,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, verbo
         return [new_pending, cancellations]
 
 # one session in the market
+# This was modified to work with the dark pool
 def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dumpfile, dump_each_trade):
 
     # variables which dictate what information is printed to the output
@@ -1688,30 +1707,36 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
         # if the randomly selected trader gives us a quote, then add it to the exchange
         if order != None:
-            # send order to exchange
+
+            # add the order to the exchange
             if isinstance(order, Order):
                 result = exchange.add_order(order, process_verbose)
+
+            # add block indication to the exchange and find matches
             elif isinstance(order, Block_Indication):
                 result = exchange.add_block_indication(order, process_verbose)
                 exchange.match_block_indications_and_get_firm_orders(time, traders, 50)
             traders[tid].n_quotes = 1
+
+            # execute all possible trades
             trades = exchange.execute_trades(time, 50)
+
+            # trades occurred, so the counterparties update order lists and blotters
             for trade in trades:
-                # trade occurred,
-                # so the counterparties update order lists and blotters
                 traders[trade['buyer']].bookkeep(trade, bookkeep_verbose)
                 traders[trade['seller']].bookkeep(trade, bookkeep_verbose)
 
         time = time + timestep
 
-    # print the final order book
+    # print the final order and block indications
+    print("Final orders and block indications:")
     exchange.print_order_book()
     exchange.print_block_indications()
 
     # end of an experiment -- dump the tape
     exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
+    # dump the traders' reputational score history
     exchange.composite_reputational_scores_history_dump('scores.csv', 'w', 'keep')
-    print(exchange.block_indication_book.composite_reputational_scores_history['B00'])
 
     # write trade_stats for this experiment NB end-of-session summary only
     trade_stats(sess_id, traders, dumpfile, time)
@@ -1754,106 +1779,6 @@ def experiment1():
     tdump.close()
 
     sys.exit('Done Now')
-
-def test1():
-
-    # initialise the exchange
-    exchange = Exchange()
-    exchange.block_indication_book.MIV = 300
-
-    # create some example orders
-    orders = []
-    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
-    orders.append(Order(35.0, 'B01', 'Buy', 10, None, 6))
-    orders.append(Order(55.0, 'B02', 'Buy', 3, 53, 1))
-    orders.append(Order(75.0, 'B03', 'Buy', 3, 59, None))
-    orders.append(Order(65.0, 'B04', 'Buy', 3, 61, 2))
-    orders.append(Order(45.0, 'S00', 'Sell', 11, None, 6))
-    orders.append(Order(55.0, 'S01', 'Sell', 4, 43, 2))
-    orders.append(Order(65.0, 'S02', 'Sell', 6, 48, None))
-    orders.append(Order(55.0, 'S03', 'Sell', 6, None, 4))
-    orders.append(Order(75.0, 'B00', 'Sell', 8, None, None))
-    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
-
-    # add the orders to the exchange
-    for order in orders:
-        print(exchange.add_order(order, False))
-
-    block_indications = []
-    block_indications.append(Block_Indication(35.0, 'B00', 'Buy', 500, None, None))
-    block_indications.append(Block_Indication(35.0, 'B01', 'Buy', 500, None, None))
-    block_indications.append(Block_Indication(35.0, 'B02', 'Buy', 500, None, None))
-    block_indications.append(Block_Indication(35.0, 'S00', 'Sell', 500, None, None))
-    block_indications.append(Block_Indication(35.0, 'S01', 'Sell', 500, None, None))
-    block_indications.append(Block_Indication(35.0, 'S02', 'Sell', 500, None, None))
-    block_indications.append(Block_Indication(35.0, 'B00', 'Sell', 500, None, None))
-    block_indications.append(Block_Indication(35.0, 'B00', 'Buy', 500, None, None))
-
-
-    for block_indication in block_indications:
-        print(exchange.add_block_indication(block_indication, False))
-
-    exchange.print_block_indications()
-    exchange.print_order_book()
-
-def test2():
-
-    # initialise the exchange
-    exchange = Exchange()
-
-    # create some example orders
-    orders = []
-    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
-    orders.append(Order(35.0, 'B01', 'Buy', 10, None, None))
-    orders.append(Order(55.0, 'B02', 'Buy', 3, None, None))
-    orders.append(Order(75.0, 'B03', 'Buy', 3, None, None))
-    orders.append(Order(65.0, 'B04', 'Buy', 3, None, None))
-    orders.append(Order(45.0, 'S00', 'Sell', 11, None, None))
-    orders.append(Order(55.0, 'S01', 'Sell', 4, None, None))
-    orders.append(Order(65.0, 'S02', 'Sell', 6, None, None))
-    orders.append(Order(55.0, 'S03', 'Sell', 6, None, None))
-    orders.append(Order(75.0, 'B00', 'Sell', 8, None, None))
-    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
-
-    
-    for order in orders:
-        exchange.add_order(order, False)
-
-    exchange.print_order_book()
-
-    exchange.execute_trades(100, 50)
-
-    exchange.print_order_book()
-
-
-def test3():
-
-    # initialise the exchange
-    exchange = Exchange()
-
-    # create some example orders
-    orders = []
-    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
-    orders.append(Order(35.0, 'B01', 'Buy', 10, None, None))
-    orders.append(Order(55.0, 'B02', 'Buy', 3, None, None))
-    orders.append(Order(75.0, 'B03', 'Buy', 3, None, None))
-    orders.append(Order(65.0, 'B04', 'Buy', 3, None, None))
-    orders.append(Order(45.0, 'S00', 'Sell', 11, None, None))
-    orders.append(Order(55.0, 'S01', 'Sell', 4, None, None))
-    orders.append(Order(65.0, 'S02', 'Sell', 6, None, None))
-    orders.append(Order(55.0, 'S03', 'Sell', 6, None, None))
-    orders.append(Order(75.0, 'B00', 'Sell', 8, None, None))
-    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
-
-    
-    for order in orders:
-        exchange.add_order(order, False)
-
-    exchange.print_order_book()
-
-    exchange.execute_trades(100, 50)
-
-    exchange.print_order_book()
 
 
 # the main function is called if BSE.py is run as the main program

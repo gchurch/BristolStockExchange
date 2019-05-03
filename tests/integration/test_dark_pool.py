@@ -57,7 +57,7 @@ class Test_Integration(unittest.TestCase):
                 elif isinstance(order, dark_pool.Block_Indication):
                     exchange.add_block_indication(order, False)
                     # check if there is a match between block indications
-                    exchange.match_block_indications_and_get_firm_orders(traders, price)
+                    exchange.match_block_indications_and_get_firm_orders(0, traders, price)
             
                 # perform all trades possible after each order/BI is added
                 exchange.execute_trades(100.0, price)
@@ -75,6 +75,106 @@ class Test_Integration(unittest.TestCase):
 
 ###########################################################################
 # the code to be executed if this is the main program
+
+def test1():
+
+    # initialise the exchange
+    exchange = Exchange()
+    exchange.block_indication_book.MIV = 300
+
+    # create some example orders
+    orders = []
+    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
+    orders.append(Order(35.0, 'B01', 'Buy', 10, None, 6))
+    orders.append(Order(55.0, 'B02', 'Buy', 3, 53, 1))
+    orders.append(Order(75.0, 'B03', 'Buy', 3, 59, None))
+    orders.append(Order(65.0, 'B04', 'Buy', 3, 61, 2))
+    orders.append(Order(45.0, 'S00', 'Sell', 11, None, 6))
+    orders.append(Order(55.0, 'S01', 'Sell', 4, 43, 2))
+    orders.append(Order(65.0, 'S02', 'Sell', 6, 48, None))
+    orders.append(Order(55.0, 'S03', 'Sell', 6, None, 4))
+    orders.append(Order(75.0, 'B00', 'Sell', 8, None, None))
+    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
+
+    # add the orders to the exchange
+    for order in orders:
+        print(exchange.add_order(order, False))
+
+    block_indications = []
+    block_indications.append(Block_Indication(35.0, 'B00', 'Buy', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'B01', 'Buy', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'B02', 'Buy', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'S00', 'Sell', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'S01', 'Sell', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'S02', 'Sell', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'B00', 'Sell', 500, None, None))
+    block_indications.append(Block_Indication(35.0, 'B00', 'Buy', 500, None, None))
+
+
+    for block_indication in block_indications:
+        print(exchange.add_block_indication(block_indication, False))
+
+    exchange.print_block_indications()
+    exchange.print_order_book()
+
+def test2():
+
+    # initialise the exchange
+    exchange = Exchange()
+
+    # create some example orders
+    orders = []
+    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
+    orders.append(Order(35.0, 'B01', 'Buy', 10, None, None))
+    orders.append(Order(55.0, 'B02', 'Buy', 3, None, None))
+    orders.append(Order(75.0, 'B03', 'Buy', 3, None, None))
+    orders.append(Order(65.0, 'B04', 'Buy', 3, None, None))
+    orders.append(Order(45.0, 'S00', 'Sell', 11, None, None))
+    orders.append(Order(55.0, 'S01', 'Sell', 4, None, None))
+    orders.append(Order(65.0, 'S02', 'Sell', 6, None, None))
+    orders.append(Order(55.0, 'S03', 'Sell', 6, None, None))
+    orders.append(Order(75.0, 'B00', 'Sell', 8, None, None))
+    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
+
+    
+    for order in orders:
+        exchange.add_order(order, False)
+
+    exchange.print_order_book()
+
+    exchange.execute_trades(100, 50)
+
+    exchange.print_order_book()
+
+
+def test3():
+
+    # initialise the exchange
+    exchange = Exchange()
+
+    # create some example orders
+    orders = []
+    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
+    orders.append(Order(35.0, 'B01', 'Buy', 10, None, None))
+    orders.append(Order(55.0, 'B02', 'Buy', 3, None, None))
+    orders.append(Order(75.0, 'B03', 'Buy', 3, None, None))
+    orders.append(Order(65.0, 'B04', 'Buy', 3, None, None))
+    orders.append(Order(45.0, 'S00', 'Sell', 11, None, None))
+    orders.append(Order(55.0, 'S01', 'Sell', 4, None, None))
+    orders.append(Order(65.0, 'S02', 'Sell', 6, None, None))
+    orders.append(Order(55.0, 'S03', 'Sell', 6, None, None))
+    orders.append(Order(75.0, 'B00', 'Sell', 8, None, None))
+    orders.append(Order(25.0, 'B00', 'Buy', 5, None, None))
+
+    
+    for order in orders:
+        exchange.add_order(order, False)
+
+    exchange.print_order_book()
+
+    exchange.execute_trades(100, 50)
+
+    exchange.print_order_book()
 
 if __name__ == "__main__":
     unittest.main()

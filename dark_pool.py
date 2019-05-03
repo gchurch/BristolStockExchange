@@ -811,6 +811,7 @@ class Block_Indication_Book:
     def composite_reputational_scores_history_dump(self, fname, fmode, tmode):
         dumpfile = open(fname, fmode)
         
+        '''
         # write the information for each trade
         for trader in self.composite_reputational_scores_history.keys():
             dumpfile.write('trader: %s\n' % trader)
@@ -821,6 +822,35 @@ class Block_Indication_Book:
             for (time, score) in self.composite_reputational_scores_history[trader]:
                 dumpfile.write('%d, ' % score)
             dumpfile.write('\n\n')
+        '''
+
+        # find the length of the longest list of scores
+        highest_length = 0
+        for trader in self.composite_reputational_scores_history.keys():
+            this_length = len(self.composite_reputational_scores_history[trader])
+            if this_length > highest_length:
+                highest_length = this_length
+
+        # write the column names
+        for trader in sorted(self.composite_reputational_scores_history.keys()):
+            dumpfile.write('%s: %d scores,,,' % (trader, len(self.composite_reputational_scores_history[trader])))
+        dumpfile.write('\n')
+        for i in range(0, len(self.composite_reputational_scores_history)):
+            dumpfile.write('time,score,,')
+        dumpfile.write('\n')
+
+        print("highest length: %d" % highest_length)
+
+        # write each row containing a time and score for each trader
+        for i in range(0, highest_length):
+            for trader in sorted(self.composite_reputational_scores_history.keys()):
+                if i < len(self.composite_reputational_scores_history[trader]):
+                    (time, score) = self.composite_reputational_scores_history[trader][i]
+                    dumpfile.write('%.2f, %d,,' % (time, score))
+                else:
+                    dumpfile.write(',,,')
+            dumpfile.write('\n')
+
         dumpfile.close()
         if tmode == 'wipe':
             self.tape = []
@@ -971,6 +1001,7 @@ class Exchange:
             # update the reputational scores of the traders in the match
             self.update_composite_reputational_scores(time, match_id)
 
+
             # check if one or both of the QBOs was not marketable
             if not(self.block_indication_book.marketable(buy_BI, buy_QBO) and self.block_indication_book.marketable(sell_BI, sell_QBO)):
                 # re-add the BI if the QBO was marketable, do not re-add the BI for the unmarketable QBO
@@ -979,7 +1010,8 @@ class Exchange:
 
                 if self.marketable(sell_BI, sell_QBO):
                     self.add_block_indication(sell_BI)
-            
+
+
             # add the firm orders to the order book.
             self.add_firm_orders_to_order_book(match_id)
             # delete the block indication match
@@ -1675,11 +1707,11 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
     # print the final order book
     exchange.print_order_book()
     exchange.print_block_indications()
-    print(exchange.block_indication_book.composite_reputational_scores_history)
 
     # end of an experiment -- dump the tape
     exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
     exchange.composite_reputational_scores_history_dump('scores.csv', 'w', 'keep')
+    print(exchange.block_indication_book.composite_reputational_scores_history['B00'])
 
     # write trade_stats for this experiment NB end-of-session summary only
     trade_stats(sess_id, traders, dumpfile, time)

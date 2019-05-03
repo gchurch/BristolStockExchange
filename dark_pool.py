@@ -1121,7 +1121,6 @@ class Trader:
         self.lastquote = None          # record of what its last quote was
         self.quantity_remaining = 0    # the quantity that has currently been traded from the last quote
         self.BI_threshold = 1          # the quantity threshold which determines when a BI should be used
-        self.test = False              # whether or not we are running a test with the trader
         self.reputational_score = None # the last notified reputational score of the trader.
 
 
@@ -1199,24 +1198,15 @@ class Trader_Giveaway(Trader):
 
             # if the quantity remaining is above the BI threshold then issue a block indication
             if self.quantity_remaining >= self.BI_threshold:
-            
-                # configure options for when we are testing
-                if self.test == True:
-                    quantity = self.quantity_remaining
-                    price = self.customer_order.price
-                    MES = 20
-                # configure the options for normal activity
-                else:
-                    quantity = self.quantity_remaining
-                    price = self.customer_order.price
-                    MES = self.BI_threshold
+
+                MES = self.BI_threshold
 
                 # create the block indication
                 block_indication = Block_Indication(time,
                                                     self.trader_id,
                                                     self.customer_order.otype,
-                                                    quantity,
-                                                    price,
+                                                    self.quantity_remaining,
+                                                    self.customer_order.price,
                                                     MES)
 
                 # update the lastquote member variable
@@ -1227,26 +1217,92 @@ class Trader_Giveaway(Trader):
 
             # otherwise issue a normal order
             else:
-                # create a normal order
+
                 MES = None
 
-                # configuration for when testing
-                if self.test == True:
-                    quantity = self.quantity_remaining
-                    price = self.customer_order.price
-                    MES = 2
-                # configuration for normal activity
-                else:
-                    quantity = self.quantity_remaining
-                    price = self.customer_order.price
-                    MES = None
+                # create the order
+                order = Order(time, 
+                              self.trader_id, 
+                              self.customer_order.otype,
+                              self.quantity_remaining,
+                              self.customer_order.price,
+                              MES)
+
+                # update the last quote member variable
+                self.lastquote=order
+
+                #return the order
+                return order
+
+    # the trader recieves an Order Submission Request (OSR). The trader needs to respond with a
+    # Qualifying Block Order (QBO) in order to confirm their block indication. 
+    def get_qualifying_block_order(self, time, OSR):
+
+        # Update the traders reputationa score
+        self.reputational_score = OSR.reputational_score
+        
+        # create a small quantity discrepency half of the time
+        quantity_discrepency = random.randint(0,1) * random.randint(1,100)
+        quantity = OSR.quantity - quantity_discrepency
+        limit_price = OSR.limit_price
+        MES = OSR.MES
+
+        # create a QBO from the received OSR
+        QBO = Qualifying_Block_Order(time, 
+                                     OSR.trader_id, 
+                                     OSR.otype, 
+                                     quantity,
+                                     limit_price,
+                                     MES, 
+                                     OSR.match_id)
+        # return the created QBO
+        return QBO
+
+    # if the block indication or the qualifying block order failed
+    def BDS_failure(self, info):
+        return
+
+
+# This trader's behaviour is deterministic and is used for testing purposes
+class Trader_Giveaway_test(Trader):
+
+    def getorder(self, time):
+        # if the trader has no customer order then return None
+        if self.customer_order == None:
+            order = None
+
+        elif self.quantity_remaining > 0:
+
+            # if the quantity remaining is above the BI threshold then issue a block indication
+            if self.quantity_remaining >= self.BI_threshold:
+            
+                MES = 20
+
+                # create the block indication
+                block_indication = Block_Indication(time,
+                                                    self.trader_id,
+                                                    self.customer_order.otype,
+                                                    self.quantity_remaining,
+                                                    self.customer_order.price,
+                                                    MES)
+
+                # update the lastquote member variable
+                self.lastquote = block_indication
+
+                # return the block indication
+                return block_indication
+
+            # otherwise issue a normal order
+            else:   
+                
+                MES = 2
 
                 # create the order
                 order = Order(time, 
                               self.trader_id, 
                               self.customer_order.otype, 
-                              quantity,
-                              price,
+                              self.quantity_remaining,
+                              self.customer_order.price,
                               MES)
 
                 # update the last quote member variable
@@ -1263,16 +1319,9 @@ class Trader_Giveaway(Trader):
         self.reputational_score = OSR.reputational_score
         
         # If we are testing then use a deterministic quantity
-        if self.test == True:
-            quantity = OSR.quantity - 10
-            limit_price = OSR.limit_price
-            MES = OSR.MES
-        else:
-            # create a small quantity discrepency half of the time
-            quantity_discrepency = random.randint(0,1) * random.randint(1,100)
-            quantity = OSR.quantity - quantity_discrepency
-            limit_price = OSR.limit_price
-            MES = OSR.MES
+        quantity = OSR.quantity - 10
+        limit_price = OSR.limit_price
+        MES = OSR.MES
 
         # create a QBO from the received OSR
         QBO = Qualifying_Block_Order(time, 
@@ -1281,23 +1330,6 @@ class Trader_Giveaway(Trader):
                                      quantity,
                                      limit_price,
                                      MES, 
-                                     OSR.match_id)
-        # return the created QBO
-        return QBO
-
-    # simpler get_qualifying_block_order function
-    def get_qualifying_block_order1(self, time, OSR):
-
-        # Update the traders reputationa score
-        self.reputational_score = OSR.reputational_score
-
-        # create a QBO from the received OSR
-        QBO = Qualifying_Block_Order(time,
-                                     OSR.trader_id,
-                                     OSR.otype,
-                                     OSR.quantity,
-                                     OSR.limit_price,
-                                     OSR.MES,
                                      OSR.match_id)
         # return the created QBO
         return QBO
@@ -1359,6 +1391,8 @@ def populate_market(traders_spec, traders, shuffle, verbose):
         def trader_type(robottype, name):
                 if robottype == 'GVWY':
                         return Trader_Giveaway('GVWY', name, 0.00, 0)
+                elif robottype == 'GVWY_test':
+                        return Trader_Giveaway_test('GVWY', name, 0.00, 0)
                 elif robottype == 'ZIC':
                         return Trader_ZIC('ZIC', name, 0.00, 0)
                 elif robottype == 'SHVR':

@@ -13,7 +13,7 @@ class Test_Integration(unittest.TestCase):
         exchange.RST = 55
 
         # create the trader specs
-        buyers_spec = [('GVWY',12)]
+        buyers_spec = [('GVWY_test',12)]
         sellers_spec = buyers_spec
         traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec, 'BI_threshold':600}
 
@@ -45,7 +45,6 @@ class Test_Integration(unittest.TestCase):
 
         	# configure the traders for the test
             traders[tid].BI_threshold = 100
-            traders[tid].test = True
  
             # get the order from the trader
             order = traders[tid].getorder(20.0)

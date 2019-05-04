@@ -1013,8 +1013,8 @@ class Exchange:
 
             # send an OSR to each traders and get back a QBO
             OSRs = self.create_order_submission_requests(match_id)
-            buy_QBO = traders[buy_BI.trader_id].get_qualifying_block_order(100, OSRs["buy_OSR"])
-            sell_QBO = traders[sell_BI.trader_id].get_qualifying_block_order(100, OSRs["sell_OSR"])
+            buy_QBO = traders[buy_BI.trader_id].get_qualifying_block_order(time, OSRs["buy_OSR"])
+            sell_QBO = traders[sell_BI.trader_id].get_qualifying_block_order(time, OSRs["sell_OSR"])
 
             # add the QBOs to the exchange
             self.add_qualifying_block_order(buy_QBO, False)
@@ -1024,17 +1024,17 @@ class Exchange:
             self.update_composite_reputational_scores(time, match_id)
 
             # check if one or both of the QBOs was not marketable
-            if not(self.block_indication_book.marketable(buy_BI, buy_QBO) and self.block_indication_book.marketable(sell_BI, sell_QBO)):
+            #if not(self.block_indication_book.marketable(buy_BI, buy_QBO) and self.block_indication_book.marketable(sell_BI, sell_QBO)):
                 # re-add the BI if the QBO was marketable, do not re-add the BI for the unmarketable QBO
-                if self.marketable(buy_BI, buy_QBO):
-                    self.add_block_indication(buy_QBO)
-                if self.marketable(sell_BI, sell_QBO):
-                    self.add_block_indication(sell_BI)
+            #    if self.marketable(buy_BI, buy_QBO):
+            #        self.add_block_indication(buy_QBO)
+            #    if self.marketable(sell_BI, sell_QBO):
+            #        self.add_block_indication(sell_BI)
 
             # add the firm orders to the order book.
             self.add_firm_orders_to_order_book(match_id)
             # delete the block indication match from the matches dictionary
-            self.delete_block_indication_match(match_id)
+            # self.delete_block_indication_match(match_id)
 
             return True
         return False

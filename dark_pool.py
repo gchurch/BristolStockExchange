@@ -978,7 +978,7 @@ class Exchange:
     def add_firm_orders_to_order_book(self, match_id):
 
         # get the QBOs from the match
-        full_match = self.get_block_indication_match(match_id)
+        full_match = self.block_indication_book.get_block_indication_match(match_id)
         buy_QBO = full_match["buy_QBO"]
         sell_QBO = full_match["sell_QBO"]
 
@@ -1015,43 +1015,35 @@ class Exchange:
     # into firm orders
     def match_block_indications_and_get_firm_orders(self, time, traders, price):
         
+        # find all block indication matches
         self.block_indication_book.find_all_matching_block_indications(price)
 
-        # while there are still matches, keep go through all of the necessary steps
+        # go through all matches
         for match_id in self.block_indication_book.matches.keys():
 
             # get the block indications that were matched
-            full_match = self.get_block_indication_match(match_id)
+            full_match = self.block_indication_book.get_block_indication_match(match_id)
             buy_BI = full_match["buy_BI"]
             sell_BI = full_match["sell_BI"]
 
             # send an OSR to each traders and get back a QBO
-            OSRs = self.create_order_submission_requests(match_id)
+            OSRs = self.block_indication_book.create_order_submission_requests(match_id)
             buy_QBO = traders[buy_BI.trader_id].get_qualifying_block_order(time, OSRs["buy_OSR"])
             sell_QBO = traders[sell_BI.trader_id].get_qualifying_block_order(time, OSRs["sell_OSR"])
 
             # add the QBOs to the exchange
-            self.add_qualifying_block_order(buy_QBO, False)
-            self.add_qualifying_block_order(sell_QBO, False)
+            self.block_indication_book.add_qualifying_block_order(buy_QBO, False)
+            self.block_indication_book.add_qualifying_block_order(sell_QBO, False)
 
             # update the reputational scores of the traders in the match
-            self.update_composite_reputational_scores(time, match_id)
-
-            # check if one or both of the QBOs was not marketable
-            #if not(self.block_indication_book.marketable(buy_BI, buy_QBO) and self.block_indication_book.marketable(sell_BI, sell_QBO)):
-                # re-add the BI if the QBO was marketable, do not re-add the BI for the unmarketable QBO
-            #    if self.marketable(buy_BI, buy_QBO):
-            #        self.add_block_indication(buy_QBO)
-            #    if self.marketable(sell_BI, sell_QBO):
-            #        self.add_block_indication(sell_BI)
+            self.block_indication_book.update_composite_reputational_scores(time, match_id)
 
             # add the firm orders to the order book.
             self.add_firm_orders_to_order_book(match_id)
+            
             # delete the block indication match from the matches dictionary
-            self.delete_block_indication_match(match_id)
+            self.block_indication_book.delete_match(match_id)
 
-            return True
-        return False
 
     # write the order_book's tape to the output file
     def tape_dump(self, fname, fmode, tmode):
@@ -1070,21 +1062,6 @@ class Exchange:
 
     def execute_trades(self, time, price):
         return self.order_book.execute_trades(time, price)
-
-    def find_matching_block_indications(self, price):
-        return self.block_indication_book.find_matching_block_indications(price)
-
-    def get_block_indication_match(self, match_id):
-        return self.block_indication_book.get_block_indication_match(match_id)
-
-    def delete_block_indication_match(self, match_id):
-        return self.block_indication_book.delete_match(match_id)
-
-    def update_composite_reputational_scores(self, time, match_id):
-        return self.block_indication_book.update_composite_reputational_scores(time, match_id)
-
-    def create_order_submission_requests(self, match_id):
-        return self.block_indication_book.create_order_submission_requests(match_id)
 
     # print the current orders in the orders dictionary
     def print_traders(self):

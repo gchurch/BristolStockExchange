@@ -68,8 +68,8 @@ class Test_Integration(unittest.TestCase):
         self.assertEqual(exchange.order_book.buy_side.orders[1].__str__(), "Order: [ID=0 T=20.00 B00 Buy Q=5 QR=5 P=67 MES=2]")
         self.assertEqual(exchange.order_book.buy_side.orders[2].__str__(), "Order: [ID=2 T=20.00 B02 Buy Q=3 QR=3 P=98 MES=2]")
         self.assertEqual(exchange.order_book.sell_side.orders[0].__str__(), "Order: [ID=8 T=20.00 S03 Sell Q=435 QR=18 P=32 MES=18]")
-        self.assertEqual(exchange.block_indication_book.composite_reputational_scores['B03'], 91)
-        self.assertEqual(exchange.block_indication_book.composite_reputational_scores['S03'], 91)
+        self.assertEqual(exchange.block_indication_book.composite_reputational_scores['B03'], 61)
+        self.assertEqual(exchange.block_indication_book.composite_reputational_scores['S03'], 61)
         self.assertEqual(exchange.order_book.tape, [{'price': 50.0, 'seller': 'S00', 'BDS': False, 'time': 100.0, 'buyer': 'B04', 'type': 'Trade', 'quantity': 11}, {'price': 50.0, 'seller': 'S01', 'BDS': False, 'time': 100.0, 'buyer': 'B04', 'type': 'Trade', 'quantity': 4}, {'price': 50.0, 'seller': 'S02', 'BDS': False, 'time': 100.0, 'buyer': 'B04', 'type': 'Trade', 'quantity': 12}, {'price': 50.0, 'seller': 'S03', 'BDS': True, 'time': 100.0, 'buyer': 'B03', 'type': 'Trade', 'quantity': 379}, {'price': 50.0, 'seller': 'S03', 'BDS': False, 'time': 100.0, 'buyer': 'B04', 'type': 'Trade', 'quantity': 38}])
 
 

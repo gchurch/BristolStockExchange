@@ -803,7 +803,7 @@ class Block_Indication_Book:
         # The sum of the weightings
         w_total = 0
 
-        # Each trader has at most 50 event reputational scores
+        # Each trader should have 50 event reputational scores
         for i in range(0, len(self.event_reputational_scores[tid])):
             total += w * self.event_reputational_scores[tid][i]
             w_total += w

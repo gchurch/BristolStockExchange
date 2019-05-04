@@ -485,10 +485,10 @@ class Block_Indication_Book:
         # The event_reputation_scores dictionary contains the last 50 event reputational scores for each trader.
         self.event_reputational_scores = {}
         # the initial composite reputational score given to each trader
-        self.initial_reputational_score = 60
+        self.initial_reputational_score = 100
         # the Reputational Score Threshold (RST). All traders with a composite reputational score below this threshold
         # are no longer able to use the block discovery service
-        self.RST = 50
+        self.RST = 75
         # A dictionary to hold matched BIs and the corresponding QBOs
         self.matches = {}
         # ID to be given to the matching of two block indications
@@ -770,16 +770,20 @@ class Block_Indication_Book:
         # Check that the QBO is marketable
         if self.marketable(BI, QBO):
 
-            # Calculate the event reputational score based on the percentage difference in the quantity 
-            # size of the BI and the QBO
-            quantity_percent_diff = 100 * (QBO.quantity - BI.quantity) / BI.quantity
-            event_reputational_score = 100 + 3 * quantity_percent_diff
+            event_reputational_score = 100
 
-            # Make sure that the score is between 50 and 100
-            if event_reputational_score > 100: event_reputational_score = 100
+            # calculate the difference between the QBO quantity and the BI quantity as a decimal
+            quantity_dec_diff = (BI.quantity - QBO.quantity) / BI.quantity
+
+            # if the QBO quantity is less than the BI quantity then decrease score
+            # The function used here is y = 77.1(e^x - 1)
+            if quantity_dec_diff > 0:
+                event_reputational_score -= round(77.1 * (math.exp(quantity_dec_diff) - 1))
+
+            # Make sure that the score is not less than 50
             if event_reputational_score < 50: event_reputational_score = 50
 
-        # If the QBO is not marketable then the event reputational score is 0
+        # If the QBO is not marketable then the score is 0
         else:
             event_reputational_score = 0
 
@@ -870,6 +874,31 @@ class Block_Indication_Book:
                     dumpfile.write('%.2f, %d,' % (time, score))
                 else:
                     dumpfile.write(',,')
+            dumpfile.write('\n')
+
+        # clost the file
+        dumpfile.close()
+
+        if tmode == 'wipe':
+            self.tape = []
+
+    # write the composite reputational scores history to an output file
+    def event_reputational_scores_dump(self, fname, fmode, tmode):
+        dumpfile = open(fname, fmode)
+
+        # write the column names
+        for trader in sorted(self.event_reputational_scores.keys()):
+            dumpfile.write('%s,,' % trader)
+        dumpfile.write('\n')
+        for i in range(0, len(self.event_reputational_scores)):
+            dumpfile.write('time,score,')
+        dumpfile.write('\n')
+
+        # write each row containing a time and score for each trader
+        for i in range(0, 50):
+            for trader in sorted(self.event_reputational_scores.keys()): 
+                score = self.event_reputational_scores[trader][i]
+                dumpfile.write('%d,' % score)
             dumpfile.write('\n')
 
         # clost the file
@@ -1053,6 +1082,10 @@ class Exchange:
     def composite_reputational_scores_history_dump(self, fname, fmode, tmode):
         self.block_indication_book.composite_reputational_scores_history_dump(fname, fmode, tmode)
 
+    # write the order_book's tape to the output file
+    def event_reputational_scores_dump(self, fname, fmode, tmode):
+        self.block_indication_book.event_reputational_scores_dump(fname, fmode, tmode)
+
     # delete an order from the exchange
     def del_order(self, time, order, verbose):
         return self.order_book.del_order(time, order, verbose)
@@ -1232,7 +1265,7 @@ class Trader_Giveaway(Trader):
         # Update the traders reputationa score
         self.reputational_score = OSR.reputational_score
         
-        quantity = round(OSR.quantity)
+        quantity = round(OSR.quantity * 0.6)
         limit_price = OSR.limit_price
         MES = OSR.MES
 
@@ -1760,7 +1793,8 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
     # end of an experiment -- dump the tape
     exchange.tape_dump('output/transactions_dark.csv', 'w', 'keep')
     # dump the traders' reputational score history
-    exchange.composite_reputational_scores_history_dump('output/scores.csv', 'w', 'keep')
+    exchange.composite_reputational_scores_history_dump('output/composite_reputational_scores_history.csv', 'w', 'keep')
+    exchange.event_reputational_scores_dump('output/event_reputational_scores.csv', 'w', 'keep')
 
     # write trade_stats for this experiment NB end-of-session summary only
     trade_stats(sess_id, traders, dumpfile, time)
@@ -1807,7 +1841,7 @@ def experiment1():
 def experiment2():
 
     start_time = 0.0
-    end_time = 6000.0
+    end_time = 10000.0
     duration = end_time - start_time
 
     price_range1 = (25, 45)

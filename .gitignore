@@ -1,5 +1,4 @@
 .DS_Store
 .~lock.*
-*.csv
-*.pyc
 test.py
+output/*.csv

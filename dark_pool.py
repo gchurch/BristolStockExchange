@@ -1758,9 +1758,9 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
     exchange.print_matches()
 
     # end of an experiment -- dump the tape
-    exchange.tape_dump('transactions_dark.csv', 'w', 'keep')
+    exchange.tape_dump('output/transactions_dark.csv', 'w', 'keep')
     # dump the traders' reputational score history
-    exchange.composite_reputational_scores_history_dump('scores.csv', 'w', 'keep')
+    exchange.composite_reputational_scores_history_dump('output/scores.csv', 'w', 'keep')
 
     # write trade_stats for this experiment NB end-of-session summary only
     trade_stats(sess_id, traders, dumpfile, time)
@@ -1788,7 +1788,7 @@ def experiment1():
     traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec, 'BI_threshold':900}
 
     n_trials = 1
-    tdump=open('avg_balance_dark.csv','w')
+    tdump=open('output/avg_balance_dark.csv','w')
     trial = 1
     if n_trials > 1:
             dump_all = False
@@ -1826,7 +1826,7 @@ def experiment2():
     traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec, 'BI_threshold':900}
 
     n_trials = 1
-    tdump=open('avg_balance_dark.csv','w')
+    tdump=open('output/avg_balance_dark.csv','w')
     trial = 1
     if n_trials > 1:
             dump_all = False

@@ -1210,7 +1210,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
 
         # end of an experiment -- dump the tape
-        exchange.tape_dump('transactions.csv', 'w', 'keep')
+        exchange.tape_dump('output/transactions.csv', 'w', 'keep')
 
 
         # write trade_stats for this experiment NB end-of-session summary only
@@ -1257,7 +1257,7 @@ def experiment1():
     # run a sequence of trials, one session per trial
 
     n_trials = 1
-    tdump=open('avg_balance.csv','w')
+    tdump=open('output/avg_balance.csv','w')
     trial = 1
     if n_trials > 1:
             dump_all = False
@@ -1301,7 +1301,7 @@ def experiment2():
 
     n_traders = n_trader_types * equal_ratio_n
 
-    fname = 'balances_%03d.csv' % equal_ratio_n
+    fname = 'output/balances_%03d.csv' % equal_ratio_n
 
     tdump = open(fname, 'w')
 
@@ -1359,7 +1359,7 @@ def experiment3():
     # run a sequence of trials, one session per trial
 
     n_trials = 1
-    tdump=open('avg_balance.csv','w')
+    tdump=open('output/avg_balance.csv','w')
     trial = 1
     if n_trials > 1:
             dump_all = False

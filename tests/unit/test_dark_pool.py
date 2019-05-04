@@ -695,12 +695,12 @@ class Test_Block_Indication_Book(unittest.TestCase):
         self.assertEqual(block_indication_book.sell_side.orders[0].__str__(), "BI: [ID=1 T=100.00 S00 Sell Q=999 P=None MES=None]")
 
         # check that reputational scores are correctly assigned
-        self.assertEqual(block_indication_book.composite_reputational_scores['B00'], block_indication_book.initial_composite_reputational_score)
-        self.assertEqual(block_indication_book.composite_reputational_scores['S00'], block_indication_book.initial_composite_reputational_score)
+        self.assertEqual(block_indication_book.composite_reputational_scores['B00'], block_indication_book.initial_reputational_score)
+        self.assertEqual(block_indication_book.composite_reputational_scores['S00'], block_indication_book.initial_reputational_score)
 
         # check that an entry was created in the events_reputational_scores dictionary for the traders
-        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [])
-        self.assertEqual(block_indication_book.event_reputational_scores['S00'], [])
+        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [block_indication_book.initial_reputational_score for i in range(0,50)])
+        self.assertEqual(block_indication_book.event_reputational_scores['S00'], [block_indication_book.initial_reputational_score for i in range(0,50)])
 
     def test_add_block_indication_function_overwrite(self):
 
@@ -1044,9 +1044,19 @@ class Test_Block_Indication_Book(unittest.TestCase):
         BI3 = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 500, 25, 300)
         QBO3 = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 490, 25, 300)
 
+        # test that the right value is calculated and the score is added to the list
         self.assertEqual(block_indication_book.calculate_event_reputational_score(BI1, QBO1), 61)
+        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [61])
         self.assertEqual(block_indication_book.calculate_event_reputational_score(BI2, QBO2), 100)
+        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [100,61])
         self.assertEqual(block_indication_book.calculate_event_reputational_score(BI3, QBO3), 94)
+        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [94,100,61])
+
+        # test that the list only contans the last 50 event reputational scores
+        block_indication_book.event_reputational_scores['B00'] = [block_indication_book.initial_reputational_score for i in range(0,50)]
+        block_indication_book.calculate_event_reputational_score(BI1, QBO1)
+        self.assertEqual(block_indication_book.event_reputational_scores['B00'][0], 61)
+        self.assertEqual(len(block_indication_book.event_reputational_scores['B00']), 50)
 
     def test_calculate_composite_reputational_score_function(self):
         
@@ -1056,7 +1066,6 @@ class Test_Block_Indication_Book(unittest.TestCase):
         block_indication_book.event_reputational_scores['B00'] = [0,50,60,70,80,90,100]
         self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 63)
         block_indication_book.event_reputational_scores['B00'] = [100,85,0,50,100]
-        self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 67)
 
 
     def test_update_composite_reputational_scores_function(self):

@@ -485,10 +485,10 @@ class Block_Indication_Book:
         # The event_reputation_scores dictionary contains the last 50 event reputational scores for each trader.
         self.event_reputational_scores = {}
         # the initial composite reputational score given to each trader
-        self.initial_composite_reputational_score = 100
-        # the Reputational Score Threshold (RST). All traders with a reputational score below this threshold
+        self.initial_reputational_score = 60
+        # the Reputational Score Threshold (RST). All traders with a composite reputational score below this threshold
         # are no longer able to use the block discovery service
-        self.RST = 55
+        self.RST = 50
         # A dictionary to hold matched BIs and the corresponding QBOs
         self.matches = {}
         # ID to be given to the matching of two block indications
@@ -504,9 +504,9 @@ class Block_Indication_Book:
 
         # if a new trader, then give it an initial reputational score
         if self.composite_reputational_scores.get(BI.trader_id) == None:
-            self.composite_reputational_scores[BI.trader_id] = self.initial_composite_reputational_score
-            self.event_reputational_scores[BI.trader_id] = []
-            self.composite_reputational_scores_history[BI.trader_id] = []
+            self.composite_reputational_scores[BI.trader_id] = self.initial_reputational_score
+            self.event_reputational_scores[BI.trader_id] = [self.initial_reputational_score for i in range(0,50)]
+            self.composite_reputational_scores_history[BI.trader_id] = [(0, self.initial_reputational_score)]
 
         # the quantity of the order must be greater than the MIV
         # the trader must also have a composite reputational score lower than the RST
@@ -1232,10 +1232,7 @@ class Trader_Giveaway(Trader):
         # Update the traders reputationa score
         self.reputational_score = OSR.reputational_score
         
-        # create a small quantity discrepency half of the time
-        quantity_discrepency = random.randint(0,1) * random.randint(1,100)
-        quantity = OSR.quantity - quantity_discrepency
-        #quantity = OSR.quantity
+        quantity = round(OSR.quantity)
         limit_price = OSR.limit_price
         MES = OSR.MES
 
@@ -1807,6 +1804,44 @@ def experiment1():
 
     sys.exit('Done Now')
 
+def experiment2():
+
+    start_time = 0.0
+    end_time = 6000.0
+    duration = end_time - start_time
+
+    price_range1 = (25, 45)
+    supply_schedule = [ {'from':start_time, 'to':end_time, 'price_ranges':[price_range1], 'stepmode':'fixed'}
+                      ]
+
+    price_range1 = (55, 75)
+    demand_schedule = [ {'from':start_time, 'to':end_time, 'price_ranges':[price_range1], 'stepmode':'fixed'}
+                      ]
+
+    order_sched = {'sup':supply_schedule, 'dem':demand_schedule,
+                   'interval':30, 'timemode':'drip-fixed', 'quantity_range':[1,1000]}
+
+    buyers_spec = [('GVWY',20)]
+    sellers_spec = buyers_spec
+    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec, 'BI_threshold':900}
+
+    n_trials = 1
+    tdump=open('avg_balance_dark.csv','w')
+    trial = 1
+    if n_trials > 1:
+            dump_all = False
+    else:
+            dump_all = True
+            
+    while (trial<(n_trials+1)):
+            trial_id = 'trial%04d' % trial
+            market_session(trial_id, start_time, end_time, traders_spec, order_sched, tdump, dump_all)
+            tdump.flush()
+            trial = trial + 1
+    tdump.close()
+
+    sys.exit('Done Now')
+
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    experiment1()
+    experiment2()

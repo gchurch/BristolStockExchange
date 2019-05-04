@@ -646,6 +646,14 @@ class Block_Indication_Book:
         # if no match was found then return None
         return None
 
+    # attempt to find two matching block indications
+    def find_all_matching_block_indications(self, price):
+
+        match_id = self.find_matching_block_indications(price)
+
+        while match_id != None:
+            match_id = self.find_matching_block_indications(price)
+
     # return a match given the ID
     def get_block_indication_match(self, match_id):
         return self.matches.get(match_id)
@@ -974,6 +982,12 @@ class Exchange:
         buy_QBO = full_match["buy_QBO"]
         sell_QBO = full_match["sell_QBO"]
 
+        # Here is where the problem lies when I was trying to create the reputational scoring graph
+        # The QBOs are converted into orders and added to the order book
+        # If these orders cannot match on the order book then the trade doesn't go through
+        # However a new composite reputational score has already been calculated.
+        # So the event reputational score is updated but a trade doesn't go through, which was confusing me.
+
         # create orders out of the QBOs
         buy_order = Order(buy_QBO.time,
                                buy_QBO.trader_id,
@@ -1000,11 +1014,11 @@ class Exchange:
     # match block indications that are lying in the exchange and then convert those block indications 
     # into firm orders
     def match_block_indications_and_get_firm_orders(self, time, traders, price):
-        # check if there is a match between any two block indications
-        match_id = self.find_matching_block_indications(price)
+        
+        self.block_indication_book.find_all_matching_block_indications(price)
 
-        # if there is a match then go through all of the necessary steps
-        if match_id != None:
+        # while there are still matches, keep go through all of the necessary steps
+        for match_id in self.block_indication_book.matches.keys():
 
             # get the block indications that were matched
             full_match = self.get_block_indication_match(match_id)
@@ -1034,7 +1048,7 @@ class Exchange:
             # add the firm orders to the order book.
             self.add_firm_orders_to_order_book(match_id)
             # delete the block indication match from the matches dictionary
-            # self.delete_block_indication_match(match_id)
+            self.delete_block_indication_match(match_id)
 
             return True
         return False
@@ -1199,7 +1213,7 @@ class Trader_Giveaway(Trader):
             # if the quantity remaining is above the BI threshold then issue a block indication
             if self.quantity_remaining >= self.BI_threshold:
 
-                MES = self.BI_threshold
+                MES = 100
 
                 # create the block indication
                 block_indication = Block_Indication(time,
@@ -1244,6 +1258,7 @@ class Trader_Giveaway(Trader):
         # create a small quantity discrepency half of the time
         quantity_discrepency = random.randint(0,1) * random.randint(1,100)
         quantity = OSR.quantity - quantity_discrepency
+        #quantity = OSR.quantity
         limit_price = OSR.limit_price
         MES = OSR.MES
 
@@ -1766,6 +1781,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
     print("Final orders and block indications:")
     exchange.print_order_book()
     exchange.print_block_indications()
+    exchange.print_matches()
 
     # end of an experiment -- dump the tape
     exchange.tape_dump('transactions_dark.csv', 'w', 'keep')

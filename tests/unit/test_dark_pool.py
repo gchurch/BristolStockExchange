@@ -1045,27 +1045,28 @@ class Test_Block_Indication_Book(unittest.TestCase):
         QBO3 = dark_pool.Block_Indication(100.0, 'B00', 'Buy', 490, 25, 300)
 
         # test that the right value is calculated and the score is added to the list
-        self.assertEqual(block_indication_book.calculate_event_reputational_score(BI1, QBO1), 61)
-        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [61])
+        self.assertEqual(block_indication_book.calculate_event_reputational_score(BI1, QBO1), 90)
+        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [90])
         self.assertEqual(block_indication_book.calculate_event_reputational_score(BI2, QBO2), 100)
-        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [100,61])
-        self.assertEqual(block_indication_book.calculate_event_reputational_score(BI3, QBO3), 94)
-        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [94,100,61])
+        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [100,90])
+        self.assertEqual(block_indication_book.calculate_event_reputational_score(BI3, QBO3), 98)
+        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [98,100,90])
 
         # test that the list only contans the last 50 event reputational scores
         block_indication_book.event_reputational_scores['B00'] = [block_indication_book.initial_reputational_score for i in range(0,50)]
         block_indication_book.calculate_event_reputational_score(BI1, QBO1)
-        self.assertEqual(block_indication_book.event_reputational_scores['B00'][0], 61)
+        self.assertEqual(block_indication_book.event_reputational_scores['B00'][0], 90)
         self.assertEqual(len(block_indication_book.event_reputational_scores['B00']), 50)
 
     def test_calculate_composite_reputational_score_function(self):
         
         block_indication_book = dark_pool.Block_Indication_Book()
-        block_indication_book.event_reputational_scores['B00'] = [100,90,80,70,60,50,0]
-        self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 66)
-        block_indication_book.event_reputational_scores['B00'] = [0,50,60,70,80,90,100]
-        self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 63)
+        block_indication_book.event_reputational_scores['B00'] = [76 for i in range(0,50)]
+        self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 76)
         block_indication_book.event_reputational_scores['B00'] = [100,85,0,50,100] + [70 for i in range(0,45)]
+        self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 69)
+        block_indication_book.event_reputational_scores['B00'] = [0,50,60,70,80,90,100] + [50 for i in range(0,43)]
+        self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 53)
 
 
     def test_update_composite_reputational_scores_function(self):
@@ -1081,19 +1082,19 @@ class Test_Block_Indication_Book(unittest.TestCase):
         block_indication_book.matches[0]["sell_QBO"] = dark_pool.Qualifying_Block_Order(100.0, 'S00', 'Sell', 495, None, 500, 0)
 
         # create event reputational scores to traders
-        block_indication_book.event_reputational_scores['B00'] = []
-        block_indication_book.event_reputational_scores['S00'] = []
-        block_indication_book.composite_reputational_scores_history['B00'] = []
-        block_indication_book.composite_reputational_scores_history['S00'] = []
+        block_indication_book.event_reputational_scores['B00'] = [100 for i in range(0,50)]
+        block_indication_book.event_reputational_scores['S00'] = [100 for i in range(0,50)]
+        block_indication_book.composite_reputational_scores_history['B00'] = [100 for i in range(0,50)]
+        block_indication_book.composite_reputational_scores_history['S00'] = [100 for i in range(0,50)]
 
         # update the composite reputational scores for the traders based on this match
         block_indication_book.update_composite_reputational_scores(0,0)
 
         # perform the tests
-        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [91])
-        self.assertEqual(block_indication_book.event_reputational_scores['S00'], [97])
-        self.assertEqual(block_indication_book.composite_reputational_scores['B00'], 91)
-        self.assertEqual(block_indication_book.composite_reputational_scores['S00'], 97)
+        self.assertEqual(block_indication_book.event_reputational_scores['B00'], [98] + [100 for i in range(0,49)])
+        self.assertEqual(block_indication_book.event_reputational_scores['S00'], [99] + [100 for i in range(0,49)])
+        self.assertEqual(block_indication_book.composite_reputational_scores['B00'], 100)
+        self.assertEqual(block_indication_book.composite_reputational_scores['S00'], 100)
 
     def test_delete_match_function(self):
         

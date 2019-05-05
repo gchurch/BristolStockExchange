@@ -773,7 +773,7 @@ class Block_Indication_Book:
             event_reputational_score = 100
 
             # calculate the difference between the QBO quantity and the BI quantity as a decimal
-            quantity_dec_diff = (BI.quantity - QBO.quantity) / BI.quantity
+            quantity_dec_diff = (float(BI.quantity) - float(QBO.quantity)) / float(BI.quantity)
 
             # if the QBO quantity is less than the BI quantity then decrease score
             # The function used here is y = 77.1(e^x - 1)
@@ -812,7 +812,7 @@ class Block_Indication_Book:
             weighting -= 1
 
         # Calculate the composite reputational score rounded to the nearest integer
-        composite_reputational_score = int(round(total / 1275))
+        composite_reputational_score = round(total / 1275.0)
 
         # return the composite reputational score
         return composite_reputational_score
@@ -1120,6 +1120,9 @@ class Exchange:
     def print_matches(self):
         self.block_indication_book.print_matches()
 
+    def print_tape(self):
+        self.order_book.print_tape()
+
 
 ##################--Traders below here--#############
 
@@ -1263,7 +1266,7 @@ class Trader_Giveaway(Trader):
         # Update the traders reputationa score
         self.reputational_score = OSR.reputational_score
         
-        quantity = round(OSR.quantity * 0.5)
+        quantity = round(OSR.quantity * 0.8)
         limit_price = OSR.limit_price
         MES = OSR.MES
 
@@ -1339,7 +1342,7 @@ class Trader_Giveaway_test(Trader):
         self.reputational_score = OSR.reputational_score
         
         # If we are testing then use a deterministic quantity
-        quantity = OSR.quantity - 10
+        quantity = OSR.quantity - 100
         limit_price = OSR.limit_price
         MES = OSR.MES
 

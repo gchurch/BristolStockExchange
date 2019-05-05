@@ -1065,7 +1065,7 @@ class Test_Block_Indication_Book(unittest.TestCase):
         self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 66)
         block_indication_book.event_reputational_scores['B00'] = [0,50,60,70,80,90,100]
         self.assertEqual(block_indication_book.calculate_composite_reputational_score('B00'), 63)
-        block_indication_book.event_reputational_scores['B00'] = [100,85,0,50,100]
+        block_indication_book.event_reputational_scores['B00'] = [100,85,0,50,100] + [70 for i in range(0,45)]
 
 
     def test_update_composite_reputational_scores_function(self):

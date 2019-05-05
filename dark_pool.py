@@ -781,7 +781,8 @@ class Block_Indication_Book:
                 event_reputational_score -= round(77.1 * (math.exp(quantity_dec_diff) - 1))
 
             # Make sure that the score is not less than 50
-            if event_reputational_score < 50: event_reputational_score = 50
+            if event_reputational_score < 50: 
+                event_reputational_score = 50
 
         # If the QBO is not marketable then the score is 0
         else:
@@ -797,24 +798,21 @@ class Block_Indication_Book:
         return event_reputational_score
 
     # Calculate a trader's composite reputational score.
-    # The most recent event has a weighting of 50, the next most recent 49, and so on
+    # The most recent event reputational score has a weighting of 50, 
+    # the next most recent 49, and so on
     def calculate_composite_reputational_score(self, tid):
 
         # The current weighting
-        w = 50
+        weighting = 50
         # The sum of the event reputational scores multiplied by their weighting
         total = 0.0
-        # The sum of the weightings
-        w_total = 0
 
-        # Each trader should have 50 event reputational scores
-        for i in range(0, len(self.event_reputational_scores[tid])):
-            total += w * self.event_reputational_scores[tid][i]
-            w_total += w
-            w -= 1
+        for i in range(0, 50):
+            total += weighting * self.event_reputational_scores[tid][i]
+            weighting -= 1
 
-        # Calculate the composite reputational score and round to the nearest integer
-        composite_reputational_score = int(round(total / w_total))
+        # Calculate the composite reputational score rounded to the nearest integer
+        composite_reputational_score = int(round(total / 1275))
 
         # return the composite reputational score
         return composite_reputational_score
@@ -1265,7 +1263,7 @@ class Trader_Giveaway(Trader):
         # Update the traders reputationa score
         self.reputational_score = OSR.reputational_score
         
-        quantity = round(OSR.quantity * 0.6)
+        quantity = round(OSR.quantity * 0.5)
         limit_price = OSR.limit_price
         MES = OSR.MES
 

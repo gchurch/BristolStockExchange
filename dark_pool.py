@@ -1209,10 +1209,8 @@ class Trader:
         return None
 
 
-# Trader subclass Giveaway
-# even dumber than a ZI-U: just give the deal away
-# (but never makes a loss)
-class Trader_Giveaway(Trader):
+# Modified Giveaway Trader
+class Trader_Modified_Giveaway(Trader):
 
     def getorder(self, time):
         # if the trader has no customer order then return None
@@ -1224,6 +1222,7 @@ class Trader_Giveaway(Trader):
             # if the quantity remaining is above the BI threshold then issue a block indication
             if self.quantity_remaining >= self.BI_threshold:
 
+                # the minimum execution size for the order
                 MES = 100
 
                 # create the block indication
@@ -1243,6 +1242,7 @@ class Trader_Giveaway(Trader):
             # otherwise issue a normal order
             else:
 
+                # the minimum exeuction size for the order
                 MES = None
 
                 # create the order
@@ -1256,7 +1256,7 @@ class Trader_Giveaway(Trader):
                 # update the last quote member variable
                 self.lastquote=order
 
-                #return the order
+                # return the order
                 return order
 
     # the trader recieves an Order Submission Request (OSR). The trader needs to respond with a
@@ -1266,7 +1266,7 @@ class Trader_Giveaway(Trader):
         # Update the traders reputationa score
         self.reputational_score = OSR.reputational_score
         
-        quantity = round(OSR.quantity * 0.8)
+        quantity = OSR.quantity
         limit_price = OSR.limit_price
         MES = OSR.MES
 
@@ -1287,7 +1287,7 @@ class Trader_Giveaway(Trader):
 
 
 # This trader's behaviour is deterministic and is used for testing purposes
-class Trader_Giveaway_test(Trader):
+class Trader_Modified_Giveaway_test(Trader):
 
     def getorder(self, time):
         # if the trader has no customer order then return None
@@ -1413,9 +1413,9 @@ def populate_market(traders_spec, traders, shuffle, verbose):
         # given a trader type and a name, create the trader
         def trader_type(robottype, name):
                 if robottype == 'GVWY':
-                        return Trader_Giveaway('GVWY', name, 0.00, 0)
+                        return Trader_Modified_Giveaway('GVWY', name, 0.00, 0)
                 elif robottype == 'GVWY_test':
-                        return Trader_Giveaway_test('GVWY', name, 0.00, 0)
+                        return Trader_Modified_Giveaway_test('GVWY', name, 0.00, 0)
                 elif robottype == 'ZIC':
                         return Trader_ZIC('ZIC', name, 0.00, 0)
                 elif robottype == 'SHVR':
@@ -1708,7 +1708,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
 
     # initialise the exchange
     exchange = Exchange()
-    exchange.block_indication_book.MIV = 600
+    exchange.block_indication_book.MIV = 800
 
 
     # create a bunch of traders
@@ -1820,7 +1820,7 @@ def experiment1():
 
     buyers_spec = [('GVWY',20)]
     sellers_spec = buyers_spec
-    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec, 'BI_threshold':900}
+    traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec, 'BI_threshold':800}
 
     n_trials = 1
     tdump=open('output/avg_balance_dark.csv','w')
@@ -1879,4 +1879,4 @@ def experiment2():
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    experiment2()
+    experiment1()

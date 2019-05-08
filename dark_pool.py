@@ -1210,7 +1210,7 @@ class Trader:
 
 
 # Modified Giveaway Trader
-class Trader_Modified_Giveaway(Trader):
+class Trader_BDS_Giveaway(Trader):
 
     def getorder(self, time):
         # if the trader has no customer order then return None
@@ -1287,7 +1287,7 @@ class Trader_Modified_Giveaway(Trader):
 
 
 # This trader's behaviour is deterministic and is used for testing purposes
-class Trader_Modified_Giveaway_test(Trader):
+class Trader_BDS_Giveaway_test(Trader):
 
     def getorder(self, time):
         # if the trader has no customer order then return None
@@ -1413,9 +1413,9 @@ def populate_market(traders_spec, traders, shuffle, verbose):
         # given a trader type and a name, create the trader
         def trader_type(robottype, name):
                 if robottype == 'GVWY':
-                        return Trader_Modified_Giveaway('GVWY', name, 0.00, 0)
+                        return Trader_BDS_Giveaway('GVWY', name, 0.00, 0)
                 elif robottype == 'GVWY_test':
-                        return Trader_Modified_Giveaway_test('GVWY', name, 0.00, 0)
+                        return Trader_BDS_Giveaway_test('GVWY', name, 0.00, 0)
                 elif robottype == 'ZIC':
                         return Trader_ZIC('ZIC', name, 0.00, 0)
                 elif robottype == 'SHVR':

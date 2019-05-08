@@ -305,11 +305,11 @@ class Test_Exchange(unittest.TestCase):
         exchange.process_order2(102.0, order3, False)
         exchange.process_order2(103.0, order4, False)
 
-        exchange.tape_dump('transactions_test.csv', 'w', 'keep')
+        exchange.tape_dump('output/transactions_test.csv', 'w', 'keep')
 
         rows = []
 
-        with open('transactions_test.csv') as csvfile:
+        with open('output/transactions_test.csv') as csvfile:
             reader = csv.reader(csvfile)
             for row in reader:
                 rows.append(row)
@@ -365,7 +365,7 @@ class Test_Functions(unittest.TestCase):
         # call the populate market function
         trader_stats = BSE.populate_market(traders_spec, traders, False, False)
         # open the test file
-        dumpfile=open('avg_balance_test.csv','w')
+        dumpfile=open('output/avg_balance_test.csv','w')
         # call the trade_stats function
         BSE.trade_stats(1, traders, dumpfile, 100.0, exchange.publish_lob(100.0, False))
         # close the test file
@@ -373,7 +373,7 @@ class Test_Functions(unittest.TestCase):
 
         rows = []
 
-        with open('avg_balance_test.csv') as csvfile:
+        with open('output/avg_balance_test.csv') as csvfile:
             reader = csv.reader(csvfile)
             for row in reader:
                 rows.append(row)

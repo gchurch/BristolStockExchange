@@ -485,10 +485,10 @@ class Block_Indication_Book:
         # The event_reputation_scores dictionary contains the last 50 event reputational scores for each trader.
         self.event_reputational_scores = {}
         # the initial composite reputational score given to each trader
-        self.initial_reputational_score = 100
+        self.initial_reputational_score = 80
         # the Reputational Score Threshold (RST). All traders with a composite reputational score below this threshold
         # are no longer able to use the block discovery service
-        self.RST = 75
+        self.RST = 55
         # A dictionary to hold matched BIs and the corresponding QBOs
         self.matches = {}
         # ID to be given to the matching of two block indications
@@ -1266,7 +1266,7 @@ class Trader_BDS_Giveaway(Trader):
         # Update the traders reputationa score
         self.reputational_score = OSR.reputational_score
         
-        quantity = OSR.quantity
+        quantity = OSR.quantity * 0.5
         limit_price = OSR.limit_price
         MES = OSR.MES
 
@@ -1879,4 +1879,4 @@ def experiment2():
 
 # the main function is called if BSE.py is run as the main program
 if __name__ == "__main__":
-    experiment1()
+    experiment2()

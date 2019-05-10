@@ -846,7 +846,7 @@ class Block_Indication_Book:
         del(self.matches[match_id])
 
     # write the composite reputational scores history to an output file
-    def composite_reputational_scores_history_dump(self, fname, fmode, tmode):
+    def CRS_history_dump(self, fname, fmode, tmode):
         dumpfile = open(fname, fmode)
 
         # find the length of the longest list of scores
@@ -881,7 +881,7 @@ class Block_Indication_Book:
             self.tape = []
 
     # write the composite reputational scores history to an output file
-    def event_reputational_scores_dump(self, fname, fmode, tmode):
+    def ERS_dump(self, fname, fmode, tmode):
         dumpfile = open(fname, fmode)
 
         # write the column names
@@ -1077,12 +1077,12 @@ class Exchange:
         self.order_book.tape_dump(fname, fmode, tmode)
 
     # write the order_book's tape to the output file
-    def composite_reputational_scores_history_dump(self, fname, fmode, tmode):
-        self.block_indication_book.composite_reputational_scores_history_dump(fname, fmode, tmode)
+    def CRS_history_dump(self, fname, fmode, tmode):
+        self.block_indication_book.CRS_history_dump(fname, fmode, tmode)
 
     # write the order_book's tape to the output file
-    def event_reputational_scores_dump(self, fname, fmode, tmode):
-        self.block_indication_book.event_reputational_scores_dump(fname, fmode, tmode)
+    def ERS_dump(self, fname, fmode, tmode):
+        self.block_indication_book.ERS_dump(fname, fmode, tmode)
 
     # delete an order from the exchange
     def del_order(self, time, order, verbose):
@@ -1792,10 +1792,10 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
     exchange.print_matches()
 
     # end of an experiment -- dump the tape
-    exchange.tape_dump('output/transactions_dark.csv', 'w', 'keep')
+    exchange.tape_dump('output/transactions.csv', 'w', 'keep')
     # dump the traders' reputational score history
-    exchange.composite_reputational_scores_history_dump('output/composite_reputational_scores_history.csv', 'w', 'keep')
-    exchange.event_reputational_scores_dump('output/event_reputational_scores.csv', 'w', 'keep')
+    exchange.CRS_history_dump('output/CRS_history.csv', 'w', 'keep')
+    exchange.ERS_dump('output/ERS.csv', 'w', 'keep')
 
     # write trade_stats for this experiment NB end-of-session summary only
     trade_stats(sess_id, traders, dumpfile, time)

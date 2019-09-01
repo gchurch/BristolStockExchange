@@ -12,4 +12,4 @@ Real exchanges are much much more complicated than this.
 
 ## Dark Pool
 
-This repository is a fork of the BSE repository. I have created a file called dark_pool.py which contains my implementation of a dark pool trading venue that is based on the London Stock Exchange's Turquoise Plato. For more information, see the thesis.pdf file.
+This repository is a fork of the BSE repository. I have created a folder called dark_pool which contains my implementation of a dark pool trading venue that is based on the London Stock Exchange's Turquoise Plato. For more information, see the thesis.pdf file.

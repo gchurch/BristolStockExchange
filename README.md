@@ -1,6 +1,6 @@
 ## Dark Pool Simulator
 
-For my final year project, I created a dark pool simulator that is based on the London Stock Exchange's Turquoise Plato trading service. This includes an implementation of the Block Discovery service which is used for facilitating the trade of larger block orders. I also created a simple trading algorithm which is based on the Giveaway trading algorithm and which operates in the simulator. 
+For my final year project, I created a dark pool simulator that is based on the London Stock Exchange's Turquoise Plato trading service. This includes an implementation of the Block Discovery service which is used for facilitating the trading of larger block orders. I also created a simple trading algorithm based on the Giveaway trading algorithm that can operate in the simulator. 
 
 The simulator is written in Python 2.7. The `dark_pool` folder contains the implementation.
 

@@ -14,7 +14,7 @@ The simulator is written in Python 2.7. The `dark_pool` folder contains the impl
 - The simulator is single threaded. 
 - It is intended to be run in batch mode, writing data to CSV files for subsequent analysis, rather than having a GUI.
 - Each trader receives a customer order specifying a quantity to be traded and a limit price. The goal of the trader is to maximise the margin that they can make on each trade.
-- The supply and demand schedules of customer orders can be customised
+- The supply and demand schedules of customer orders can be customised.
 
 
 For more information, see [thesis.pdf](https://github.com/gchurch/DarkPoolSimulator/blob/master/thesis.pdf). 

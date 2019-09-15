@@ -13,7 +13,7 @@ The simulator is written in Python 2.7. The `dark_pool` folder contains the impl
 - The price of the security in each trade is meant to be determined by the mid-price on a coupled lit pool. It is currently set to a fixed value.
 - The simulator is single threaded. 
 - It is intended to be run in batch mode, writing data to CSV files for subsequent analysis, rather than having a GUI.
-- Each trader receives a customer order specifying a quantity to be traded and a limit price. The goal of the trader is to maximise the margin that they can make on each trade.
+- traders receive customer orders specifying a quantity to traded and a limit price. The goal of the trader is to maximise the margin that they can make on each trade.
 - The supply and demand schedules of customer orders can be customised.
 
 

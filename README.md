@@ -17,4 +17,6 @@ The simulator is written in Python 2.7. The `dark_pool` folder contains the impl
 - The supply and demand schedules of customer orders can be customised.
 
 
-For more information, see [thesis.pdf](https://github.com/gchurch/DarkPoolSimulator/blob/master/thesis.pdf). 
+For more information, see [thesis.pdf](https://github.com/gchurch/DarkPoolSimulator/blob/master/thesis.pdf).
+
+I also co-wrote a [paper](https://research-information.bris.ac.uk/ws/portalfiles/portal/210010985/ChurchCliffEMSS2019Final190711.pdf) with my supervisor that contains some of my work. The paper was published in <em>Proceedings of the 31st European Modelling and Simulation Symposium</em>.
